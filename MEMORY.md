@@ -194,6 +194,32 @@ EnVia/
 
 ---
 
+## 5.4 Manual gráfico, capturas y limpieza de secciones (06/11/2026)
+
+**Objetivo:** hacer el manual más amigable para usuarios nuevos, con capturas reales de los procesos; retirar del instructivo la configuración de bases de datos y los respaldos/exportación JSON (uso exclusivo de administradores); eliminar el bloque “Ir a sección” para que el capítulo elegido se muestre directamente.
+
+| Archivo | Cambio |
+|---------|--------|
+| `manual.html` | Se eliminó el índice rápido `.quick-index` y su CSS/JS. El contenido principal inicia directamente en la sección activa. Se quitaron las secciones de Supabase y respaldos; Reglas pasó a `sec-11`. Se agregaron 15 capturas y se actualizó la sección BCV a tasa automática de solo lectura. Versión v1.3. |
+| `docs/manual_usuario.md` | Versión 1.3. Se agregaron las mismas capturas en Markdown, se quitaron Respaldos y Sincronización con Supabase, y Reglas pasó a ser la sección 11. |
+| `imagen/manual/` | 15 capturas PNG de 1440×900: login, dashboard, clientes, conductores, servicios, contabilidad, tributos, CxP, auditoría y usuarios, incluyendo formularios y expediente. |
+
+**Decisiones:**
+- El manual de usuario final no documenta configuración de Supabase, `anon key`, RLS, buckets ni exportación/importación JSON.
+- Se conservan las exportaciones CSV de reportes operativos (Libro Diario, auditoría, etc.) porque son parte del trabajo diario, no respaldos de la base.
+- El capítulo 04 ya no muestra el bloque “Ir a sección”; al hacer clic en el menú se renderiza su contenido de inmediato y el encabezado “04 Conductores y Flota” flota con el contenido.
+- `showSection()` reinicia `scrollTop` del panel `.manual-main` y un `setTimeout` corrige la carga directa con hash (`manual.html#sec-4`) para que nunca se oculte el encabezado del capítulo.
+- La tasa BCV del manual ahora se describe como automática, de solo lectura, con calendario histórico y fallback a la última tasa conocida.
+
+**Validación (Chrome headless):**
+- 11 secciones y 11 ítems de navegación; sin `.quick-index` ni texto “Ir a sección”.
+- `#sec-4` activo y visible; `#sec-3` oculto.
+- Las 16 imágenes del manual cargan (`naturalWidth > 0`), incluidas las 15 capturas nuevas.
+- Recorrido por clic en las 11 secciones: `sec-1` a `sec-11`, sin errores de consola.
+- Búsqueda “conductor” filtra correctamente las secciones relacionadas.
+
+---
+
 ## 6. Próximas tareas pendientes (opcionales)
 
 1. **Integración WhatsApp** para notificaciones a conductores (pendiente de conversación con equipo).

@@ -1,6 +1,6 @@
 # Manual de Usuario — ENVIA ERP
 
-**Versión:** 1.2 · **Fecha:** 06 de noviembre de 2026  
+**Versión:** 1.3 · **Fecha:** noviembre de 2026  
 **Para:** Usuarios del sistema ENVIA ERP  
 **Cómo abrir:** Doble clic en `index.html` en Google Chrome
 
@@ -18,9 +18,7 @@
 8. [Cuentas por Pagar (proveedores y facturas)](#8-cuentas-por-pagar-proveedores-y-facturas)
 9. [Bitácora de Auditoría](#9-bitacora-de-auditoria)
 10. [Usuarios del ERP](#10-usuarios-del-erp)
-11. [Respaldos](#11-respaldos)
-12. [Sincronización con Supabase (nube)](#12-sincronización-con-supabase-nube)
-13. [Reglas importantes que debes conocer](#13-reglas-importantes-que-debes-conocer)
+11. [Reglas importantes que debes conocer](#11-reglas-importantes-que-debes-conocer)
 
 ---
 
@@ -44,6 +42,8 @@ Al entrar, verás tu nombre, tu rol y la tasa del dólar (BCV) en la parte super
 
 El **menú lateral** muestra todos los módulos a los que tienes acceso y se adapta a la altura de la pantalla: en pantallas de portátil reduce los espacios para que veas todas las opciones sin desplazarte. Los datos del usuario y el botón de **Cerrar sesión** están únicamente en la barra superior derecha.
 
+![Pantalla de acceso a ENVIA ERP](../imagen/manual/01-login.png)
+
 > Si olvidas la clave, contacta a la persona encargada del sistema en tu empresa. No hay forma de recuperarla desde el login.
 
 ---
@@ -51,6 +51,8 @@ El **menú lateral** muestra todos los módulos a los que tienes acceso y se ada
 ## 2. Panel principal (Dashboard)
 
 Al entrar, ves el **Dashboard** organizado como un tablero de operación:
+
+![Dashboard de ENVIA ERP](../imagen/manual/02-dashboard.png)
 
 ### Banda de operación (14 días)
 
@@ -91,6 +93,8 @@ Los clientes son las personas o empresas a las que les prestas servicio de trasl
 ### Ver la lista de clientes
 Ve al menú lateral y haz clic en **Clientes**. Verás una tabla con todos los clientes registrados, su cédula/RIF, teléfono, saldo en la billetera y cuántos servicios han tenido.
 
+![Listado de clientes](../imagen/manual/03-clientes-lista.png)
+
 ### Agregar un cliente nuevo
 1. En la pantalla de Clientes, busca el botón para agregar nuevo (generalmente dice "Nuevo cliente" o tiene un icono de más).
 2. Llena los campos obligatorios:
@@ -101,6 +105,8 @@ Ve al menú lateral y haz clic en **Clientes**. Verás una tabla con todos los c
    - **Dirección completa**
    - **Estatus:** Activo, Suspendido, Pendiente o Corporativo.
 3. Presiona **Guardar**.
+
+![Formulario de cliente](../imagen/manual/04-cliente-formulario.png)
 
 ### Editar un cliente
 1. En la lista, haz clic sobre el nombre del cliente que quieres editar.
@@ -114,6 +120,8 @@ Ve al menú lateral y haz clic en **Clientes**. Verás una tabla con todos los c
 ## 4. Conductores y Flota
 
 Los conductores son las personas que realizan las carreras y entregas. Reciben un pago por cada servicio.
+
+![Listado de conductores y flota](../imagen/manual/05-conductores-lista.png)
 
 ### Registrar un conductor
 1. Ve al menú lateral → **Conductores y Flota**.
@@ -132,6 +140,8 @@ Los conductores son las personas que realizan las carreras y entregas. Reciben u
    - Porcentaje de comisión (cuánto se queda ENVIA de cada carrera).
 6. Presiona **Guardar**.
 
+![Formulario de conductor](../imagen/manual/06-conductor-formulario.png)
+
 ### Documentos del conductor
 Cada conductor debe tener documentos que pueden estar en tres estados: Pendiente, Aprobado o Rechazado.
 - Cédula
@@ -141,6 +151,8 @@ Cada conductor debe tener documentos que pueden estar en tres estados: Pendiente
 
 Cuando todos los documentos estén **Aprobados**, el conductor puede pasar de "En Revisión" a **Activo / Disponible** y podrá recibir carreras.
 
+![Expediente del conductor](../imagen/manual/07-conductor-expediente.png)
+
 > No se puede eliminar un conductor que tenga servicios registrados.
 
 ---
@@ -148,6 +160,8 @@ Cuando todos los documentos estén **Aprobados**, el conductor puede pasar de "E
 ## 5. Servicios (Carreras y Encomiendas)
 
 Aquí registras cada viaje o entrega que se hace.
+
+![Listado de servicios](../imagen/manual/08-servicios-lista.png)
 
 ### Crear un servicio nuevo
 1. Ve al menú lateral → **Servicios**.
@@ -163,6 +177,8 @@ Aquí registras cada viaje o entrega que se hace.
    - **Método de pago:** Pago Móvil, Wallet, Efectivo USD, Zelle o Tarjeta.
    - **Número de factura y control:** Si aplica.
 4. Presiona **Guardar**.
+
+![Formulario de servicio](../imagen/manual/09-servicio-formulario.png)
 
 ### Qué pasa automáticamente al guardar
 El sistema hace lo siguiente solo:
@@ -181,6 +197,8 @@ El sistema hace lo siguiente solo:
 ENVIA ERP lleva la contabilidad automática en bolívares (VES). Cada servicio, factura o pago genera sus asientos contables solos.
 
 ### Qué puedes ver y imprimir
+![Contabilidad · Libro Diario](../imagen/manual/10-contabilidad-libro-diario.png)
+
 Desde el menú **Contabilidad** puedes consultar:
 
 | Reporte | Qué muestra |
@@ -214,6 +232,8 @@ Desde el menú **Tributos & BCV** ves los parámetros fiscales de la empresa:
 | IVA exento | 0% |
 | IGTF | 3% (sobre pagos en divisas) |
 | Unidad Tributaria | 90 Bs |
+
+![Tributos y BCV](../imagen/manual/11-tributos-bcv.png)
 
 ### Tasa automática (DolarVZLA)
 
@@ -254,6 +274,8 @@ Todos los nuevos servicios y facturas usarán la nueva tasa. Los asientos contab
 
 Aquí gestionas lo que le debes a tus proveedores (repuestos, combustible, servicios, etc.).
 
+![Facturas de cuentas por pagar](../imagen/manual/12-cxp-facturas.png)
+
 ### Registrar un proveedor
 1. Ve a **Cuentas por Pagar** → pestaña de proveedores.
 2. Haz clic en **Nuevo proveedor**.
@@ -273,6 +295,8 @@ Aquí gestionas lo que le debes a tus proveedores (repuestos, combustible, servi
 5. El sistema calcula automáticamente las retenciones de IVA e ISLR.
 6. Presiona **Guardar**.
 
+![Formulario de factura de proveedor](../imagen/manual/13-factura-formulario.png)
+
 ### Pagar una factura
 1. En la lista, busca la factura pendiente.
 2. Haz clic en **Pagar**.
@@ -286,6 +310,8 @@ Aquí gestionas lo que le debes a tus proveedores (repuestos, combustible, servi
 ## 9. Bitácora de Auditoría
 
 Esta sección registra todo lo que se hace en el sistema para tener un control de quién modificó qué.
+
+![Bitácora de Auditoría](../imagen/manual/14-auditoria.png)
 
 ### Qué se registra
 Cada vez que guardas o borras algo (cliente, conductor, servicio, factura, asiento contable, usuario, tasa del dólar, etc.), el sistema anota:
@@ -307,10 +333,12 @@ Ve al menú lateral → **Bitácora de Auditoría**. Puedes filtrar por usuario,
 
 Aquí se gestionan las personas que entran al sistema y qué pueden hacer.
 
+![Usuarios del ERP](../imagen/manual/15-usuarios.png)
+
 ### Roles disponibles
 | Rol | Puede hacer |
 |-----|-------------|
-| SuperAdmin | Todo: todos los módulos, configurar, usuarios, sincronizar. |
+| SuperAdmin | Todo: todos los módulos y gestión de usuarios. |
 | Contador / Fiscal | Contabilidad, tributos, libros, cuentas por pagar, maestros. |
 | Tesorero / CxP | Pagos, proveedores, liquidaciones, maestros, consulta tributaria. |
 | Auditor / Operaciones | Solo ver todo, no puede guardar ni borrar nada. |
@@ -325,69 +353,7 @@ Aquí se gestionan las personas que entran al sistema y qué pueden hacer.
 
 ---
 
-## 11. Respaldos
-
-Es recomendable hacer respaldos periódicamente para no perder información.
-
-### Hacer un respaldo
-1. Ve a **Configuración** o a la sección de respaldos.
-2. Haz clic en **Exportar respaldo JSON**.
-3. Se descargará un archivo con todos los datos (clientes, conductores, servicios, facturas, asientos, etc.).
-
-### Restaurar un respaldo
-1. Haz clic en **Importar respaldo**.
-2. Selecciona el archivo JSON que exportaste antes.
-3. El sistema cargará esos datos (esto reemplaza lo que tengas actualmente).
-
-> Antes de importar, asegúrate de no necesitar los datos actuales, porque se sobrescriben.
-
----
-
-## 12. Sincronización con Supabase (nube)
-
-ENVIA ERP puede guardar tus datos en la nube usando **Supabase**. Esto significa que tu información está respaldada y disponible desde cualquier dispositivo donde abra el sistema, además de seguir funcionando sin internet usando el almacenamiento local.
-
-### Qué se sincroniza
-Cuando sincronizas, el sistema sube a Supabase toda tu información operativa:
-
-| Módulo | Qué se guarda en la nube |
-|--------|--------------------------|
-| Clientes | Todos los clientes registrados con sus datos y saldo de wallet |
-| Conductores | Conductores, vehículos, documentos y datos de pago |
-| Proveedores | RIF, razón social, datos de contacto y configuración de retenciones |
-| Servicios | Carreras y encomiendas con montos, IVA, IGTF y comisiones |
-| Cuentas por Pagar | Facturas, retenciones IVA/ISLR y pagos |
-| Contabilidad | Plan de cuentas, asientos contables y líneas de asiento |
-| Usuarios | Usuarios del ERP y sus roles |
-| Tributos | Tasa BCV, IVA, IGTF, ISLR y unidad tributaria |
-
-### Cómo sincronizar tus datos
-
-1. Ve al menú lateral → **Configuración Supabase & Sincronización**.
-2. Verifica que tengas pegados correctamente:
-   - **Project URL:** `https://tu-proyecto.supabase.co`
-   - **anon key:** La clave pública que empieza con `eyJ...`
-3. Haz clic en el botón **"Sincronizar ahora"**.
-4. Espera a que termine el proceso. Verás un reporte con cuántos registros se subieron a cada tabla.
-
-### Qué pasa si la conexión falla
-
-Si Supabase no está disponible o hay problemas de internet, el ERP **sigue funcionando normalmente**:
-
-- Todos los datos se guardan en tu navegador (localStorage).
-- Los documentos se guardan como Data URL localmente.
-- Cuando recuperes la conexión, puedes volver a sincronizar y los datos se subirán a la nube sin perder nada.
-
-### Cuándo sincronizar
-
-Se recomienda sincronizar:
-- Después de configurar Supabase por primera vez.
-- Después de cargar muchos datos nuevos (clientes, servicios, facturas).
-- Periódicamente, para mantener respaldo actualizado en la nube.
-
----
-
-## 13. Reglas importantes que debes conocer
+## 11. Reglas importantes que debes conocer
 
 1. **La cédula / RIF no se repite:** Cada cliente y conductor tiene un identificador único. No se pueden duplicar.
 2. **No se puede borrar lo que se usa:** No se puede eliminar un cliente que tenga servicios, ni un proveedor que tenga facturas, ni una cuenta contable que tenga movimientos.

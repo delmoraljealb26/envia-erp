@@ -124,15 +124,6 @@
     .back-top { position: fixed; right: 24px; bottom: 24px; background: var(--orange); color: #fff; border: 0; border-radius: 50%; width: 52px; height: 52px; display: grid; place-items: center; cursor: pointer; box-shadow: 0 12px 26px rgba(240,90,36,.35); z-index: 60; }
     .back-top:hover { background: #FF7A00; }
 
-    /* Índice rápido */
-    .quick-index { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 22px; margin-bottom: 24px; box-shadow: 0 4px 14px rgba(2,8,18,.04); }
-    .quick-index h4 { margin: 0 0 14px; font-size: 15px; color: #0F1E36; font-weight: 700; }
-    .quick-index ul { list-style: none; padding: 0; margin: 0; columns: 2; column-gap: 24px; }
-    .quick-index li { margin-bottom: 8px; font-size: 14px; color: #37475F; }
-    .quick-index a { color: #005FFF; text-decoration: none; font-weight: 600; }
-    .quick-index a:hover { text-decoration: underline; }
-    @media (max-width: 700px) { .quick-index ul { columns: 1; } }
-
     .footer-manual { border-top: 1px solid var(--line); color: #7D93B2; font-size: 12px; padding: 26px 40px; text-align: center; margin-top: 40px; }
     @media (max-width: 900px) { .footer-manual { padding: 20px 16px; } }
   </style>
@@ -168,11 +159,6 @@
 
       <!-- Contenido principal -->
       <main class="manual-main">
-        <div class="quick-index">
-          <h4>Ir a sección</h4>
-          <ul id="quick-index-list"></ul>
-        </div>
-
         <!-- 1. Acceso -->
         <section class="manual-section active" id="sec-1">
           <div class="section-head">
@@ -211,7 +197,7 @@
             <div class="img-cap">Pantalla de acceso corporativo. Usuario ENVIA / 123456789, rol SuperAdmin.</div>
           </div>
 
-          <div class="note info"><strong>¿Olvidaste la clave?</b> En esta versión demo las claves se gestionan localmente. Contacta al SuperAdmin para restablecer acceso.</div>
+          <div class="note info"><strong>¿Olvidaste la clave?</strong> En esta versión demo las claves se gestionan localmente. Contacta al SuperAdmin para restablecer acceso.</div>
         </section>
 
         <!-- 2. Dashboard -->
@@ -259,7 +245,7 @@
 
           <div class="img-ref">
             <img src="imagen/manual/02-dashboard.png" alt="Dashboard ENVIA ERP">
-            <div class="img-cap">Dashboard con KPIs, gráficos de dona y tabla de vencimientos próximos.</div>
+            <div class="img-cap">Dashboard actual: banda de operación de 14 días, ritmo de ingresos, cuentas por pagar y composición de los cobros.</div>
           </div>
           <div class="note"><strong>Tasa BCV:</strong> se muestra en la barra superior. Se edita desde <a href="#sec-7">Tributos &amp; BCV</a>.</div>
         </section>
@@ -270,6 +256,11 @@
             <span class="section-kicker"><span class="num">03</span> Maestro de Clientes</span>
             <h1 class="section-title">Clientes de ENVIA</h1>
             <p class="section-sub">El cliente es la clave primaria de facturación. Su identificador es la Cédula / RIF, formato <code>V-12345678</code>, <code>E-12345678</code> o <code>J-123456789</code>.</p>
+          </div>
+
+          <div class="img-ref">
+            <img src="imagen/manual/03-clientes-lista.png" alt="Listado de clientes de ENVIA ERP">
+            <div class="img-cap">Listado de clientes con búsqueda, filtros, estatus, saldo wallet y accesos a la ficha.</div>
           </div>
 
           <div class="step-card">
@@ -296,6 +287,11 @@
             </div>
           </div>
 
+          <div class="img-ref">
+            <img src="imagen/manual/04-cliente-formulario.png" alt="Formulario para crear un cliente">
+            <div class="img-cap">Formulario de alta de cliente. La cédula/RIF es la clave única y no se puede duplicar.</div>
+          </div>
+
           <div class="note warn"><strong>No se puede eliminar</strong> un cliente que tenga servicios asociados. Primero debe reasignar o eliminar esos servicios.</div>
           <table class="data-table">
             <thead><tr><th>Formato</th><th>Ejemplo</th><th>Tipo</th></tr></thead>
@@ -315,6 +311,11 @@
             <p class="section-sub">Los conductores reciben liquidaciones por los servicios realizados. Su identificador es la Cédula / RIF.</p>
           </div>
 
+          <div class="img-ref">
+            <img src="imagen/manual/05-conductores-lista.png" alt="Listado de conductores y flota">
+            <div class="img-cap">Listado de conductores y flota con estatus, vehículo, documentos y saldo por liquidar.</div>
+          </div>
+
           <div class="step-card">
             <div class="step-head"><span class="step-badge">1</span><h2 class="step-title">Registrar un conductor</h2></div>
             <div class="step-body">
@@ -329,11 +330,21 @@
             </div>
           </div>
 
+          <div class="img-ref">
+            <img src="imagen/manual/06-conductor-formulario.png" alt="Formulario para registrar un conductor">
+            <div class="img-cap">Formulario de alta de conductor: datos personales, vehículo, Pago Móvil, cuenta bancaria y comisión.</div>
+          </div>
+
           <div class="step-card">
             <div class="step-head"><span class="step-badge">2</span><h2 class="step-title">Estado de documentos</h2></div>
             <div class="step-body">
               Cada documento tiene estados: <b>Pendiente</b>, <b>Aprobado</b> o <b>Rechazado</b>. Cuando todos estén aprobados (cédula, RIF, licencia, circulación), el conductor puede pasar de <i>En Revisión Documental</i> a <b>Activo / Disponible</b>.
             </div>
+          </div>
+
+          <div class="img-ref">
+            <img src="imagen/manual/07-conductor-expediente.png" alt="Expediente del conductor">
+            <div class="img-cap">Expediente del conductor con documentos, vehículo, datos de pago y liquidaciones.</div>
           </div>
 
           <div class="note warn"><strong>No se puede eliminar</strong> un conductor que tenga servicios asociados.</div>
@@ -345,6 +356,11 @@
             <span class="section-kicker"><span class="num">05</span> Servicios</span>
             <h1 class="section-title">Carreras y Encomiendas</h1>
             <p class="section-sub">Cada servicio genera automáticamente asiento de ingreso (base + IVA + IGTF en VES), liquidación al conductor e incremento de contadores.</p>
+          </div>
+
+          <div class="img-ref">
+            <img src="imagen/manual/08-servicios-lista.png" alt="Listado de servicios">
+            <div class="img-cap">Listado de servicios con filtros por tipo, estatus y método de pago, además de sus totales.</div>
           </div>
 
           <div class="step-card">
@@ -361,6 +377,11 @@
                 <li><span class="ord">8</span><span class="txt">Presiona <b>Guardar</b>.</span></li>
               </ul>
             </div>
+          </div>
+
+          <div class="img-ref">
+            <img src="imagen/manual/09-servicio-formulario.png" alt="Formulario para registrar un servicio">
+            <div class="img-cap">Formulario de servicio: tipo, cliente, conductor, origen/destino, tarifa, IVA, IGTF y método de pago.</div>
           </div>
 
           <div class="note info"><strong>Partida doble:</strong> el asiento generado cumple DEBE = HABER (tolerancia máxima 0,01 VES). Si hay diferencia de redondeo, se ajusta en la línea de mayor monto.</div>
@@ -398,6 +419,11 @@
             </div>
           </div>
 
+          <div class="img-ref">
+            <img src="imagen/manual/10-contabilidad-libro-diario.png" alt="Libro Diario de contabilidad">
+            <div class="img-cap">Contabilidad · Libro Diario con asientos, cuentas, débitos y créditos del período.</div>
+          </div>
+
           <div class="note"><strong>Todos los reportes</strong> se pueden imprimir y exportar a CSV/Excel (UTF-8 con BOM).</div>
         </section>
 
@@ -406,13 +432,13 @@
           <div class="section-head">
             <span class="section-kicker"><span class="num">07</span> Tributos y BCV</span>
             <h1 class="section-title">IVA, IGTF, ISLR y tasa BCV</h1>
-            <p class="section-sub">Desde <b>Tributos &amp; BCV</b> configuras los parámetros fiscales. Nunca se hardcodean en la lógica; son editables.</p>
+            <p class="section-sub">Desde <b>Tributos &amp; BCV</b> consultas los parámetros fiscales de la empresa. La tasa BCV se obtiene automáticamente de la fuente oficial y es de solo lectura.</p>
           </div>
 
           <table class="data-table">
             <thead><tr><th>Parámetro</th><th>Valor por defecto</th><th>Nota</th></tr></thead>
             <tbody>
-              <tr><td>Tasa BCV (Bs / USD)</td><td>Editable</td><td>Conversión USD → VES</td></tr>
+              <tr><td>Tasa BCV (Bs / USD)</td><td>Automática · solo lectura</td><td>Se actualiza desde DolarVZLA</td></tr>
               <tr><td>IVA general</td><td>16%</td><td>Operaciones normales</td></tr>
               <tr><td>IVA reducido</td><td>8%</td><td>Actividades específicas</td></tr>
               <tr><td>IVA exento</td><td>0%</td><td>Operaciones exentas</td></tr>
@@ -421,8 +447,27 @@
             </tbody>
           </table>
 
+          <div class="img-ref">
+            <img src="imagen/manual/11-tributos-bcv.png" alt="Pantalla de Tributos y BCV">
+            <div class="img-cap">Tributos &amp; BCV: tasa vigente, parámetros, resumen fiscal, tarifas ISLR y calculadora de retención.</div>
+          </div>
+
           <div class="step-card">
-            <div class="step-head"><span class="step-badge">1</span><h2 class="step-title">Retención de IVA</h2></div>
+            <div class="step-head"><span class="step-badge">1</span><h2 class="step-title">Tasa BCV automática</h2></div>
+            <div class="step-body">
+              <ul class="step-list">
+                <li><span class="ord">•</span><span class="txt">Al iniciar sesión, ENVIA ERP consulta la <b>tasa oficial del BCV</b> y la muestra en la barra superior con fecha y fuente.</span></li>
+                <li><span class="ord">•</span><span class="txt">Para actualizarla, usa el botón <b>⟳</b> junto a la tasa o <b>Tributos &amp; BCV → Sincronizar BCV</b>.</span></li>
+                <li><span class="ord">•</span><span class="txt">El icono de <b>calendario</b> permite consultar la tasa de una fecha anterior. La tasa histórica se aplica a los nuevos cálculos y el indicador cambia a <i>DolarVZLA · histórica</i>.</span></li>
+                <li><span class="ord">•</span><span class="txt">Si no hay internet, se conserva la última tasa conocida. La tasa <b>no se edita manualmente</b>.</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="note info"><strong>Tasa histórica:</strong> los asientos y documentos ya registrados conservan la tasa BCV con la que fueron creados.</div>
+
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">2</span><h2 class="step-title">Retención de IVA</h2></div>
             <div class="step-body">
               <ul class="step-list">
                 <li><span class="ord">•</span><span class="txt">75% para personas naturales residentes.</span></li>
@@ -433,7 +478,7 @@
           </div>
 
           <div class="step-card">
-            <div class="step-head"><span class="step-badge">2</span><h2 class="step-title">Retención ISLR (Decreto 1.808)</h2></div>
+            <div class="step-head"><span class="step-badge">3</span><h2 class="step-title">Retención ISLR (Decreto 1.808)</h2></div>
             <div class="step-body">
               <table class="data-table" style="margin: 10px 0;">
                 <thead><tr><th>Tipo</th><th>Tarifa</th><th>Sustraendo</th></tr></thead>
@@ -453,6 +498,11 @@
             <span class="section-kicker"><span class="num">08</span> Cuentas por Pagar</span>
             <h1 class="section-title">Proveedores, facturas y pagos</h1>
             <p class="section-sub">Gestión de compras a proveedores con retenciones automáticas de IVA e ISLR.</p>
+          </div>
+
+          <div class="img-ref">
+            <img src="imagen/manual/12-cxp-facturas.png" alt="Facturas de cuentas por pagar">
+            <div class="img-cap">Cuentas por Pagar · Facturas de compra con proveedor, vencimiento, total y saldo pendiente.</div>
           </div>
 
           <div class="step-card">
@@ -478,6 +528,11 @@
             </div>
           </div>
 
+          <div class="img-ref">
+            <img src="imagen/manual/13-factura-formulario.png" alt="Formulario de factura de proveedor">
+            <div class="img-cap">Formulario de factura de compra. El sistema calcula IVA, IGTF, retención de IVA e ISLR antes de guardar.</div>
+          </div>
+
           <div class="step-card">
             <div class="step-head"><span class="step-badge">3</span><h2 class="step-title">Registrar un pago</h2></div>
             <div class="step-body">
@@ -498,6 +553,11 @@
             <span class="section-kicker"><span class="num">09</span> Bitácora de Auditoría</span>
             <h1 class="section-title">Trazabilidad de cambios</h1>
             <p class="section-sub">Cada vez que un usuario guarda o borra un registro, el sistema lo graba con nombre de usuario, fecha y hora.</p>
+          </div>
+
+          <div class="img-ref">
+            <img src="imagen/manual/14-auditoria.png" alt="Bitácora de auditoría">
+            <div class="img-cap">Bitácora de Auditoría con filtros por usuario, acción, módulo y rango de fechas.</div>
           </div>
 
           <div class="step-card">
@@ -533,6 +593,11 @@
             <p class="section-sub">ENVIA ERP tiene 4 roles exactos. El usuario maestro <code>ENVIA</code> es SuperAdmin y no se puede eliminar ni cambiar de rol.</p>
           </div>
 
+          <div class="img-ref">
+            <img src="imagen/manual/15-usuarios.png" alt="Usuarios del ERP y roles">
+            <div class="img-cap">Usuarios del ERP: cuentas activas, rol asignado y matriz de permisos por módulo.</div>
+          </div>
+
           <table class="data-table">
             <thead><tr><th>Rol</th><th>Acceso</th><th>Escritura</th></tr></thead>
             <tbody>
@@ -554,63 +619,13 @@
             </div>
           </div>
 
-          <div class="note warn"><strong>La sesión expira a las 12 horas.</strong> Las contraseñas se almacenan localmente (demo); en producción se migran a Supabase Auth con hash.</div>
+          <div class="note warn"><strong>La sesión expira a las 12 horas.</strong> Las contraseñas se almacenan localmente (demo); en producción se migran a un sistema de autenticación seguro con hash.</div>
         </section>
 
-        <!-- 11. Supabase -->
+        <!-- 11. Reglas -->
         <section class="manual-section" id="sec-11">
           <div class="section-head">
-            <span class="section-kicker"><span class="num">11</span> Configuración Supabase</span>
-            <h1 class="section-title">Sincronización opcional en la nube</h1>
-            <p class="section-sub">Supabase es opcional. La aplicación funciona completamente en local con <code>localStorage</code> y archivos en Data URL.</p>
-          </div>
-
-          <div class="step-card">
-            <div class="step-head"><span class="step-badge">1</span><h2 class="step-title">Conectar un proyecto real</h2></div>
-            <div class="step-body">
-              <ul class="step-list">
-                <li><span class="ord">1</span><span class="txt">Crea un proyecto en Supabase.</span></li>
-                <li><span class="ord">2</span><span class="txt">Ejecuta <code>sql/supabase_schema.sql</code> en tu proyecto (crea tablas, buckets, triggers, índices y políticas RLS).</span></li>
-                <li><span class="ord">3</span><span class="txt">En ENVIA ERP, ve a <b>Configuración Supabase</b> e ingresa la URL y la <code>anon key</code>.</span></li>
-                <li><span class="ord">4</span><span class="txt">Usa los botones de <b>Sincronizar</b> o <b>Pull</b> para subir/bajar datos.</span></li>
-              </ul>
-            </div>
-          </div>
-
-          <div class="note"><strong>Buckets obligatorios:</strong> <code>documentos-clientes</code>, <code>documentos-conductores</code>, <code>fotos-vehiculos</code>.</div>
-          <div class="note warn"><strong>RLS de demostración:</strong> las políticas permiten <code>anon</code>; en producción restricción a usuarios autenticados y propietarios.</div>
-        </section>
-
-        <!-- 12. Respaldos -->
-        <section class="manual-section" id="sec-12">
-          <div class="section-head">
-            <span class="section-kicker"><span class="num">12</span> Respaldos y restauración</span>
-            <h1 class="section-title">Exportar e importar datos</h1>
-            <p class="section-sub">Los respaldos se exportan/importan en JSON y validan su estructura antes de restaurar.</p>
-          </div>
-
-          <div class="grid-2">
-            <div class="step-card">
-              <div class="step-head"><span class="step-badge">1</span><h2 class="step-title">Exportar respaldo</h2></div>
-              <div class="step-body">
-                Desde <b>Configuración</b> o <b>Usuarios</b>, usa la opción de exportar JSON. Se guarda toda la base de datos y los archivos subidos (como Data URL).
-              </div>
-            </div>
-            <div class="step-card">
-              <div class="step-head"><span class="step-badge">2</span><h2 class="step-title">Importar respaldo</h2></div>
-              <div class="step-body">
-                Selecciona el archivo JSON exportado previamente. La aplicación restaurará todos los datos (reemplaza la base actual).
-              </div>
-            </div>
-          </div>
-
-          <div class="note warn"><strong>Antes de importar:</strong> asegúrate de no perder datos importantes, ya que la importación reemplaza la base actual.</div>
-        </section>
-
-        <!-- 13. Reglas -->
-        <section class="manual-section" id="sec-13">
-          <div class="section-head">
-            <span class="section-kicker"><span class="num">13</span> Reglas de negocio</span>
+            <span class="section-kicker"><span class="num">11</span> Reglas de negocio</span>
             <h1 class="section-title">Reglas irrenunciables de ENVIA ERP</h1>
             <p class="section-sub">Estas reglas rigen toda operación y no se pueden saltar.</p>
           </div>
@@ -626,8 +641,8 @@
         </section>
 
         <div class="footer-manual">
-          ENVIA ERP · Manual de Usuario v1.1 · 04 de noviembre de 2026 · <br>
-          <strong>Moneda funcional:</strong> Bolívares (VES) · <strong>Tasa BCV:</strong> configurable · <strong>Auditoría:</strong> bitácora de cambios activada
+          ENVIA ERP · Manual de Usuario v1.3 · noviembre de 2026 · <br>
+          <strong>Moneda funcional:</strong> Bolívares (VES) · <strong>Tasa BCV:</strong> automática y solo lectura · <strong>Auditoría:</strong> bitácora de cambios activada
         </div>
       </main>
     </div>
@@ -641,9 +656,7 @@
       'use strict';
       var nav = document.getElementById('manual-nav');
       var sections = Array.prototype.slice.call(document.querySelectorAll('.manual-section'));
-      var list = document.getElementById('quick-index-list');
       var itemsHTML = '';
-      var indexHTML = '';
       var links = [];
 
       function buildLinks(){
@@ -654,10 +667,8 @@
           var label = (title ? title.textContent : id) || id;
           var num = kicker ? kicker.textContent.replace(/\D/g,'') : '';
           itemsHTML += '<a class="manual-item" href="#' + id + '"><span class="ico">' + (num ? num : '•') + '</span>' + label + '</a>';
-          indexHTML += '<li><a href="#' + id + '">' + label + '</a></li>';
         });
         nav.innerHTML = itemsHTML;
-        list.innerHTML = indexHTML;
         links = Array.prototype.slice.call(nav.querySelectorAll('a'));
       }
       buildLinks();
@@ -683,6 +694,8 @@
         if(pushHistory !== false){
           history.pushState(null, null, '#' + id);
         }
+        var main = document.querySelector('.manual-main');
+        if(main) main.scrollTop = 0;
         window.scrollTo({ top: 0, behavior: 'auto' });
       }
 
@@ -691,7 +704,7 @@
         return h || sections[0].id;
       }
 
-      // Clic en sidebar y índice rápido
+      // Clic en la navegación lateral
       function bindLink(link){
         link.addEventListener('click', function(e){
           e.preventDefault();
@@ -703,17 +716,15 @@
       }
       links.forEach(bindLink);
 
-      // Índice rápido (se reconstruye el innerHTML, hay que rebindear después)
-      function rebindQuickIndex(){
-        var qlinks = Array.prototype.slice.call(list.querySelectorAll('a'));
-        qlinks.forEach(bindLink);
-      }
-      // list se llena en buildLinks; rebindear tras un tick
-      setTimeout(rebindQuickIndex, 0);
-
       // Inicial según hash
       var initialId = getHashId();
       showSection(initialId, false);
+      // Al abrir un enlace directo (#sec-4), el navegador intenta hacer scroll al
+      // ancla y puede ocultar el encabezado. Lo devolvemos al inicio del panel.
+      setTimeout(function(){
+        var main = document.querySelector('.manual-main');
+        if(main) main.scrollTop = 0;
+      }, 0);
 
       // Escuchar cambios de hash (navegar hacia atrás/adelante)
       window.addEventListener('hashchange', function(){
