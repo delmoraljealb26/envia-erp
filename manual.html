@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0F1E36">
+  <title>ENVIA ERP · Manual de Usuario</title>
+  <link rel="icon" type="image/jpeg" href="imagen/WhatsApp%20Image%202026-11-03%20at%2010.49.04%20PM.jpeg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    /* =========================================================================
+       MANUAL DE USUARIO · identidad visual ENVIA (misma tipografía y colores)
+       ========================================================================= */
+    :root {
+      --manual-max: 1100px;
+    }
+    body.on-manual { background: #F5F7FA; }
+    .manual-shell { display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* Topbar del manual */
+    .manual-topbar {
+      height: 64px;
+      background: #0F1E36;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      box-shadow: 0 2px 12px rgba(2,8,18,.12);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .manual-brand { display: flex; align-items: center; gap: 12px; font-family: var(--font-head); font-weight: 800; font-size: 20px; letter-spacing: -.03em; }
+    .manual-brand img { height: 36px; width: auto; border-radius: 6px; }
+    .manual-brand span { color: #fff; }
+    .manual-brand em { font-style: normal; color: var(--orange-2); font-weight: 600; }
+    .manual-actions { display: flex; align-items: center; gap: 12px; }
+    .btn-erp { background: var(--orange); color: #fff; border: 0; border-radius: 10px; padding: 8px 16px; font-weight: 700; font-size: 13px; cursor: pointer; box-shadow: 0 8px 20px rgba(240,90,36,.3); }
+    .btn-erp:hover { background: #FF7A00; transform: translateY(-1px); }
+
+    /* Layout sidebar + contenido */
+    .manual-body { display: flex; flex: 1; overflow: hidden; }
+    .manual-sidebar {
+      width: 280px;
+      background: #0F1E36;
+      color: #C9D3E1;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid rgba(255,255,255,.06);
+      flex-shrink: 0;
+    }
+    .manual-sidebar-head { padding: 24px 20px 16px; border-bottom: 1px solid rgba(255,255,255,.06); }
+    .manual-sidebar-head h3 { color: #fff; font-size: 15px; margin: 0 0 6px; font-family: var(--font-head); }
+    .manual-sidebar-head p { font-size: 11.5px; color: #8FA6C7; margin: 0; line-height: 1.5; }
+    .manual-search { padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,.06); }
+    .manual-search input { width: 100%; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); border-radius: 10px; color: #fff; padding: 9px 14px; font-size: 13px; }
+    .manual-search input::placeholder { color: #8FA6C7; }
+    .manual-nav { flex: 1; overflow-y: auto; padding: 16px 0; }
+    .manual-nav-section { padding: 0 18px 6px; font-size: 10px; letter-spacing: 1.6px; text-transform: uppercase; font-weight: 700; color: #6880A0; margin-top: 14px; }
+    .manual-nav-section:first-child { margin-top: 0; }
+    .manual-item { display: flex; align-items: center; gap: 12px; padding: 10px 18px; color: #C9D3E1; text-decoration: none; border-radius: 10px; font-size: 13.5px; font-weight: 500; transition: var(--fast); cursor: pointer; border: 1px solid transparent; margin: 0 12px 6px; }
+    .manual-item:hover { background: rgba(255,255,255,.06); color: #fff; border-color: rgba(240,90,36,.35); }
+    .manual-item.active { background: rgba(240,90,36,.12); color: #fff; border-color: var(--orange); }
+    .manual-item .ico { width: 24px; display: grid; place-items: center; color: #7F96B5; }
+    .manual-item.active .ico { color: var(--orange-2); }
+    .manual-item svg { width: 18px; height: 18px; }
+
+    /* Contenido principal */
+    .manual-main { flex: 1; overflow-y: auto; background: #F5F7FA; padding: 32px 40px 60px; }
+    @media (max-width: 900px) {
+      .manual-sidebar { display: none; }
+      .manual-main { padding: 20px 16px 60px; }
+    }
+
+    /* Secciones del manual */
+    .manual-section { display: none; max-width: var(--manual-max); margin: 0 auto; }
+    .manual-section.active { display: block; animation: fadeIn .35s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    .section-head { margin-bottom: 28px; }
+    .section-kicker { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; color: var(--orange); margin-bottom: 10px; }
+    .section-kicker .num { background: var(--orange); color: #fff; border-radius: 6px; padding: 2px 9px; font-size: 12px; }
+    .section-title { font-family: var(--font-head); font-size: 30px; font-weight: 800; letter-spacing: -.04em; color: #0F1E36; margin: 0 0 10px; line-height: 1.15; }
+    .section-sub { color: #5B6B82; font-size: 15px; line-height: 1.6; margin: 0; max-width: 720px; }
+
+    .step-card { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 24px; margin-bottom: 18px; box-shadow: 0 4px 14px rgba(2,8,18,.04); }
+    .step-head { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; flex-wrap: wrap; }
+    .step-badge { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(100deg, var(--orange), #FF7A00); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 15px; flex: 0 0 auto; }
+    .step-title { font-size: 18px; font-weight: 700; color: #0F1E36; margin: 0; }
+    .step-meta { margin-left: auto; font-size: 12px; color: #7D93B2; }
+    .step-body { color: #37475F; font-size: 14.5px; line-height: 1.7; }
+
+    .step-list { list-style: none; padding: 0; margin: 14px 0 0; }
+    .step-list li { display: flex; gap: 14px; margin-bottom: 12px; align-items: flex-start; }
+    .step-list .ord { width: 22px; height: 22px; border-radius: 50%; background: #E5E9F0; color: var(--navy); font-weight: 800; font-size: 13px; display: grid; place-items: center; flex: 0 0 auto; }
+    .step-list .txt { font-size: 14px; color: #37475F; line-height: 1.6; }
+
+    .note { background: #FFF7EC; border-left: 4px solid var(--orange-2); padding: 14px 18px; border-radius: 0 10px 10px 0; margin: 16px 0; font-size: 13.5px; color: #7A4D12; }
+    .note.warn { background: #FFF3F3; border-left-color: #FF6B6B; color: #9F2C2C; }
+    .note.info { background: #EEF6FF; border-left-color: #005FFF; color: #0A3D6B; }
+    .note strong { color: inherit; }
+
+    .img-ref { margin: 16px 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff; }
+    .img-ref img { width: 100%; height: auto; display: block; }
+    .img-cap { padding: 10px 14px; font-size: 12px; color: #7D93B2; border-top: 1px solid var(--line); text-align: center; }
+
+    table.data-table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 16px 0; }
+    table.data-table th { background: #F5F7FA; color: #5B6B82; font-weight: 700; text-align: left; padding: 12px 14px; border-bottom: 2px solid var(--line); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+    table.data-table td { padding: 12px 14px; border-bottom: 1px solid var(--line); color: #37475F; vertical-align: top; }
+    table.data-table tr:last-child td { border-bottom: 0; }
+    table.data-table tr:hover { background: #FAFCFF; }
+
+    .chip { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 700; margin: 2px 4px 2px 0; }
+    .chip.navy { background: #0F1E36; color: #fff; }
+    .chip.orange { background: var(--orange-2); color: #fff; }
+    .chip.blue { background: #005FFF; color: #fff; }
+    .chip.yellow { background: #FFD200; color: #4A3800; }
+
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .back-top { position: fixed; right: 24px; bottom: 24px; background: var(--orange); color: #fff; border: 0; border-radius: 50%; width: 52px; height: 52px; display: grid; place-items: center; cursor: pointer; box-shadow: 0 12px 26px rgba(240,90,36,.35); z-index: 60; }
+    .back-top:hover { background: #FF7A00; }
+
+    /* Índice rápido */
+    .quick-index { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 22px; margin-bottom: 24px; box-shadow: 0 4px 14px rgba(2,8,18,.04); }
+    .quick-index h4 { margin: 0 0 14px; font-size: 15px; color: #0F1E36; font-weight: 700; }
+    .quick-index ul { list-style: none; padding: 0; margin: 0; columns: 2; column-gap: 24px; }
+    .quick-index li { margin-bottom: 8px; font-size: 14px; color: #37475F; }
+    .quick-index a { color: #005FFF; text-decoration: none; font-weight: 600; }
+    .quick-index a:hover { text-decoration: underline; }
+    @media (max-width: 700px) { .quick-index ul { columns: 1; } }
+
+    .footer-manual { border-top: 1px solid var(--line); color: #7D93B2; font-size: 12px; padding: 26px 40px; text-align: center; margin-top: 40px; }
+    @media (max-width: 900px) { .footer-manual { padding: 20px 16px; } }
+  </style>
+</head>
+<body class="on-manual">
+
+  <div class="manual-shell">
+    <!-- Topbar -->
+    <header class="manual-topbar">
+      <div class="manual-brand">
+        <img src="imagen/WhatsApp%20Image%202026-11-03%20at%2010.49.04%20PM.jpeg" alt="ENVIA">
+        <span>ENVIA ERP</span><em> · Manual de Usuario</em>
+      </div>
+      <div class="manual-actions">
+        <a href="index.html" class="btn-erp">← Volver al ERP</a>
+      </div>
+    </header>
+
+    <div class="manual-body">
+      <!-- Sidebar de navegación del manual -->
+      <aside class="manual-sidebar">
+        <div class="manual-sidebar-head">
+          <h3>Contenido del Manual</h3>
+          <p>Guía paso a paso para operar ENVIA ERP: clientes, conductores, servicios, contabilidad, tributos y cuentas por pagar.</p>
+        </div>
+        <div class="manual-search">
+          <input type="text" id="manual-search" placeholder="Buscar en el manual...">
+        </div>
+        <nav class="manual-nav" id="manual-nav">
+          <!-- secciones inyectadas por JS -->
+        </nav>
+      </aside>
+
+      <!-- Contenido principal -->
+      <main class="manual-main">
+        <div class="quick-index">
+          <h4>Ir a sección</h4>
+          <ul id="quick-index-list"></ul>
+        </div>
+
+        <!-- 1. Acceso -->
+        <section class="manual-section active" id="sec-1">
+          <div class="section-head">
+            <span class="section-kicker"><span class="num">01</span> Acceso al sistema</span>
+            <h1 class="section-title">Cómo iniciar sesión en ENVIA ERP</h1>
+            <p class="section-sub">ENVIA ERP se abre directamente desde <code>index.html</code> en Chrome, sin servidor y sin conexión a internet. La sesión dura 12 horas.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head">
+              <span class="step-badge">1</span>
+              <h2 class="step-title">Abrir la aplicación</h2>
+              <span class="step-meta">Sin login previo</span>
+            </div>
+            <div class="step-body">Haz doble clic en <code>index.html</code> o arrástralo a una ventana de Google Chrome. La aplicación carga en modo local (<code>file://</code>).</div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head">
+              <span class="step-badge">2</span>
+              <h2 class="step-title">Ingresar credenciales</h2>
+              <span class="step-meta">Usuario maestro</span>
+            </div>
+            <div class="step-body">
+              En la pantalla de bienvenida escribe:
+              <ul class="step-list">
+                <li><span class="ord">1</span><span class="txt"><b>Usuario:</b> ENVIA</span></li>
+                <li><span class="ord">2</span><span class="txt"><b>Clave de acceso:</b> 123456789</span></li>
+              </ul>
+              O presiona el botón <b>“Usar”</b> bajo <i>Credenciales maestras</i> para autocompletar. Luego presiona <b>Ingresar</b>.
+            </div>
+          </div>
+
+          <div class="img-ref">
+            <img src="imagen/manual/01-login.png" alt="Pantalla de login ENVIA ERP">
+            <div class="img-cap">Pantalla de acceso corporativo. Usuario ENVIA / 123456789, rol SuperAdmin.</div>
+          </div>
+
+          <div class="note info"><strong>¿Olvidaste la clave?</b> En esta versión demo las claves se gestionan localmente. Contacta al SuperAdmin para restablecer acceso.</div>
+        </section>
+
+        <!-- 2. Dashboard -->
+        <section class="manual-section" id="sec-2">
+          <div class="section-head">
+            <span class="section-kicker"><span class="num">02</span> Dashboard ejecutivo</span>
+            <h1 class="section-title">Panel de control y KPIs</h1>
+            <p class="section-sub">Resumen de ingresos, servicios, conductores y cuentas por pagar. Todos los montos contables se expresan en Bolívares (VES) usando la tasa BCV configurada.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head">
+              <span class="step-badge">1</span>
+              <h2 class="step-title">Ingresar al Dashboard</h2>
+              <span class="step-meta">Menú lateral → Dashboard</span>
+            </div>
+            <div class="step-body">Al iniciar sesión el sistema abre automáticamente el Dashboard. Aquí ves el resumen ejecutivo del día.</div>
+          </div>
+
+          <div class="grid-2">
+            <div class="step-card">
+              <div class="step-head"><span class="step-badge">2</span><h2 class="step-title">KPIs principales</h2></div>
+              <div class="step-body">
+                <ul class="step-list">
+                  <li><span class="ord">•</span><span class="txt">Ingresos por carreras (USD y VES)</span></li>
+                  <li><span class="ord">•</span><span class="txt">Ingresos por encomiendas (USD y VES)</span></li>
+                  <li><span class="ord">•</span><span class="txt">Comisión neta ENVIA</span></li>
+                  <li><span class="ord">•</span><span class="txt">Servicios completados</span></li>
+                  <li><span class="ord">•</span><span class="txt">Conductores activos</span></li>
+                  <li><span class="ord">•</span><span class="txt">Cuentas por pagar pendientes</span></li>
+                </ul>
+              </div>
+            </div>
+            <div class="step-card">
+              <div class="step-head"><span class="step-badge">3</span><h2 class="step-title">Gráficos y tablas</h2></div>
+              <div class="step-body">
+                <ul class="step-list">
+                  <li><span class="ord">•</span><span class="txt"><i>Traslados vs. Delivery</i>: distribución de ingresos por línea de negocio.</span></li>
+                  <li><span class="ord">•</span><span class="txt"><i>Métodos de pago</i>: participación de Pago Móvil, Wallet, Efectivo USD, Zelle y Tarjeta.</span></li>
+                  <li><span class="ord">•</span><span class="txt"><i>Próximos vencimientos</i>: facturas de proveedores por pagar.</span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="img-ref">
+            <img src="imagen/manual/02-dashboard.png" alt="Dashboard ENVIA ERP">
+            <div class="img-cap">Dashboard con KPIs, gráficos de dona y tabla de vencimientos próximos.</div>
+          </div>
+          <div class="note"><strong>Tasa BCV:</strong> se muestra en la barra superior. Se edita desde <a href="#sec-7">Tributos &amp; BCV</a>.</div>
+        </section>
+
+        <!-- 3. Clientes -->
+        <section class="manual-section" id="sec-3">
+          <div class="section-head">
+            <span class="section-kicker"><span class="num">03</span> Maestro de Clientes</span>
+            <h1 class="section-title">Clientes de ENVIA</h1>
+            <p class="section-sub">El cliente es la clave primaria de facturación. Su identificador es la Cédula / RIF, formato <code>V-12345678</code>, <code>E-12345678</code> o <code>J-123456789</code>.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">1</span><h2 class="step-title">Crear un cliente</h2></div>
+            <div class="step-body">
+              <ul class="step-list">
+                <li><span class="ord">1</span><span class="txt">Ve a <b>Maestros → Clientes</b> y presiona <b>Nuevo cliente</b>.</span></li>
+                <li><span class="ord">2</span><span class="txt">Completa Cédula/RIF, nombres, apellidos, teléfono, correo y dirección.</span></li>
+                <li><span class="ord">3</span><span class="txt">Define el estatus (Activo, Suspendido, Pendiente de Verificación, Corporativo).</span></li>
+                <li><span class="ord">4</span><span class="txt">Opcional: saldo Wallet en USD y VES.</span></li>
+                <li><span class="ord">5</span><span class="txt">Presiona <b>Guardar</b>.</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">2</span><h2 class="step-title">Editar un cliente</h2></div>
+            <div class="step-body">
+              <ul class="step-list">
+                <li><span class="ord">1</span><span class="txt">En la lista de clientes, haz clic sobre el nombre del cliente.</span></li>
+                <li><span class="ord">2</span><span class="txt">Modifica los campos deseados (la Cédula/RIF no se puede cambiar una vez creado).</span></li>
+                <li><span class="ord">3</span><span class="txt">Presiona <b>Guardar</b>.</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="note warn"><strong>No se puede eliminar</strong> un cliente que tenga servicios asociados. Primero debe reasignar o eliminar esos servicios.</div>
+          <table class="data-table">
+            <thead><tr><th>Formato</th><th>Ejemplo</th><th>Tipo</th></tr></thead>
+            <tbody>
+              <tr><td>Venezolano</td><td class="mono">V-12345678</td><td>Persona natural</td></tr>
+              <tr><td>Extranjero</td><td class="mono">E-12345678</td><td>Extranjero con cédula</td></tr>
+              <tr><td>Jurídico</td><td class="mono">J-123456789</td><td>Empresa / persona jurídica</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- 4. Conductores -->
+        <section class="manual-section" id="sec-4">
+          <div class="section-head">
+            <span class="section-kicker"><span class="num">04</span> Conductores y Flota</span>
+            <h1 class="section-title">Aliados operativos y vehículos</h1>
+            <p class="section-sub">Los conductores reciben liquidaciones por los servicios realizados. Su identificador es la Cédula / RIF.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">1</span><h2 class="step-title">Registrar un conductor</h2></div>
+            <div class="step-body">
+              <ul class="step-list">
+                <li><span class="ord">1</span><span class="txt">Ve a <b>Maestros → Conductores y Flota</b> → <b>Nuevo conductor</b>.</span></li>
+                <li><span class="ord">2</span><span class="txt">Ingresa cédula/RIF, nombres, apellidos, teléfono y correo.</span></li>
+                <li><span class="ord">3</span><span class="txt">Define tipo de servicio, placa, marca, modelo, año y color del vehículo.</span></li>
+                <li><span class="ord">4</span><span class="txt">Configura banco, teléfono y cédula de Pago Móvil, y cuenta bancaria.</span></li>
+                <li><span class="ord">5</span><span class="txt">Asigna el porcentaje de comisión (ej. 20%).</span></li>
+                <li><span class="ord">6</span><span class="txt">Presiona <b>Guardar</b>.</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">2</span><h2 class="step-title">Estado de documentos</h2></div>
+            <div class="step-body">
+              Cada documento tiene estados: <b>Pendiente</b>, <b>Aprobado</b> o <b>Rechazado</b>. Cuando todos estén aprobados (cédula, RIF, licencia, circulación), el conductor puede pasar de <i>En Revisión Documental</i> a <b>Activo / Disponible</b>.
+            </div>
+          </div>
+
+          <div class="note warn"><strong>No se puede eliminar</strong> un conductor que tenga servicios asociados.</div>
+        </section>
+
+        <!-- 5. Servicios -->
+        <section class="manual-section" id="sec-5">
+          <div class="section-head">
+            <span class="section-kicker"><span class="num">05</span> Servicios</span>
+            <h1 class="section-title">Carreras y Encomiendas</h1>
+            <p class="section-sub">Cada servicio genera automáticamente asiento de ingreso (base + IVA + IGTF en VES), liquidación al conductor e incremento de contadores.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">1</span><h2 class="step-title">Crear un servicio</h2></div>
+            <div class="step-body">
+              <ul class="step-list">
+                <li><span class="ord">1</span><span class="txt">Ve a <b>Operación → Servicios</b> → <b>Nuevo servicio</b>.</span></li>
+                <li><span class="ord">2</span><span class="txt">Selecciona tipo: <b>Carrera</b> o <b>Encomienda</b>.</span></li>
+                <li><span class="ord">3</span><span class="txt">Elige cliente y conductor (ambos deben existir en sus maestros).</span></li>
+                <li><span class="ord">4</span><span class="txt">Ingresa origen, destino, kilómetros y duración en minutos.</span></li>
+                <li><span class="ord">5</span><span class="txt">Ingresa la base en USD y elige el IVA % (16 general, 8 reducido, 0 exento).</span></li>
+                <li><span class="ord">6</span><span class="txt">El IGTF (3%) se aplica automático para Efectivo USD y Zelle.</span></li>
+                <li><span class="ord">7</span><span class="txt">Elige método de pago e ingresa número de factura y control.</span></li>
+                <li><span class="ord">8</span><span class="txt">Presiona <b>Guardar</b>.</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="note info"><strong>Partida doble:</strong> el asiento generado cumple DEBE = HABER (tolerancia máxima 0,01 VES). Si hay diferencia de redondeo, se ajusta en la línea de mayor monto.</div>
+        </section>
+
+        <!-- 6. Contabilidad -->
+        <section class="manual-section" id="sec-6">
+          <div class="section-head">
+            <span class="section-kicker"><span class="num">06</span> Contabilidad</span>
+            <h1 class="section-title">Asientos, libros y estados financieros</h1>
+            <p class="section-sub">ENVIA ERP lleva contabilidad de partida doble en <b>Bolívares (VES)</b>. El catálogo de cuentas sigue codificación jerárquica: 1 Activos · 2 Pasivos · 3 Patrimonio · 4 Ingresos · 5 Costos · 6 Gastos.</p>
+          </div>
+
+          <div class="grid-2">
+            <div class="step-card">
+              <div class="step-head"><span class="step-badge">1</span><h2 class="step-title">Plan de cuentas</h2></div>
+              <div class="step-body">
+                Solo las cuentas de nivel <b>Cuenta de Movimiento</b> reciben asientos. Una cuenta con subcuentas o movimientos no se puede eliminar.
+              </div>
+            </div>
+            <div class="step-card">
+              <div class="step-head"><span class="step-badge">2</span><h2 class="step-title">Libros disponibles</h2></div>
+              <div class="step-body">
+                Desde <b>Contabilidad</b> puedes consultar e imprimir:
+                <ul class="step-list">
+                  <li><span class="ord">•</span><span class="txt">Libro Diario</span></li>
+                  <li><span class="ord">•</span><span class="txt">Libro Mayor</span></li>
+                  <li><span class="ord">•</span><span class="txt">Balance de Comprobación</span></li>
+                  <li><span class="ord">•</span><span class="txt">Estado de Resultados</span></li>
+                  <li><span class="ord">•</span><span class="txt">Balance General</span></li>
+                  <li><span class="ord">•</span><span class="txt">Libro de Ventas (SENIAT)</span></li>
+                  <li><span class="ord">•</span><span class="txt">Libro de Compras (SENIAT)</span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="note"><strong>Todos los reportes</strong> se pueden imprimir y exportar a CSV/Excel (UTF-8 con BOM).</div>
+        </section>
+
+        <!-- 7. Tributos -->
+        <section class="manual-section" id="sec-7">
+          <div class="section-head">
+            <span class="section-kicker"><span class="num">07</span> Tributos y BCV</span>
+            <h1 class="section-title">IVA, IGTF, ISLR y tasa BCV</h1>
+            <p class="section-sub">Desde <b>Tributos &amp; BCV</b> configuras los parámetros fiscales. Nunca se hardcodean en la lógica; son editables.</p>
+          </div>
+
+          <table class="data-table">
+            <thead><tr><th>Parámetro</th><th>Valor por defecto</th><th>Nota</th></tr></thead>
+            <tbody>
+              <tr><td>Tasa BCV (Bs / USD)</td><td>Editable</td><td>Conversión USD → VES</td></tr>
+              <tr><td>IVA general</td><td>16%</td><td>Operaciones normales</td></tr>
+              <tr><td>IVA reducido</td><td>8%</td><td>Actividades específicas</td></tr>
+              <tr><td>IVA exento</td><td>0%</td><td>Operaciones exentas</td></tr>
+              <tr><td>IGTF</td><td>3%</td><td>Pagos en divisas o criptoactivos</td></tr>
+              <tr><td>Unidad Tributaria (UT)</td><td>90 VES</td><td>Base para sustraendo ISLR</td></tr>
+            </tbody>
+          </table>
+
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">1</span><h2 class="step-title">Retención de IVA</h2></div>
+            <div class="step-body">
+              <ul class="step-list">
+                <li><span class="ord">•</span><span class="txt">75% para personas naturales residentes.</span></li>
+                <li><span class="ord">•</span><span class="txt">100% para personas jurídicas domiciliadas y no domiciliadas.</span></li>
+                <li><span class="ord">•</span><span class="txt">Se calcula sobre el IVA facturado y se registra en Retenciones de IVA por Pagar.</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">2</span><h2 class="step-title">Retención ISLR (Decreto 1.808)</h2></div>
+            <div class="step-body">
+              <table class="data-table" style="margin: 10px 0;">
+                <thead><tr><th>Tipo</th><th>Tarifa</th><th>Sustraendo</th></tr></thead>
+                <tbody>
+                  <tr><td>PN_RES</td><td>3%</td><td>10 UT</td></tr>
+                  <tr><td>PJ_DOM</td><td>5%</td><td>0 UT</td></tr>
+                  <tr><td>PN_NORES / PJ_NODOM</td><td>34%</td><td>0 UT</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 8. Cuentas por Pagar -->
+        <section class="manual-section" id="sec-8">
+          <div class="section-head">
+            <span class="section-kicker"><span class="num">08</span> Cuentas por Pagar</span>
+            <h1 class="section-title">Proveedores, facturas y pagos</h1>
+            <p class="section-sub">Gestión de compras a proveedores con retenciones automáticas de IVA e ISLR.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">1</span><h2 class="step-title">Registrar un proveedor</h2></div>
+            <div class="step-body">
+              <ul class="step-list">
+                <li><span class="ord">1</span><span class="txt">Ve a <b>Finanzas → Cuentas por Pagar</b> → <b>Proveedores</b>.</span></li>
+                <li><span class="ord">2</span><span class="txt">Ingresa RIF (clave primaria), razón social, dirección y contacto.</span></li>
+                <li><span class="ord">3</span><span class="txt">Define el porcentaje de retención de IVA (75% o 100%).</span></li>
+                <li><span class="ord">4</span><span class="txt">Presiona <b>Guardar</b>.</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">2</span><h2 class="step-title">Registrar una factura de compra</h2></div>
+            <div class="step-body">
+              <ul class="step-list">
+                <li><span class="ord">1</span><span class="txt">Selecciona proveedor, número de factura, número de control, fechas y concepto.</span></li>
+                <li><span class="ord">2</span><span class="txt">El sistema calcula automáticamente IVA, IGTF, retención de IVA e ISLR.</span></li>
+                <li><span class="ord">3</span><span class="txt">Se genera el asiento de compra y el comprobante de retención (formato AAAAMM + 8 dígitos).</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">3</span><h2 class="step-title">Registrar un pago</h2></div>
+            <div class="step-body">
+              <ul class="step-list">
+                <li><span class="ord">1</span><span class="txt">En la lista de facturas, selecciona una pendiente y presiona <b>Pagar</b>.</span></li>
+                <li><span class="ord">2</span><span class="txt">Ingresa monto, método de pago y referencia.</span></li>
+                <li><span class="ord">3</span><span class="txt">El sistema actualiza el saldo y genera el asiento de pago.</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="note warn"><strong>No se puede eliminar</strong> una factura que tenga pagos registrados. Primero anula los pagos.</div>
+        </section>
+
+        <!-- 9. Auditoría -->
+        <section class="manual-section" id="sec-9">
+          <div class="section-head">
+            <span class="section-kicker"><span class="num">09</span> Bitácora de Auditoría</span>
+            <h1 class="section-title">Trazabilidad de cambios</h1>
+            <p class="section-sub">Cada vez que un usuario guarda o borra un registro, el sistema lo graba con nombre de usuario, fecha y hora.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">1</span><h2 class="step-title">Qué se registra</h2></div>
+            <div class="step-body">
+              En <b>Sistema → Bitácora de Auditoría</b> ves:
+              <ul class="step-list">
+                <li><span class="ord">•</span><span class="txt"><b>Usuario</b> que hizo el cambio</span></li>
+                <li><span class="ord">•</span><span class="txt"><b>Fecha y hora</b> exacta de la modificación</span></li>
+                <li><span class="ord">•</span><span class="txt"><b>Acción</b>: crear, actualizar, eliminar, pagar, liquidar, registrar asiento, etc.</span></li>
+                <li><span class="ord">•</span><span class="txt"><b>Módulo</b> afectado (clientes, servicios, CxP, usuarios, tributos, etc.)</span></li>
+                <li><span class="ord">•</span><span class="txt"><b>Detalle</b> de lo que cambió</span></li>
+                <li><span class="ord">•</span><span class="txt"><b>Referencia</b> (ID del registro modificado)</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">2</span><h2 class="step-title">Filtros y exportación</h2></div>
+            <div class="step-body">
+              Puedes filtrar por usuario, acción o módulo, y buscar por texto. Los resultados se exportan a CSV con el botón <b>Exportar CSV</b>. Solo el <b>SuperAdmin</b> puede limpiar toda la bitácora.
+            </div>
+          </div>
+
+          <div class="note info"><strong>Propósito:</strong> garantiza trazabilidad total para auditoría interna y fiscal (SENIAT). Ningún cambio queda sin registro de responsable.</div>
+        </section>
+
+        <!-- 10. Usuarios -->
+        <section class="manual-section" id="sec-10">
+          <div class="section-head">
+            <span class="section-kicker"><span class="num">10</span> Usuarios y RBAC</span>
+            <h1 class="section-title">Roles, accesos y seguridad</h1>
+            <p class="section-sub">ENVIA ERP tiene 4 roles exactos. El usuario maestro <code>ENVIA</code> es SuperAdmin y no se puede eliminar ni cambiar de rol.</p>
+          </div>
+
+          <table class="data-table">
+            <thead><tr><th>Rol</th><th>Acceso</th><th>Escritura</th></tr></thead>
+            <tbody>
+              <tr><td>SuperAdmin</td><td>Todos los módulos</td><td>Sí</td></tr>
+              <tr><td>Contador / Fiscal</td><td>Dashboard, servicios, clientes, conductores, contabilidad, fiscal, CxP</td><td>Sí</td></tr>
+              <tr><td>Tesorero / CxP</td><td>Dashboard, servicios, clientes, conductores, CxP, fiscal</td><td>Sí</td></tr>
+              <tr><td>Auditor / Operaciones</td><td>Dashboard, servicios, clientes, conductores, contabilidad, fiscal, CxP</td><td><b>No</b> (solo lectura)</td></tr>
+            </tbody>
+          </table>
+
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">1</span><h2 class="step-title">Crear un usuario</h2></div>
+            <div class="step-body">
+              <ul class="step-list">
+                <li><span class="ord">1</span><span class="txt">Ve a <b>Sistema → Usuarios del ERP</b> → <b>Nuevo usuario</b>.</span></li>
+                <li><span class="ord">2</span><span class="txt">Asigna usuario, clave, nombre, correo y rol.</span></li>
+                <li><span class="ord">3</span><span class="txt">Presiona <b>Guardar</b>.</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="note warn"><strong>La sesión expira a las 12 horas.</strong> Las contraseñas se almacenan localmente (demo); en producción se migran a Supabase Auth con hash.</div>
+        </section>
+
+        <!-- 11. Supabase -->
+        <section class="manual-section" id="sec-11">
+          <div class="section-head">
+            <span class="section-kicker"><span class="num">11</span> Configuración Supabase</span>
+            <h1 class="section-title">Sincronización opcional en la nube</h1>
+            <p class="section-sub">Supabase es opcional. La aplicación funciona completamente en local con <code>localStorage</code> y archivos en Data URL.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">1</span><h2 class="step-title">Conectar un proyecto real</h2></div>
+            <div class="step-body">
+              <ul class="step-list">
+                <li><span class="ord">1</span><span class="txt">Crea un proyecto en Supabase.</span></li>
+                <li><span class="ord">2</span><span class="txt">Ejecuta <code>sql/supabase_schema.sql</code> en tu proyecto (crea tablas, buckets, triggers, índices y políticas RLS).</span></li>
+                <li><span class="ord">3</span><span class="txt">En ENVIA ERP, ve a <b>Configuración Supabase</b> e ingresa la URL y la <code>anon key</code>.</span></li>
+                <li><span class="ord">4</span><span class="txt">Usa los botones de <b>Sincronizar</b> o <b>Pull</b> para subir/bajar datos.</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="note"><strong>Buckets obligatorios:</strong> <code>documentos-clientes</code>, <code>documentos-conductores</code>, <code>fotos-vehiculos</code>.</div>
+          <div class="note warn"><strong>RLS de demostración:</strong> las políticas permiten <code>anon</code>; en producción restricción a usuarios autenticados y propietarios.</div>
+        </section>
+
+        <!-- 12. Respaldos -->
+        <section class="manual-section" id="sec-12">
+          <div class="section-head">
+            <span class="section-kicker"><span class="num">12</span> Respaldos y restauración</span>
+            <h1 class="section-title">Exportar e importar datos</h1>
+            <p class="section-sub">Los respaldos se exportan/importan en JSON y validan su estructura antes de restaurar.</p>
+          </div>
+
+          <div class="grid-2">
+            <div class="step-card">
+              <div class="step-head"><span class="step-badge">1</span><h2 class="step-title">Exportar respaldo</h2></div>
+              <div class="step-body">
+                Desde <b>Configuración</b> o <b>Usuarios</b>, usa la opción de exportar JSON. Se guarda toda la base de datos y los archivos subidos (como Data URL).
+              </div>
+            </div>
+            <div class="step-card">
+              <div class="step-head"><span class="step-badge">2</span><h2 class="step-title">Importar respaldo</h2></div>
+              <div class="step-body">
+                Selecciona el archivo JSON exportado previamente. La aplicación restaurará todos los datos (reemplaza la base actual).
+              </div>
+            </div>
+          </div>
+
+          <div class="note warn"><strong>Antes de importar:</strong> asegúrate de no perder datos importantes, ya que la importación reemplaza la base actual.</div>
+        </section>
+
+        <!-- 13. Reglas -->
+        <section class="manual-section" id="sec-13">
+          <div class="section-head">
+            <span class="section-kicker"><span class="num">13</span> Reglas de negocio</span>
+            <h1 class="section-title">Reglas irrenunciables de ENVIA ERP</h1>
+            <p class="section-sub">Estas reglas rigen toda operación y no se pueden saltar.</p>
+          </div>
+
+          <ul class="step-list">
+            <li><span class="ord">1</span><span class="txt"><b>Partida doble:</b> todo asiento debe cumplir DEBE = HABER (tolerancia 0,01 VES).</span></li>
+            <li><span class="ord">2</span><span class="txt"><b>Moneda funcional:</b> VES. Los montos operativos se capturan en USD y se convierten con la tasa BCV.</span></li>
+            <li><span class="ord">3</span><span class="txt"><b>Claves primarias:</b> clientes y conductores usan <code>cedula_rif</code>; proveedores usan <code>rif</code>. Sin duplicados.</span></li>
+            <li><span class="ord">4</span><span class="txt"><b>No eliminar con dependencias:</b> no se puede borrar cliente con servicios, ni proveedor con facturas, ni cuenta con movimientos.</span></li>
+            <li><span class="ord">5</span><span class="txt"><b>Documentos:</b> ruta <code>/{bucket}/{cedula_rif}/{tipoDocumento}_{timestamp}.{ext}</code>, máximo 10 MB, tipos PDF/JPG/PNG/WEBP.</span></li>
+            <li><span class="ord">6</span><span class="txt"><b>Usuario maestro:</b> <code>ENVIA</code> / <code>123456789</code>, rol SuperAdmin, no editable.</span></li>
+          </ul>
+        </section>
+
+        <div class="footer-manual">
+          ENVIA ERP · Manual de Usuario v1.1 · 04 de noviembre de 2026 · <br>
+          <strong>Moneda funcional:</strong> Bolívares (VES) · <strong>Tasa BCV:</strong> configurable · <strong>Auditoría:</strong> bitácora de cambios activada
+        </div>
+      </main>
+    </div>
+
+    <button class="back-top" id="back-top" title="Subir">▲</button>
+
+  </div>
+
+  <script>
+    (function(){
+      'use strict';
+      var nav = document.getElementById('manual-nav');
+      var sections = Array.prototype.slice.call(document.querySelectorAll('.manual-section'));
+      var list = document.getElementById('quick-index-list');
+      var itemsHTML = '';
+      var indexHTML = '';
+      var links = [];
+
+      function buildLinks(){
+        sections.forEach(function(sec){
+          var id = sec.id;
+          var kicker = sec.querySelector('.section-kicker');
+          var title = sec.querySelector('.section-title');
+          var label = (title ? title.textContent : id) || id;
+          var num = kicker ? kicker.textContent.replace(/\D/g,'') : '';
+          itemsHTML += '<a class="manual-item" href="#' + id + '"><span class="ico">' + (num ? num : '•') + '</span>' + label + '</a>';
+          indexHTML += '<li><a href="#' + id + '">' + label + '</a></li>';
+        });
+        nav.innerHTML = itemsHTML;
+        list.innerHTML = indexHTML;
+        links = Array.prototype.slice.call(nav.querySelectorAll('a'));
+      }
+      buildLinks();
+
+      function showSection(id, pushHistory){
+        if(!id) return;
+        sections.forEach(function(sec){
+          if(sec.id === id){
+            sec.classList.add('active');
+            sec.style.display = 'block';
+          } else {
+            sec.classList.remove('active');
+            sec.style.display = 'none';
+          }
+        });
+        links.forEach(function(l){
+          if(l.getAttribute('href') === '#' + id){
+            l.classList.add('active');
+          } else {
+            l.classList.remove('active');
+          }
+        });
+        if(pushHistory !== false){
+          history.pushState(null, null, '#' + id);
+        }
+        window.scrollTo({ top: 0, behavior: 'auto' });
+      }
+
+      function getHashId(){
+        var h = location.hash.replace(/^#/, '');
+        return h || sections[0].id;
+      }
+
+      // Clic en sidebar y índice rápido
+      function bindLink(link){
+        link.addEventListener('click', function(e){
+          e.preventDefault();
+          var href = link.getAttribute('href');
+          if(href && href.indexOf('#') === 0){
+            showSection(href.slice(1), true);
+          }
+        });
+      }
+      links.forEach(bindLink);
+
+      // Índice rápido (se reconstruye el innerHTML, hay que rebindear después)
+      function rebindQuickIndex(){
+        var qlinks = Array.prototype.slice.call(list.querySelectorAll('a'));
+        qlinks.forEach(bindLink);
+      }
+      // list se llena en buildLinks; rebindear tras un tick
+      setTimeout(rebindQuickIndex, 0);
+
+      // Inicial según hash
+      var initialId = getHashId();
+      showSection(initialId, false);
+
+      // Escuchar cambios de hash (navegar hacia atrás/adelante)
+      window.addEventListener('hashchange', function(){
+        showSection(getHashId(), false);
+      });
+
+      // Búsqueda en el manual: filtra ítems del nav y permite saltar a la sección
+      var search = document.getElementById('manual-search');
+      if(search){
+        search.addEventListener('input', function(){
+          var q = search.value.toLowerCase().trim();
+          links.forEach(function(link){
+            var secId = link.getAttribute('href').slice(1);
+            var sec = document.getElementById(secId);
+            var hay = q === '' ||
+              link.textContent.toLowerCase().indexOf(q) >= 0 ||
+              (sec ? (sec.textContent || '').toLowerCase().indexOf(q) >= 0 : false);
+            link.style.display = hay ? 'flex' : 'none';
+          });
+          // Si hay una sola coincidencia, opcionalmente resaltarla visualmente
+          if(q !== ''){
+            var visibles = links.filter(function(l){ return l.style.display !== 'none'; });
+            links.forEach(function(l){ l.classList.remove('active'); });
+            if(visibles.length === 1){
+              visibles[0].classList.add('active');
+            }
+          } else {
+            // restaurar activo actual
+            var activeSec = sections.find(function(s){ return s.classList.contains('active'); });
+            var curId = activeSec ? activeSec.id : sections[0].id;
+            var curLink = nav.querySelector('a[href="#' + curId + '"]');
+            if(curLink) curLink.classList.add('active');
+          }
+        });
+      }
+
+      // Botón subir
+      var btnTop = document.getElementById('back-top');
+      window.addEventListener('scroll', function(){
+        btnTop.style.display = window.scrollY > 300 ? 'block' : 'none';
+      });
+      btnTop.addEventListener('click', function(){
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      btnTop.style.display = 'none';
+    })();
+  </script>
+</body>
+</html>

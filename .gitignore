@@ -1,0 +1,18 @@
+# Dependencias
+node_modules/
+
+# Entorno y secretos
+.env
+.env.*
+!.env.example
+
+# Herramientas locales del agente
+opencode.exe
+.opencode/
+.agents/
+
+# Despliegue y sistema
+.vercel/
+.DS_Store
+Thumbs.db
+*.log
