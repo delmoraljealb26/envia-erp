@@ -1,7 +1,7 @@
 /* =========================================================================
-   ENVIA ERP · modules/settings.js
-   Configuración de Supabase, prueba de conexión, sincronización,
-   respaldos locales y estado del sistema.
+   ENVIA Technology C.A. · modules/settings.js
+   Configuración del sistema, Supabase, prueba de conexión, sincronización,
+   respaldos locales, estado del sistema y parámetros de mantenimiento.
    ========================================================================= */
 (function () {
   'use strict';
@@ -16,12 +16,17 @@
     ['drivers', 'Conductores', 'cedula_rif'],
     ['services', 'Servicios', 'id'],
     ['suppliers', 'Proveedores', 'rif'],
+    ['partners', 'Negocios asociados', 'rif'],
+    ['products', 'Productos tienda', 'sku'],
+    ['driverCharges', 'Financiamientos conductores', 'id'],
+    ['driverMovements', 'Movimientos wallet', 'id'],
     ['payables', 'Cuentas por pagar', 'id'],
     ['withholdings', 'Comprobantes de retención', 'id'],
     ['accounts', 'Plan de cuentas', 'codigo'],
     ['accountingRules', 'Reglas contables', 'evento'],
     ['entries', 'Asientos + líneas', 'id'],
-    ['users', 'Usuarios ERP', 'usuario']
+    ['users', 'Usuarios del sistema', 'usuario'],
+    ['systemParams', 'Parámetros del sistema', 'key']
   ];
 
   function bytes(n) {
@@ -47,8 +52,8 @@
       <div class="page-head">
         <div>
           <span class="eyebrow">Sistema · integración nativa con Supabase</span>
-          <h2 class="page-title">Configuración Supabase & Sincronización</h2>
-          <p class="page-sub">Conecta PostgreSQL + Storage o mantén el ERP en modo local con respaldo automático en el navegador.</p>
+          <h2 class="page-title">Configuración del Sistema & Sincronización</h2>
+          <p class="page-sub">Conecta PostgreSQL + Storage o mantén el sistema en modo local con respaldo automático en el navegador.</p>
         </div>
         <div class="page-actions">
           ${NS.reports.button('settings')}
@@ -120,6 +125,29 @@
         </div>` : ''}
       </section>
 
+      <section class="card">
+        <div class="card-head"><div><h3>Parámetros de mantenimiento del sistema</h3><p>Tarifas, comisiones por nivel, descuentos y beneficios parametrizables por módulo.</p></div>${NS.app.canAction('settings', 'parametros') ? `<button class="btn btn-primary btn-sm" id="params-new">${ui.icon('plus', 14)} Nuevo parámetro</button>` : ''}</div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Clave</th><th>Etiqueta</th><th>Módulo</th><th>Tipo</th><th class="num">Valor</th><th>Descripción</th><th class="actions-col">Acciones</th></tr></thead>
+            <tbody>
+              ${db.systemParams.length ? db.systemParams.map((p) => `<tr>
+                <td><span class="mono strong">${ui.esc(p.key)}</span></td>
+                <td>${ui.esc(p.label)}</td>
+                <td>${ui.badge(p.module, 'info')}</td>
+                <td>${ui.badge(p.tipo, 'info')}</td>
+                <td class="num"><strong>${p.tipo === 'porcentaje' ? p.value + '%' : p.tipo === 'monto' ? '$' + p.value : p.value}</strong></td>
+                <td>${ui.esc(p.descripcion || '—')}</td>
+                <td class="actions-col">
+                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn" data-edit-param="${ui.esc(p.key)}" title="Editar">${ui.icon('edit', 16)}</button>` : ''}
+                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn danger" data-del-param="${ui.esc(p.key)}" title="Eliminar">${ui.icon('trash', 16)}</button>` : ''}
+                </td>
+              </tr>`).join('') : `<tr><td colspan="7">${ui.empty('settings', 'Sin parámetros', 'Crea el primer parámetro de mantenimiento del sistema.', NS.app.canAction('settings', 'parametros') ? '<button class="btn btn-primary" id="params-empty-new">Nuevo parámetro</button>' : '')}</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <div class="dash-grid">
         <section class="card">
           <div class="card-head"><div><h3>Respaldo y restauración</h3><p>Exporta toda la base local + archivos</p></div></div>
@@ -139,7 +167,7 @@
         <section class="card">
           <div class="card-head"><div><h3>Información del sistema</h3><p>Parámetros y documentación</p></div></div>
           <div class="status-list">
-            <div class="status-row"><span>Versión</span><strong>ENVIA ERP 1.0.0</strong></div>
+            <div class="status-row"><span>Versión</span><strong>ENVIA Technology C.A. 1.5.0</strong></div>
             <div class="status-row"><span>Moneda funcional</span><strong>VES (Bolívares)</strong></div>
             <div class="status-row"><span>Tasa BCV</span><strong>${ui.bs(db.taxParams.bcvRate)} / USD</strong></div>
             <div class="status-row"><span>Unidad Tributaria</span><strong>${ui.bs(db.taxParams.ut)}</strong></div>
@@ -251,7 +279,69 @@
         NS.app.refresh(true);
       });
     });
+
+    /* Parámetros de mantenimiento */
+    const canParams = NS.app.canAction('settings', 'parametros');
+    const paramsNew = $('#params-new');
+    if (paramsNew) paramsNew.addEventListener('click', () => openParamForm());
+    const paramsEmptyNew = $('#params-empty-new');
+    if (paramsEmptyNew) paramsEmptyNew.addEventListener('click', () => openParamForm());
+    view.querySelectorAll('[data-edit-param]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); openParamForm(b.dataset.editParam); }));
+    view.querySelectorAll('[data-del-param]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); askDeleteParam(b.dataset.delParam); }));
+
+    function openParamForm(key) {
+      const p = key ? NS.store.systemParam(key) : null;
+      const overlay = ui.modal({
+        title: p ? 'Editar parámetro' : 'Nuevo parámetro',
+        eyebrow: 'Parámetros de mantenimiento',
+        subtitle: p ? `Clave: ${ui.esc(p.key)}` : 'Define un parámetro configurable para el sistema.',
+        size: 'sm',
+        body: `<form id="param-form" class="form-grid" autocomplete="off">
+          <label class="field"><span>Clave *</span><input name="key" value="${ui.esc(p ? p.key : '')}" placeholder="tarifa_plana_semanal_usd" ${p ? 'disabled' : ''} required></label>
+          <label class="field"><span>Etiqueta *</span><input name="label" value="${ui.esc(p ? p.label : '')}" placeholder="Tarifa plana semanal" required></label>
+          <label class="field"><span>Módulo</span><input name="module" value="${ui.esc(p ? p.module : 'sistema')}" placeholder="drivers"></label>
+          <label class="field"><span>Tipo *</span><select name="tipo">${['texto', 'monto', 'porcentaje', 'booleano', 'fecha'].map((t) => `<option value="${t}" ${(p && p.tipo) === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+          <label class="field"><span>Valor *</span><input name="value" value="${ui.esc(p ? p.value : '')}" placeholder="10"></label>
+          <label class="field field-full"><span>Descripción</span><textarea name="descripcion" rows="2" placeholder="Qué controla este parámetro...">${ui.esc(p ? p.descripcion : '')}</textarea></label>
+        </form>`,
+        footer: `<button class="btn btn-ghost" data-cancel>Cancelar</button><button class="btn btn-primary" id="param-save">${ui.icon('check', 15)} ${p ? 'Guardar' : 'Crear'}</button>`
+      });
+      overlay.querySelector('[data-cancel]').addEventListener('click', () => ui.closeModal(overlay));
+      overlay.querySelector('#param-save').addEventListener('click', () => {
+        const form = overlay.querySelector('#param-form');
+        if (!form.reportValidity()) return;
+        try {
+          NS.store.upsertSystemParam({
+            key: form.elements.key.value,
+            label: form.elements.label.value,
+            module: form.elements.module.value || 'sistema',
+            tipo: form.elements.tipo.value,
+            value: form.elements.value.value,
+            descripcion: form.elements.descripcion.value
+          });
+          ui.closeModal(overlay);
+          ui.toast(p ? 'Parámetro actualizado.' : 'Parámetro creado.', 'success');
+          NS.app.refresh(true);
+        } catch (e) { ui.toast(e.message, 'error'); }
+      });
+    }
+
+    function askDeleteParam(key) {
+      const p = NS.store.systemParam(key);
+      ui.confirm({
+        title: 'Eliminar parámetro',
+        message: `¿Eliminar el parámetro "${ui.esc(p ? p.label : key)}" (${ui.esc(key)})?`,
+        confirmText: 'Eliminar', danger: true
+      }).then((ok) => {
+        if (!ok) return;
+        try {
+          NS.store.deleteSystemParam(key);
+          ui.toast('Parámetro eliminado.', 'success');
+          NS.app.refresh(true);
+        } catch (e) { ui.toast(e.message, 'error'); }
+      });
+    }
   }
 
-  NS.modules.settings = { render };
+  NS.modules.settings = { render, openParamForm };
 })();

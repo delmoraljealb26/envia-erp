@@ -493,6 +493,22 @@ create table if not exists public.driver_movements (
 comment on table public.driver_movements is 'Historial de wallet del conductor: ganancias, comisiones, compras y liquidaciones.';
 
 -- ============================================================================
+--  13.3 PARÁMETROS DE MANTENIMIENTO DEL SISTEMA
+-- ============================================================================
+create table if not exists public.system_params (
+  key          text primary key check (key ~ '^[a-z0-9_]{3,40}$'),
+  label        text not null,
+  value        text not null default '',
+  tipo         text not null default 'texto' check (tipo in ('monto','porcentaje','texto','booleano','fecha')),
+  module       text not null default 'sistema',
+  descripcion  text,
+  created_at   timestamptz not null default timezone('utc', now()),
+  updated_at   timestamptz not null default timezone('utc', now())
+);
+comment on table public.system_params is 'Parámetros configurables por el administrador (tarifas, comisiones por nivel, descuentos, beneficios). Clave primaria: key.';
+comment on column public.system_params.value is 'Valor guardado como texto; se interpreta según tipo (monto/porcentaje/etc).';
+
+-- ============================================================================
 --  14. ÍNDICES
 -- ============================================================================
 create index if not exists idx_clients_estatus          on public.clients(estatus);
@@ -526,6 +542,7 @@ create index if not exists idx_driver_charges_driver    on public.driver_charges
 create index if not exists idx_driver_charges_estatus   on public.driver_charges(estatus);
 create index if not exists idx_driver_movements_driver  on public.driver_movements(conductor_cedula_rif);
 create index if not exists idx_driver_movements_fecha   on public.driver_movements(fecha);
+create index if not exists idx_system_params_module     on public.system_params(module);
 
 -- ============================================================================
 --  15. TRIGGERS updated_at
@@ -675,6 +692,7 @@ alter table public.partner_movements       enable row level security;
 alter table public.products                enable row level security;
 alter table public.driver_charges          enable row level security;
 alter table public.driver_movements        enable row level security;
+alter table public.system_params           enable row level security;
 
 -- Políticas demo: anon + authenticated con acceso completo.
 -- PRODUCCIÓN: reemplazar por políticas basadas en auth.uid(), rol y propietario.
@@ -687,7 +705,7 @@ begin
     'accounts_payable','withholding_vouchers','accounting_rules',
     'accounting_entries','accounting_entry_lines','erp_roles','erp_users',
     'tax_parameters','wallet_movements','partners','partner_movements',
-    'products','driver_charges','driver_movements'
+    'products','driver_charges','driver_movements','system_params'
   ]
   loop
     execute format('drop policy if exists envia_demo_all on public.%I', t);

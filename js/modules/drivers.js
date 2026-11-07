@@ -249,7 +249,10 @@
     const canDocs = NS.app.canAction('drivers', 'documentos');
     const canSettle = NS.app.canAction('drivers', 'liquidar');
     const canAssign = NS.app.canAction('inventory', 'asignar');
+    const canTarifa = NS.app.canAction('drivers', 'tarifa_plana');
     const info = docsInfo(d);
+    const tarifaPlanaParam = NS.store.systemParam('tarifa_plana_semanal_usd');
+    const tarifaPlanaMonto = tarifaPlanaParam ? Number(tarifaPlanaParam.value) : 0;
     const st = d.docs_estado || {};
     const services = db.services.filter((s) => s.conductor_cedula_rif === d.cedula_rif).slice(0, 4);
     const photos = d.urls_fotos_vehiculo || [];
@@ -336,6 +339,12 @@
             ${charges.length ? `<div class="charge-list">
               <span class="charge-list-title">Financiamientos vigentes</span>
               ${charges.map((c) => `<div class="charge-row"><span><strong>${ui.esc(c.producto_nombre)}</strong><small>${c.cuotas} cuota(s) · ${ui.usd(c.cuota_usd)} c/u</small></span><b>${ui.usd(c.saldo_usd)}</b></div>`).join('')}
+            </div>` : ''}
+            ${canTarifa && tarifaPlanaMonto > 0 ? `<div class="tarifa-plana-card">
+              <span>Tarifa plana semanal</span>
+              <strong>${ui.usd(tarifaPlanaMonto)}</strong>
+              <small>Descuento automático de la wallet del conductor</small>
+              <button class="btn btn-primary btn-block btn-sm" id="driver-tarifa-plana">${ui.icon('calendar', 15)} Aplicar esta semana</button>
             </div>` : ''}
           </div>
         </div>
@@ -599,6 +608,16 @@
     if (assignProduct) assignProduct.addEventListener('click', () => {
       ui.closeModal(overlay);
       if (NS.modules.inventory && NS.modules.inventory.openAssign) NS.modules.inventory.openAssign(null, cedula);
+    });
+    const tarifaBtn = overlay.querySelector('#driver-tarifa-plana');
+    if (tarifaBtn) tarifaBtn.addEventListener('click', () => {
+      ui.closeModal(overlay);
+      try {
+        NS.store.applyTarifaPlana(cedula);
+        ui.toast('Tarifa plana semanal aplicada y descontada de la wallet.', 'success');
+        NS.app.refresh(true);
+        openDetail(cedula);
+      } catch (e) { ui.toast(e.message, 'error'); }
     });
 
     // Drag & drop en tarjetas de documentos

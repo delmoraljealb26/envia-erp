@@ -100,7 +100,7 @@
     },
     drivers: {
       label: 'Conductores y Flota', group: 'Maestros', icon: 'car',
-      tabs: [], actions: ['ver', 'crear', 'editar', 'eliminar', 'documentos', 'liquidar', 'exportar', 'imprimir', 'reportes']
+      tabs: [], actions: ['ver', 'crear', 'editar', 'eliminar', 'documentos', 'liquidar', 'tarifa_plana', 'exportar', 'imprimir', 'reportes']
     },
     partners: {
       label: 'Negocios Asociados', group: 'Operación', icon: 'building',
@@ -148,8 +148,8 @@
       tabs: [], actions: ['ver', 'crear', 'editar', 'eliminar', 'roles', 'exportar', 'imprimir', 'reportes']
     },
     settings: {
-      label: 'Configuración Supabase', group: 'Sistema', icon: 'database',
-      tabs: [], actions: ['ver', 'editar', 'reportes']
+      label: 'Configuración del Sistema', group: 'Sistema', icon: 'database',
+      tabs: [], actions: ['ver', 'editar', 'reportes', 'parametros']
     }
   };
 
@@ -1007,6 +1007,7 @@
       products: seedProducts(),
       driverCharges: [],
       driverMovements: [],
+      systemParams: [],
       accounts: clone(ACCOUNTS),
       accountingRules: clone(DEFAULT_RULES).map((r) => ({ ...r, id: 'rule_' + r.evento, updated_at: stamp() })),
       entries: [],
@@ -1023,7 +1024,8 @@
         voucherSeq: 0,
         lastBackup: null,
         createdAt: stamp(),
-        supabaseLastSync: null
+        supabaseLastSync: null,
+        schemaVersion: 2
       },
       auditLog: []
     };
@@ -1517,6 +1519,21 @@
       }
     });
 
+    // Parámetros por defecto de mantenimiento del sistema (si no existen).
+    if (!Array.isArray(db.systemParams)) { db.systemParams = []; changed = true; }
+    const defaultParams = [
+      { key: 'tarifa_plana_semanal_usd', label: 'Tarifa plana semanal por conductor', value: '10', tipo: 'monto', module: 'drivers', descripcion: 'Monto fijo descontado de la wallet del conductor cada semana.' },
+      { key: 'comision_nivel_zafiro_pct', label: 'Comisión nivel Zafiro', value: '5', tipo: 'porcentaje', module: 'drivers', descripcion: 'Porcentaje descontado al conductor Zafiro por cada servicio.' },
+      { key: 'comision_nivel_esmeralda_pct', label: 'Comisión nivel Esmeralda', value: '10', tipo: 'porcentaje', module: 'drivers', descripcion: 'Porcentaje descontado al conductor Esmeralda por cada servicio.' },
+      { key: 'comision_nivel_diamante_pct', label: 'Comisión nivel Diamante', value: '15', tipo: 'porcentaje', module: 'drivers', descripcion: 'Porcentaje descontado al conductor Diamante por cada servicio.' }
+    ];
+    defaultParams.forEach((dp) => {
+      if (!db.systemParams.some((p) => p.key === dp.key)) {
+        db.systemParams.push({ ...dp, created_at: stamp(), updated_at: stamp() });
+        changed = true;
+      }
+    });
+
     // Migración demo: reemplaza el cliente "María Fernanda" por "Jesús Alberto"
     // y actualiza sus referencias en servicios y movimientos de billetera.
     if (db.clients.some((c) => c.cedula_rif === 'V-18500123')) {
@@ -1547,6 +1564,40 @@
       persist();
     }
   }
+
+  /* ---------------------------------------------------------------- *
+   *  MIGRACIÓN INTERNA DE ESQUEMA                                    *
+   *  Ejecutada al iniciar y expuesta como migrateDatabase().         *
+   *  Permite aplicar cambios de estructura (tablas, columnas,         *
+   *  parámetros por defecto) sin que el usuario tenga que hacerlo      *
+   *  manualmente. Incrementar schemaVersion para nuevas migraciones.   *
+   * ---------------------------------------------------------------- */
+  function ensureSchema(db) {
+    const currentVersion = Number(db.meta && db.meta.schemaVersion) || 0;
+    const targetVersion = 2;
+    let migrated = false;
+    if (currentVersion < targetVersion) {
+      if (!Array.isArray(db.systemParams)) { db.systemParams = []; migrated = true; }
+      const defaultParams = [
+        { key: 'tarifa_plana_semanal_usd', label: 'Tarifa plana semanal por conductor', value: '10', tipo: 'monto', module: 'drivers', descripcion: 'Monto fijo descontado de la wallet del conductor cada semana.' },
+        { key: 'comision_nivel_zafiro_pct', label: 'Comisión nivel Zafiro', value: '5', tipo: 'porcentaje', module: 'drivers', descripcion: 'Porcentaje descontado al conductor Zafiro por cada servicio.' },
+        { key: 'comision_nivel_esmeralda_pct', label: 'Comisión nivel Esmeralda', value: '10', tipo: 'porcentaje', module: 'drivers', descripcion: 'Porcentaje descontado al conductor Esmeralda por cada servicio.' },
+        { key: 'comision_nivel_diamante_pct', label: 'Comisión nivel Diamante', value: '15', tipo: 'porcentaje', module: 'drivers', descripcion: 'Porcentaje descontado al conductor Diamante por cada servicio.' }
+      ];
+      defaultParams.forEach((dp) => {
+        if (!db.systemParams.some((p) => p.key === dp.key)) {
+          db.systemParams.push({ ...dp, created_at: stamp(), updated_at: stamp() });
+          migrated = true;
+        }
+      });
+      if (migrated) {
+        db.meta.schemaVersion = targetVersion;
+        persist();
+      }
+    }
+  }
+
+  ensureSchema(current);
 
   if (!loadDb()) persist();
   storageReady = true;
@@ -2005,6 +2056,58 @@
       return current.partnerMovements.filter((m) => m.partner_rif === rif);
     },
 
+    /* parámetros de mantenimiento del sistema */
+    systemParam(key) {
+      const p = current.systemParams.find((x) => x.key === key);
+      return p ? clone(p) : null;
+    },
+    upsertSystemParam(data) {
+      const key = norm(data.key);
+      if (!key) throw new Error('La clave del parámetro es obligatoria.');
+      if (!/^[a-z0-9_]{3,40}$/.test(key)) throw new Error('La clave debe tener entre 3 y 40 caracteres (minúsculas, números y guion bajo).');
+      const existing = current.systemParams.find((x) => x.key === key);
+      if (!existing && current.systemParams.some((x) => x.key === key)) throw new Error('Ya existe un parámetro con esa clave.');
+      const value = String(data.value || '');
+      const tipo = data.tipo || 'texto';
+      if (!['monto', 'porcentaje', 'texto', 'booleano', 'fecha'].includes(tipo)) throw new Error('Tipo de parámetro no válido.');
+      if (tipo === 'porcentaje') {
+        const n = Number(value);
+        if (!isFinite(n) || n < 0 || n > 100) throw new Error('El porcentaje debe estar entre 0 y 100.');
+      }
+      if (tipo === 'monto') {
+        const n = Number(value);
+        if (!isFinite(n) || n < 0) throw new Error('El monto debe ser mayor o igual a cero.');
+      }
+      const rec = {
+        ...(existing || {}),
+        ...data,
+        key,
+        label: required(data.label, 'Etiqueta'),
+        value,
+        tipo,
+        module: data.module || 'sistema',
+        descripcion: data.descripcion || '',
+        updated_at: stamp(),
+        created_at: existing ? existing.created_at : stamp()
+      };
+      if (existing) Object.assign(existing, rec);
+      else current.systemParams.unshift(rec);
+      api.addAuditParam ? api.addAuditParam('actualizar', 'system_params', `Parámetro ${key} = ${value}`, key) : api.addAuditLog('actualizar', 'system_params', `Parámetro ${key} = ${value}`, key);
+      persist();
+      return rec;
+    },
+    deleteSystemParam(key) {
+      current.systemParams = current.systemParams.filter((p) => p.key !== key);
+      api.addAuditLog('eliminar', 'system_params', `Parámetro ${key}`, key);
+      persist();
+    },
+    systemParams() {
+      return current.systemParams.slice();
+    },
+    systemParamsByModule(module) {
+      return current.systemParams.filter((p) => p.module === module);
+    },
+
     /* tienda del conductor e inventario */
     product(sku) {
       const p = current.products.find((x) => x.sku === sku);
@@ -2156,9 +2259,28 @@
       const comisiones = Math.abs(sum('comision'));
       const productos = Math.abs(sum('producto'));
       const pagos = Math.abs(sum('pago')) + Math.abs(sum('pago_producto'));
+      const tarifas = Math.abs(sum('tarifa_plana'));
       const saldo = round(movs.reduce((s, m) => s + m.monto_usd, 0));
       const deuda = round(current.driverCharges.filter((c) => c.conductor_cedula_rif === cedula && c.saldo_usd > 0).reduce((s, c) => s + c.saldo_usd, 0));
-      return { movimientos: movs, ganancias, comisiones, productos, pagos, saldo, deuda };
+      return { movimientos: movs, ganancias, comisiones, productos, pagos, tarifas, saldo, deuda };
+    },
+    applyTarifaPlana(cedula, data) {
+      const driver = current.drivers.find((d) => d.cedula_rif === cedula);
+      if (!driver) throw new Error('Conductor no encontrado.');
+      const param = current.systemParams.find((p) => p.key === 'tarifa_plana_semanal_usd');
+      const monto = param ? Number(param.value) : 0;
+      if (!monto || monto <= 0) throw new Error('No hay tarifa plana configurada en Parámetros del Sistema.');
+      const fecha = (data && data.fecha) || today();
+      const referencia = (data && data.referencia) || 'TARIFA-' + cedula;
+      const mov = {
+        id: uid('dmv'), conductor_cedula_rif: cedula, tipo: 'tarifa_plana',
+        concepto: 'Tarifa plana semanal · ' + fecha,
+        monto_usd: -round(monto), fecha, referencia, created_at: stamp()
+      };
+      current.driverMovements.unshift(mov);
+      api.addAuditLog('tarifa_plana', 'conductores', `Tarifa plana semanal aplicada a ${driver.nombres} ${driver.apellidos} · $${monto}`, cedula);
+      persist();
+      return mov;
     },
 
     /* alertas documentales (vencimientos) */
@@ -2390,7 +2512,9 @@
       if (!isFinite(igtfPct) || igtfPct < 0 || igtfPct > 100) throw new Error('El % de IGTF debe estar entre 0 y 100.');
       const igtf = round((base + iva) * igtfPct / 100);
       const total = round(base + iva + igtf);
-      const comPct = Number(data.comision_pct ?? driver.porcentaje_comision);
+      const nivelKey = 'comision_nivel_' + (driver.nivel || 'Zafiro').toLowerCase() + '_pct';
+      const paramNivel = NS.store.systemParam(nivelKey);
+      const comPct = Number(data.comision_pct ?? (paramNivel ? Number(paramNivel.value) : driver.porcentaje_comision));
       if (!isFinite(comPct) || comPct < 0 || comPct > 100) throw new Error('El % de comisión debe estar entre 0 y 100.');
       const comision = round(base * comPct / 100);
       const distancia = Number(data.distancia_km) || 0;
@@ -2631,8 +2755,15 @@
         dbBytes,
         files,
         lastSavedAt: current.meta && current.meta.updatedAt ? current.meta.updatedAt : null,
-        backup: !!localStorage.getItem(DB_BACKUP_KEY)
+        backup: !!localStorage.getItem(DB_BACKUP_KEY),
+        schemaVersion: current.meta && current.meta.schemaVersion ? current.meta.schemaVersion : 0
       };
+    },
+
+    /* migración interna de esquema */
+    migrateDatabase() {
+      ensureSchema(current);
+      return current.meta && current.meta.schemaVersion ? current.meta.schemaVersion : 0;
     },
 
     /* auditoría / bitácora */

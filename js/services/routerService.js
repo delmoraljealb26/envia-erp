@@ -1,5 +1,5 @@
 /* =========================================================================
-   ENVIA ERP · services/routerService.js
+   ENVIA Technology C.A. · services/routerService.js
    Ruteo SPA, barra lateral, barra superior y tasa BCV. Contiene la
    navegación y la representación del shell; la lógica de negocio vive en
    store.js y las peticiones en supabaseService.js / exchangeRateService.js.
@@ -22,7 +22,7 @@
     payables: { label: 'Cuentas por Pagar', sub: 'Proveedores, facturas, retenciones y pagos', icon: 'wallet', group: 'Finanzas', module: 'payables' },
     audit: { label: 'Bitácora de Auditoría', sub: 'Quién modificó qué, cuándo y con qué usuario', icon: 'activity', group: 'Sistema', module: 'audit' },
     users: { label: 'Usuarios del sistema', sub: 'Roles, accesos y seguridad', icon: 'shield', group: 'Sistema', module: 'users' },
-    settings: { label: 'Configuración Supabase', sub: 'Conexión, almacenamiento y sincronización', icon: 'database', group: 'Sistema', module: 'settings' }
+    settings: { label: 'Configuración del Sistema', sub: 'Conexión Supabase, parámetros y sincronización', icon: 'database', group: 'Sistema', module: 'settings' }
   };
 
   const GROUPS = ['Operación', 'Maestros', 'Finanzas', 'Sistema'];
@@ -118,7 +118,7 @@
     bar.innerHTML = `
       <button class="icon-btn menu-toggle" id="menu-toggle" aria-label="Menú">${NS.ui.icon('menu', 21)}</button>
       <div class="topbar-title">
-        <div class="crumb">ENVIA ERP <span>/</span> <span id="crumb-current">Dashboard</span></div>
+        <div class="crumb">ENVIA Technology C.A. <span>/</span> <span id="crumb-current">Dashboard</span></div>
         <h1 id="page-title">Dashboard</h1>
       </div>
       <div class="topbar-actions">
@@ -343,7 +343,7 @@
     const meta = MODULES[route];
     $('#crumb-current').textContent = meta.label;
     $('#page-title').textContent = meta.label;
-    document.title = meta.label + ' · ENVIA ERP';
+    document.title = meta.label + ' · ENVIA Technology C.A.';
     document.querySelectorAll('#sidebar-nav .nav-item').forEach((a) => a.classList.toggle('active', a.dataset.route === route));
 
     const view = $('#view');
@@ -375,7 +375,7 @@
       if (!force) window.scrollTo({ top: 0, behavior: 'instant' });
     } catch (err) {
       NS.errors.fail(err, 'Cargar módulo ' + meta.label);
-      view.innerHTML = `<div class="card"><div class="empty-state"><span class="empty-ico">${NS.ui.icon('alert', 28)}</span><h3>No se pudo cargar el módulo</h3><p>${NS.ui.esc(err.message)}</p><button class="btn btn-primary" onclick="location.reload()">Recargar ERP</button></div></div>`;
+      view.innerHTML = `<div class="card"><div class="empty-state"><span class="empty-ico">${NS.ui.icon('alert', 28)}</span><h3>No se pudo cargar el módulo</h3><p>${NS.ui.esc(err.message)}</p><button class="btn btn-primary" onclick="location.reload()">Recargar sistema</button></div></div>`;
     }
   }
 

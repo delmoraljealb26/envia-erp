@@ -24,6 +24,12 @@
       <td class="num"><strong>${ui.usd(p.precio_usd)}</strong><small class="block muted">costo ${ui.usd(p.costo_usd)}</small></td>
       <td class="num">${ui.pct(margin)}</td>
       <td class="num"><strong class="${low ? 'text-orange' : ''}">${ui.num(p.stock, 0)}</strong><small class="block muted">mín. ${ui.num(p.stock_min, 0)}</small></td>
+      <td class="num">
+        <div class="quick-stock">
+          <input type="number" value="0" min="-999" step="1" placeholder="±" data-qs-input="${ui.esc(p.sku)}">
+          <button class="btn btn-xs btn-ghost" data-qs-add="${ui.esc(p.sku)}" title="Aplicar ajuste">${ui.icon('plus', 13)}</button>
+        </div>
+      </td>
       <td>${low ? ui.badge('Stock bajo', 'warning') : ui.badge('Disponible', 'success')}</td>
       <td>${p.activo ? ui.badge('Activo') : ui.badge('Inactivo')}</td>
       <td class="actions-col">
@@ -87,7 +93,7 @@
         </div>
         <div class="table-wrap">
           <table class="data-table">
-            <thead><tr><th>Producto</th><th>SKU</th><th>Categoría</th><th class="num">Precio</th><th class="num">Margen</th><th class="num">Stock</th><th>Estado</th><th>Activo</th><th class="actions-col">Acciones</th></tr></thead>
+            <thead><tr><th>Producto</th><th>SKU</th><th>Categoría</th><th class="num">Precio</th><th class="num">Margen</th><th class="num">Stock</th><th class="num">Ajuste rápido</th><th>Estado</th><th>Activo</th><th class="actions-col">Acciones</th></tr></thead>
             <tbody>
               ${products.length ? products.map((p) => productRow(p, canEdit, canDelete, canAssign)).join('') : `<tr><td colspan="9">${ui.empty('package', 'Sin productos', 'Crea el primer producto del catálogo del conductor.', canCreate ? '<button class="btn btn-primary" id="inventory-empty-new">Nuevo producto</button>' : '')}</td></tr>`}
             </tbody>
@@ -151,6 +157,19 @@
     view.querySelectorAll('[data-stock]').forEach((b) => b.addEventListener('click', () => openStock(b.dataset.stock)));
     view.querySelectorAll('[data-assign]').forEach((b) => b.addEventListener('click', () => openAssign(b.dataset.assign)));
     view.querySelectorAll('[data-pay-charge]').forEach((b) => b.addEventListener('click', () => openChargePayment(b.dataset.payCharge)));
+    view.querySelectorAll('[data-qs-add]').forEach((b) => b.addEventListener('click', () => {
+      const sku = b.dataset.qsAdd;
+      const input = view.querySelector(`[data-qs-input="${ui.esc(sku)}"]`);
+      if (!input) return;
+      const delta = input.value.trim();
+      if (!delta) return ui.toast('Ingresa un número de unidades.', 'warning');
+      try {
+        NS.store.adjustStock(sku, delta, 'Ajuste rápido desde inventario');
+        input.value = '0';
+        ui.toast('Stock ajustado correctamente.', 'success');
+        NS.app.refresh(true);
+      } catch (e) { ui.toast(e.message, 'error'); }
+    }));
   }
 
   function openProductForm(sku) {

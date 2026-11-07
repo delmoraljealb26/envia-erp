@@ -9,6 +9,7 @@
 
   const ROLE_ICON = { SuperAdmin: 'shield', 'Contador / Fiscal': 'book', 'Tesorero / Cuentas por Pagar': 'wallet', 'Auditor / Operaciones': 'eye' };
   const ICON_OPTIONS = ['shield', 'book', 'wallet', 'eye', 'users', 'settings', 'activity', 'grid'];
+  let filters = { q: '' };
 
   function roleIcon(role) { return role.icono || ROLE_ICON[role.nombre] || 'shield'; }
   function catalog() { return NS.store.PERMISSION_CATALOG; }
@@ -32,6 +33,7 @@
           <p class="page-sub">${db.users.length} usuarios · ${db.users.filter((u) => u.activo).length} activos · ${roles.length} roles con permisos por módulo, pestaña y acción.</p>
         </div>
         <div class="page-actions">
+          <div class="search-box">${ui.icon('search', 17)}<input id="user-search" type="search" placeholder="Buscar por usuario, nombre o correo..." value="${ui.esc(filters.q)}"></div>
           ${NS.reports.button('users')}
           ${canRoles ? `<button class="btn btn-ghost" id="role-new">${ui.icon('shield', 16)} Nuevo rol</button>` : ''}
           ${canCreate ? `<button class="btn btn-primary" id="user-new">${ui.icon('plus', 16)} Nuevo usuario</button>` : ''}
@@ -54,8 +56,8 @@
         <div class="table-wrap">
           <table class="data-table">
             <thead><tr><th>Usuario</th><th>Nombre</th><th>Correo</th><th>Rol</th><th>Permisos</th><th>Estado</th><th>Creación</th><th class="actions-col"></th></tr></thead>
-            <tbody>${db.users.map((u) => `<tr>
-              <td><div class="user-cell">${ui.avatar(u.nombre, 34)}<div><strong class="mono">${ui.esc(u.usuario)}</strong>${u.usuario === 'ENVIA' ? '<small class="block text-orange">Cuenta maestra</small>' : ''}</div></div></td>
+            <tbody>${db.users.filter((u) => { const hay = [u.usuario, u.nombre, u.correo].join(' ').toLowerCase(); return !filters.q || hay.includes(filters.q); }).map((u) => `<tr>
+              <td><div class="user-cell"><span class="cell-link" data-user="${ui.esc(u.id)}">${ui.avatar(u.nombre, 34)}<div><strong class="mono">${ui.esc(u.usuario)}</strong>${u.usuario === 'ENVIA' ? '<small class="block text-orange">Cuenta maestra</small>' : ''}</div></div></span></td>
               <td>${ui.esc(u.nombre)}</td>
               <td>${ui.esc(u.correo)}</td>
               <td>${ui.badge(u.rol, 'purple')}</td>
@@ -96,6 +98,16 @@
     view.querySelectorAll('[data-del-user]').forEach((b) => b.addEventListener('click', () => askDelete(b.dataset.delUser)));
     view.querySelectorAll('[data-edit-role]').forEach((b) => b.addEventListener('click', () => openRoleForm(b.dataset.editRole)));
     view.querySelectorAll('[data-del-role]').forEach((b) => b.addEventListener('click', () => askDeleteRole(b.dataset.delRole)));
+
+    const userSearch = $('#user-search');
+    if (userSearch) {
+      let ut;
+      userSearch.addEventListener('input', () => { clearTimeout(ut); ut = setTimeout(() => { filters.q = userSearch.value; render(view); }, 180); });
+    }
+    view.querySelectorAll('[data-user]').forEach((b) => b.addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;
+      openForm(b.dataset.user);
+    }));
   }
 
   /* --------------------------- Editor de permisos --------------------------- */
