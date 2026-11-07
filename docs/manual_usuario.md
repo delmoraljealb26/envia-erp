@@ -1,7 +1,8 @@
 # Manual de Usuario — ENVIA ERP
 
-**Versión:** 1.3 · **Fecha:** noviembre de 2026  
-**Para:** Usuarios del sistema ENVIA ERP  
+**Versión:** 1.4 · **Fecha:** noviembre de 2026
+
+**Para:** Usuarios del sistema ENVIA ERP
 **Cómo abrir:** Doble clic en `index.html` en Google Chrome
 
 ---
@@ -17,8 +18,9 @@
 7. [Tributos y Tasa BCV](#7-tributos-y-tasa-bcv)
 8. [Cuentas por Pagar (proveedores y facturas)](#8-cuentas-por-pagar-proveedores-y-facturas)
 9. [Bitácora de Auditoría](#9-bitacora-de-auditoria)
-10. [Usuarios del ERP](#10-usuarios-del-erp)
-11. [Reglas importantes que debes conocer](#11-reglas-importantes-que-debes-conocer)
+10. [Usuarios del sistema](#10-usuarios-del-sistema)
+11. [Reportes en cada módulo](#11-reportes-en-cada-modulo)
+12. [Reglas importantes que debes conocer](#12-reglas-importantes-que-debes-conocer)
 
 ---
 
@@ -40,6 +42,8 @@ Puedes presionar el botón **"Usar"** que está debajo de "Credenciales maestras
 ### Paso 3 — Ver tu sesión
 Al entrar, verás tu nombre, tu rol y la tasa del dólar (BCV) en la parte superior derecha. Tu sesión dura 12 horas y se cierra automáticamente.
 
+Cada vez que inicies sesión, el sistema abrirá siempre el **Dashboard**, aunque antes hayas estado trabajando en otro módulo. Así empiezas con la visión general de la operación.
+
 El **menú lateral** muestra todos los módulos a los que tienes acceso y se adapta a la altura de la pantalla: en pantallas de portátil reduce los espacios para que veas todas las opciones sin desplazarte. Los datos del usuario y el botón de **Cerrar sesión** están únicamente en la barra superior derecha.
 
 ![Pantalla de acceso a ENVIA ERP](../imagen/manual/01-login.png)
@@ -50,7 +54,7 @@ El **menú lateral** muestra todos los módulos a los que tienes acceso y se ada
 
 ## 2. Panel principal (Dashboard)
 
-Al entrar, ves el **Dashboard** organizado como un tablero de operación:
+Al entrar, ves siempre el **Dashboard** organizado como un tablero de operación. No se restaura el último módulo visitado:
 
 ![Dashboard de ENVIA ERP](../imagen/manual/02-dashboard.png)
 
@@ -129,6 +133,7 @@ Los conductores son las personas que realizan las carreras y entregas. Reciben u
 3. Llena los datos personales:
    - Cédula / RIF (único, no se repite).
    - Nombres y apellidos.
+   - **Nivel del conductor:** Plata, Oro o Platium.
    - Teléfono y correo.
    - Dirección.
 4. Llena los datos del vehículo:
@@ -141,6 +146,16 @@ Los conductores son las personas que realizan las carreras y entregas. Reciben u
 6. Presiona **Guardar**.
 
 ![Formulario de conductor](../imagen/manual/06-conductor-formulario.png)
+
+### Niveles del conductor
+
+| Nivel | Uso sugerido |
+|-------|--------------|
+| **Plata** | Conductor nuevo o en período de evaluación. |
+| **Oro** | Conductor con buen desempeño y cumplimiento. |
+| **Platium** | Conductor destacado o de máxima prioridad operativa. |
+
+El nivel se muestra como una etiqueta en el listado y se incluye en los reportes de conductores y liquidaciones. Puedes cambiarlo editando el expediente del conductor.
 
 ### Documentos del conductor
 Cada conductor debe tener documentos que pueden estar en tres estados: Pendiente, Aprobado o Rechazado.
@@ -211,12 +226,17 @@ Desde el menú **Contabilidad** puedes consultar:
 | Libro de Ventas | Facturas emitidas con IVA e IGTF (para el SENIAT). |
 | Libro de Compras | Facturas de proveedores con retenciones. |
 
-### Cómo imprimir o exportar
-Cada reporte tiene dos botones:
-- **Imprimir:** Abre una versión lista para imprimir.
-- **Exportar CSV:** Descarga un archivo que se puede abrir en Excel.
+### Navegación entre libros y estados
+Las opciones de Contabilidad se muestran en una cuadrícula de pestañas que se ajusta al ancho de la pantalla. Ya no necesitas desplazarte horizontalmente para encontrar Libro Diario, Libro Mayor, Balance de Comprobación, Estado de Resultados, Balance General, Libro de Ventas o Libro de Compras.
 
-> Todos los reportes muestran la tasa del BCV utilizada y el período seleccionado.
+### Cómo imprimir o exportar
+En la esquina superior derecha de Contabilidad, y de todos los demás módulos, está el botón **Reportes**. Desde allí puedes:
+- **Imprimir:** abre el diálogo de impresoras del navegador con una versión limpia del reporte.
+- **Excel:** descarga un archivo `.xls` que se abre directamente en Microsoft Excel o LibreOffice.
+
+El centro de reportes se explica con detalle en la [sección 11](#11-reportes-en-cada-modulo).
+
+> Todos los reportes muestran la tasa del BCV utilizada, el usuario que los generó y la fecha de emisión. Los reportes contables incluyen además el período consultado.
 
 ---
 
@@ -262,7 +282,7 @@ La tasa de esa fecha se aplica a todos los cálculos y el indicador cambia a **`
 
 Si no hay internet o DolarVZLA no está disponible, el sistema **conserva la última tasa conocida** y muestra un aviso. La tasa no se edita manualmente: cuando se recupere la conexión, usa **⟳** para actualizarla.
 
-> Solo los roles con permiso de escritura (SuperAdmin, Contador/Fiscal y Tesorero/CxP) ven los controles de calendario y actualización; el rol Auditor solo visualiza la tasa.
+> Solo los roles o usuarios con el permiso de edición de Tributos ven los controles de calendario y actualización. Los roles de solo lectura, como Auditor / Operaciones, únicamente visualizan la tasa. Los roles personalizados reciben exactamente los permisos que les asigne el administrador.
 
 Todos los nuevos servicios y facturas usarán la nueva tasa. Los asientos contables ya creados conservan la tasa que tenían ese día.
 
@@ -329,31 +349,85 @@ Ve al menú lateral → **Bitácora de Auditoría**. Puedes filtrar por usuario,
 
 ---
 
-## 10. Usuarios del ERP
+## 10. Usuarios del sistema
 
-Aquí se gestionan las personas que entran al sistema y qué pueden hacer.
+Aquí se gestionan las personas que entran al sistema, los roles y los permisos de cada rol.
 
-![Usuarios del ERP](../imagen/manual/15-usuarios.png)
+![Usuarios del sistema](../imagen/manual/15-usuarios.png)
 
-### Roles disponibles
+### Roles base
+ENVIA ERP incluye cuatro roles listos para usar. Además, el administrador puede crear roles nuevos y ajustar sus permisos.
+
 | Rol | Puede hacer |
 |-----|-------------|
-| SuperAdmin | Todo: todos los módulos y gestión de usuarios. |
-| Contador / Fiscal | Contabilidad, tributos, libros, cuentas por pagar, maestros. |
-| Tesorero / CxP | Pagos, proveedores, liquidaciones, maestros, consulta tributaria. |
-| Auditor / Operaciones | Solo ver todo, no puede guardar ni borrar nada. |
+| SuperAdmin | Todo: todos los módulos, usuarios, roles y configuración. |
+| Contador / Fiscal | Contabilidad, tributos, libros, cuentas por pagar, maestros y reportes. |
+| Tesorero / CxP | Pagos, proveedores, liquidaciones, maestros, consulta tributaria y reportes. |
+| Auditor / Operaciones | Consultar los módulos asignados, sin crear, editar ni eliminar. |
+
+### Crear o editar un rol
+1. Ve a **Sistema → Usuarios del sistema**.
+2. En la tarjeta del rol, haz clic en el lápiz para editar sus permisos, o en **Nuevo rol** para crear uno.
+3. Escribe el nombre, una descripción y elige un icono.
+4. En la matriz de permisos, activa **Acceso** para cada módulo que verá el rol. Eso habilita el módulo y sus pestañas, con la acción **Ver / consultar**.
+5. Marca **Todo** si el rol tendrá acceso completo a ese módulo, o selecciona solo las **opciones / pestañas** y **acciones** permitidas.
+6. Presiona **Guardar**.
+
+![Editor de roles y permisos](../imagen/manual/17-editor-roles-permisos.png)
+
+Las acciones disponibles incluyen ver, crear, editar, eliminar, exportar, imprimir, abrir el centro de reportes, gestionar documentos, liquidar, pagar, administrar la billetera y administrar roles. Los módulos con pestañas internas, como Contabilidad o Cuentas por Pagar, permiten habilitar cada pestaña por separado.
 
 ### Crear un usuario nuevo
-1. Ve a **Usuarios del ERP**.
+1. Ve a **Usuarios del sistema**.
 2. Haz clic en **Nuevo usuario**.
-3. Llena: usuario, clave, nombre, correo y asigna un rol.
-4. Presiona **Guardar**.
+3. Llena usuario, clave, nombre, correo y asigna un rol.
+4. Si necesitas un trato especial, activa **Permisos personalizados para este usuario** y ajusta la matriz. Estos permisos reemplazan los del rol solo para esa persona.
+5. Presiona **Guardar**.
 
-> El usuario `ENVIA` es el dueño del sistema y no se puede eliminar ni cambiar su rol.
+### Otras acciones
+- **Cambiar clave:** usa el icono de llave en la fila del usuario.
+- **Editar:** usa el lápiz para cambiar datos, rol, estado o permisos personalizados.
+- **Eliminar rol:** solo se permite en roles personalizados que no estén en uso por usuarios.
+- **SuperAdmin:** conserva acceso total y no puede degradarse desde la interfaz.
+
+> El usuario `ENVIA` es la cuenta maestra: no se puede eliminar ni cambiar de rol. La sesión expira a las 12 horas.
 
 ---
 
-## 11. Reglas importantes que debes conocer
+## 11. Reportes en cada módulo
+
+Todos los módulos tienen el botón **Reportes** en la esquina superior derecha. Abre el catálogo de reportes del módulo actual y permite imprimir o descargar en Excel sin salir de la pantalla.
+
+![Centro de reportes](../imagen/manual/16-centro-reportes.png)
+
+### Cómo usar el centro de reportes
+1. Entra al módulo que necesitas (Clientes, Conductores, Servicios, Contabilidad, etc.).
+2. Haz clic en **Reportes**.
+3. Elige el reporte que necesitas de la lista.
+4. Usa **Imprimir** para abrir el diálogo de impresoras del navegador. También puedes elegir “Guardar como PDF”.
+5. Usa **Excel** para descargar un archivo `.xls` con los mismos datos y totales.
+6. Cierra el centro con la **X** o con el botón **Cerrar**.
+
+### Reportes disponibles por módulo
+
+| Módulo | Reportes principales |
+|--------|----------------------|
+| Dashboard | Resumen ejecutivo, servicios de los últimos 14 días, clientes por estatus. |
+| Servicios | Listado general, ingresos por tipo de servicio y comisiones por conductor. |
+| Clientes | Maestro de clientes, saldos de billetera y clientes por estatus. |
+| Conductores y Flota | Maestro de conductores y flota, conductores por nivel y saldos por liquidar. |
+| Contabilidad | Libro diario, libro mayor, balance de comprobación, estado de resultados, balance general, libro de ventas y libro de compras. |
+| Tributos & BCV | Resumen fiscal, comprobantes de retención, retenciones de IVA y retenciones de ISLR. |
+| Cuentas por Pagar | Facturas de compra, antigüedad de saldos, maestro de proveedores y liquidaciones a conductores. |
+| Bitácora de Auditoría | Bitácora completa, actividad por usuario y eventos por módulo. |
+| Usuarios del sistema | Usuarios y roles, roles y permisos, matriz de permisos. |
+| Configuración | Parámetros del sistema, almacenamiento y tasa BCV. |
+
+> El botón **Reportes** solo aparece si el rol o el usuario tiene habilitada la acción **Centro de reportes** en ese módulo. Los reportes incluyen la tasa BCV, el usuario y la fecha de generación.
+
+---
+
+## 12. Reglas importantes que debes conocer
 
 1. **La cédula / RIF no se repite:** Cada cliente y conductor tiene un identificador único. No se pueden duplicar.
 2. **No se puede borrar lo que se usa:** No se puede eliminar un cliente que tenga servicios, ni un proveedor que tenga facturas, ni una cuenta contable que tenga movimientos.
@@ -361,6 +435,9 @@ Aquí se gestionan las personas que entran al sistema y qué pueden hacer.
 4. **El dólar es importante:** Los montos operativos se capturan en dólares y se convierten a bolívares con la tasa del día para la contabilidad.
 5. **Tu sesión dura 12 horas:** Después de ese tiempo, el sistema te pedirá entrar de nuevo.
 6. **El usuario ENVIA es el dueño:** Tiene acceso total y no se puede eliminar ni cambiar de rol.
+7. **Los permisos se respetan:** Si no tienes una acción habilitada, el botón no aparece y la operación se rechaza aunque intentes ejecutarla.
+8. **Los datos se guardan en el navegador:** La base se conserva en `localStorage` y los documentos en IndexedDB. Al recargar la página, la información sigue disponible.
+9. **Cada sesión abre el Dashboard:** El sistema no vuelve al último módulo visitado.
 
 ---
 

@@ -17,7 +17,10 @@
     const ui = NS.ui;
     const store = NS.store;
     const db = store.db;
-    const canWrite = NS.app.canWrite();
+    const canCreate = NS.app.canAction('clients', 'crear');
+    const canEdit = NS.app.canAction('clients', 'editar');
+    const canDelete = NS.app.canAction('clients', 'eliminar');
+    const canExport = NS.app.canAction('clients', 'exportar');
     const q = filters.q.toLowerCase();
     const list = db.clients.filter((c) => {
       const hay = [c.cedula_rif, c.nombres, c.apellidos, c.telefono, c.correo, c.direccion].join(' ').toLowerCase();
@@ -38,8 +41,9 @@
           <p class="page-sub">${db.clients.length} clientes registrados · ${totals.corporate} corporativos · Wallet consolidada ${ui.usd(totals.walletUsd)} + ${ui.bs(totals.walletVes)}.</p>
         </div>
         <div class="page-actions">
-          <button class="btn btn-ghost" id="clients-export">${ui.icon('download', 16)} Exportar CSV</button>
-          ${canWrite ? `<button class="btn btn-primary" id="clients-new">${ui.icon('plus', 16)} Nuevo cliente</button>` : ''}
+          ${NS.reports.button('clients')}
+          ${canExport ? `<button class="btn btn-ghost" id="clients-export">${ui.icon('download', 16)} Exportar CSV</button>` : ''}
+          ${canCreate ? `<button class="btn btn-primary" id="clients-new">${ui.icon('plus', 16)} Nuevo cliente</button>` : ''}
         </div>
       </div>
 
@@ -87,10 +91,10 @@
                   <td>${ui.badge(c.estatus)}</td>
                   <td class="actions-col">
                     <button class="icon-btn" data-client="${ui.esc(c.cedula_rif)}" title="Ver ficha">${ui.icon('eye', 16)}</button>
-                    ${canWrite ? `<button class="icon-btn" data-edit-client="${ui.esc(c.cedula_rif)}" title="Editar">${ui.icon('edit', 16)}</button>` : ''}
-                    ${canWrite ? `<button class="icon-btn danger" data-del-client="${ui.esc(c.cedula_rif)}" title="Eliminar">${ui.icon('trash', 16)}</button>` : ''}
+                    ${canEdit ? `<button class="icon-btn" data-edit-client="${ui.esc(c.cedula_rif)}" title="Editar">${ui.icon('edit', 16)}</button>` : ''}
+                    ${canDelete ? `<button class="icon-btn danger" data-del-client="${ui.esc(c.cedula_rif)}" title="Eliminar">${ui.icon('trash', 16)}</button>` : ''}
                   </td>
-                </tr>`).join('') : `<tr><td colspan="10">${ui.empty('users', 'No hay clientes que coincidan', 'Prueba con otro término de búsqueda o registra un nuevo cliente.', canWrite ? '<button class="btn btn-primary" id="clients-empty-new">Nuevo cliente</button>' : '')}</td></tr>`}
+                </tr>`).join('') : `<tr><td colspan="10">${ui.empty('users', 'No hay clientes que coincidan', 'Prueba con otro término de búsqueda o registra un nuevo cliente.', canCreate ? '<button class="btn btn-primary" id="clients-empty-new">Nuevo cliente</button>' : '')}</td></tr>`}
             </tbody>
           </table>
         </div>
@@ -112,7 +116,8 @@
     if (newBtn) newBtn.addEventListener('click', () => openForm());
     const emptyNew = $('#clients-empty-new');
     if (emptyNew) emptyNew.addEventListener('click', () => openForm());
-    $('#clients-export').addEventListener('click', exportCsv);
+    const exportBtn = $('#clients-export');
+    if (exportBtn) exportBtn.addEventListener('click', exportCsv);
     view.querySelectorAll('[data-client]').forEach((b) => b.addEventListener('click', () => openDetail(b.dataset.client)));
     view.querySelectorAll('[data-edit-client]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); openForm(b.dataset.editClient); }));
     view.querySelectorAll('[data-del-client]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); askDelete(b.dataset.delClient); }));
@@ -155,7 +160,7 @@
 
   function openForm(cedula) {
     const ui = NS.ui;
-    if (!NS.app.canWrite()) return ui.toast('Tu rol es de solo lectura.', 'warning');
+    if (!NS.app.canAction('clients', cedula ? 'editar' : 'crear')) return ui.toast('No tienes permiso para esta acción en clientes.', 'warning');
     const existing = cedula ? NS.store.db.clients.find((c) => c.cedula_rif === cedula) : null;
     const c = existing || {};
     const overlay = ui.modal({
@@ -196,7 +201,10 @@
   function detailHtml(c) {
     const ui = NS.ui;
     const db = NS.store.db;
-    const canWrite = NS.app.canWrite();
+    const canEdit = NS.app.canAction('clients', 'editar');
+    const canDelete = NS.app.canAction('clients', 'eliminar');
+    const canWallet = NS.app.canAction('clients', 'billetera');
+    const canDocs = NS.app.canAction('clients', 'documentos');
     const services = db.services.filter((s) => s.cliente_cedula_rif === c.cedula_rif).slice(0, 5);
     const walletTx = (db.walletMovements || []).filter((w) => w.cliente_cedula_rif === c.cedula_rif).slice(0, 4);
     return `
@@ -207,7 +215,7 @@
           <div class="profile-meta"><span class="mono">${ui.esc(c.cedula_rif)}</span><span>${ui.esc(c.telefono)}</span><span>${ui.esc(c.correo)}</span></div>
         </div>
         <div class="profile-actions">
-          ${canWrite ? `<button class="btn btn-ghost btn-sm" id="detail-edit">${ui.icon('edit', 15)} Editar</button>` : ''}
+          ${canEdit ? `<button class="btn btn-ghost btn-sm" id="detail-edit">${ui.icon('edit', 15)} Editar</button>` : ''}
         </div>
       </div>
 
@@ -229,15 +237,15 @@
               <div class="wallet-card wallet-usd"><span>Saldo en dólares</span><strong>${ui.usd(c.saldo_wallet_usd)}</strong><small>${ui.bs(ui.toBs(c.saldo_wallet_usd))} referencial</small></div>
               <div class="wallet-card wallet-ves"><span>Saldo en bolívares</span><strong>${ui.bs(c.saldo_wallet_ves)}</strong><small>${ui.usd(c.saldo_wallet_ves / ui.rate())} referencial</small></div>
             </div>
-            ${canWrite ? `<div class="inline-actions"><button class="btn btn-ghost btn-sm" id="wallet-recharge">${ui.icon('plus', 15)} Recargar wallet</button><span class="hint">Genera asiento contable automático en la cuenta de pasivo wallet.</span></div>` : ''}
+            ${canWallet ? `<div class="inline-actions"><button class="btn btn-ghost btn-sm" id="wallet-recharge">${ui.icon('plus', 15)} Recargar wallet</button><span class="hint">Genera asiento contable automático en la cuenta de pasivo wallet.</span></div>` : ''}
             ${walletTx.length ? `<div class="mini-list mini-list-tight">${walletTx.map((w) => `<div class="mini-row mini-static"><span class="mini-ico">${ui.icon('wallet', 15)}</span><span class="mini-main"><strong>Recarga ${w.moneda}</strong><small>${ui.date(w.fecha)} · ${ui.esc(w.metodo)}</small></span><span class="mini-amount">+ ${w.moneda === 'USD' ? ui.usd(w.monto) : ui.bs(w.monto)}</span></div>`).join('')}</div>` : ''}
           </div>
 
           <div class="detail-block">
             <h4>Expediente digital <span class="h4-note">Documentos del cliente</span></h4>
             <div class="doc-grid">
-              ${docCard('Cédula de Identidad', 'cedula', c.url_foto_cedula, c.cedula_rif, canWrite)}
-              ${docCard('RIF Personal Digital', 'rif', c.url_foto_rif, c.cedula_rif, canWrite)}
+              ${docCard('Cédula de Identidad', 'cedula', c.url_foto_cedula, c.cedula_rif, canDocs)}
+              ${docCard('RIF Personal Digital', 'rif', c.url_foto_rif, c.cedula_rif, canDocs)}
             </div>
             <p class="upload-hint">${ui.icon('cloud', 14)} Los archivos se guardan en <strong>Supabase Storage → documentos-clientes/{cédula}</strong> o localmente si aún no hay conexión. Formatos: JPG, PNG, WEBP o PDF (máx. 8 MB).</p>
           </div>
@@ -261,7 +269,7 @@
             <h4>Acciones</h4>
             <div class="stack-actions">
               <button class="btn btn-ghost btn-block" id="detail-services">${ui.icon('route', 15)} Ver todos los servicios</button>
-              ${canWrite ? `<button class="btn btn-danger-ghost btn-block" id="detail-delete">${ui.icon('trash', 15)} Eliminar cliente</button>` : ''}
+              ${canDelete ? `<button class="btn btn-danger-ghost btn-block" id="detail-delete">${ui.icon('trash', 15)} Eliminar cliente</button>` : ''}
             </div>
           </div>
           <div class="audit-note">${ui.icon('shield', 14)} Cédula / RIF como identificador maestro único · Registro ${ui.dateTime(c.created_at)}</div>
@@ -371,7 +379,7 @@
 
   function openRecharge(cedula) {
     const ui = NS.ui;
-    if (!NS.app.canWrite()) return ui.toast('Tu rol es de solo lectura.', 'warning');
+    if (!NS.app.canAction('clients', 'billetera')) return ui.toast('No tienes permiso para recargar billeteras.', 'warning');
     const c = NS.store.db.clients.find((x) => x.cedula_rif === cedula);
     if (!c) return;
     const overlay = ui.modal({

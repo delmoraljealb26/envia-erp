@@ -15,7 +15,9 @@ movilidad y delivery. Cubre:
 - **Fiscalidad SENIAT**: IVA, IGTF, retenciones de IVA e ISLR.
 - **Proveedores, cuentas por pagar, pagos y comprobantes de retención**.
 - **Dashboard** ejecutivo, reportes, exportación CSV/Excel e impresión.
-- **RBAC** con cuatro roles y **Supabase** opcional (REST + Storage).
+- **RBAC** con cuatro roles base, roles personalizados, permisos granulares y
+  **Supabase** opcional (REST + Storage).
+- **Centro de reportes** en cada módulo, con impresión y exportación a Excel.
 
 ## 2. Restricciones técnicas obligatorias
 
@@ -45,7 +47,7 @@ movilidad y delivery. Cubre:
 - Los documentos se guardan como
   `/{bucket}/{cedula_rif}/{tipoDocumento}_{timestamp}.{ext}`.
 - Buckets: `documentos-clientes`, `documentos-conductores`, `fotos-vehiculos`.
-- Roles exactos:
+- Roles base (el administrador puede crear roles personalizados):
   - `SuperAdmin`
   - `Contador / Fiscal`
   - `Tesorero / Cuentas por Pagar`
@@ -89,7 +91,7 @@ docs/constitution.md
 2. Inspecciona el código existente y sigue sus patrones.
 3. Haz cambios pequeños y coherentes; no reescribas módulos completos sin causa.
 4. Valida sintaxis: `node --check` sobre cada archivo JS modificado.
-5. Prueba en Chrome: login, navegación por los 9 módulos, alta/edición,
+5. Prueba en Chrome: login, navegación por los 10 módulos, alta/edición,
    exportación, impresión y recarga.
 6. Verifica que la app siga abriendo con `file://` y sin Supabase.
 7. Reporta archivos tocados, pruebas ejecutadas y riesgos pendientes.
@@ -107,7 +109,8 @@ docs/constitution.md
 ## 8. Criterios de aceptación
 
 - La app abre y funciona sin servidor ni Supabase.
-- Los 8 módulos operativos + dashboard renderizan sin errores de consola.
+- Los 10 módulos renderizan sin errores de consola y respetan los permisos
+  granulares del rol o del usuario.
 - Los cuatro roles ven solo lo permitido y las acciones de escritura se bloquean
   para `Auditor / Operaciones`.
 - Los asientos cuadran y los reportes muestran totales consistentes.

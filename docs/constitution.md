@@ -230,7 +230,7 @@ Antes de entregar cualquier cambio:
 1. `node --check` sobre todos los archivos JS modificados.
 2. Apertura de `index.html` en Chrome mediante `file://`.
 3. Login con `ENVIA` / `123456789`.
-4. Recorrido de los 9 módulos sin errores en consola.
+4. Recorrido de los 10 módulos sin errores en consola.
 5. Alta y edición de cliente y conductor con validación de cédula/RIF.
 6. Carga y vista previa de un documento con y sin Supabase.
 7. Registro de un servicio y verificación del asiento generado.

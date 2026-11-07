@@ -77,6 +77,8 @@ create table if not exists public.drivers (
   saldo_por_liquidar_usd  numeric(14,2) not null default 0 check (saldo_por_liquidar_usd >= 0),
   estatus_conductor       text not null default 'En Revisión Documental'
                             check (estatus_conductor in ('Activo / Disponible','En Servicio','En Revisión Documental','Suspendido')),
+  nivel                   text not null default 'Plata'
+                            check (nivel in ('Plata','Oro','Platium')),
   fecha_registro          date not null default current_date,
   url_foto_cedula         text,
   url_foto_rif            text,
@@ -302,19 +304,30 @@ comment on table public.accounting_entries is 'Cabecera de asientos contables.';
 comment on table public.accounting_entry_lines is 'Líneas DEBE/HABER. La suma debe cuadrar.';
 
 -- ============================================================================
---  11. USUARIOS DEL ERP (RBAC)
+--  11. USUARIOS DEL SISTEMA (RBAC)
 -- ============================================================================
+create table if not exists public.erp_roles (
+  id          text primary key,
+  nombre      text not null unique,
+  descripcion text,
+  icono       text not null default 'shield',
+  admin       boolean not null default false,
+  sistema     boolean not null default false,
+  permisos    jsonb not null default '{}'::jsonb,
+  created_at  timestamptz not null default timezone('utc', now()),
+  updated_at  timestamptz not null default timezone('utc', now())
+);
+
+comment on table public.erp_roles is
+  'Roles dinámicos. permisos guarda módulos, pestañas y acciones autorizadas por rol.';
+
 create table if not exists public.erp_users (
   id          text primary key,
   usuario     text not null unique,
   password    text not null,
   nombre      text not null,
-  rol         text not null check (rol in (
-                'SuperAdmin',
-                'Contador / Fiscal',
-                'Tesorero / Cuentas por Pagar',
-                'Auditor / Operaciones'
-              )),
+  rol         text not null,
+  permisos    jsonb,
   correo      text,
   activo      boolean not null default true,
   created_at  timestamptz not null default timezone('utc', now()),
@@ -323,6 +336,13 @@ create table if not exists public.erp_users (
 
 comment on table public.erp_users is
   'Usuarios demo. En producción migrar a Supabase Auth y almacenar solo hash.';
+
+-- Migraciones idempotentes para instalaciones existentes.
+alter table public.drivers add column if not exists nivel text not null default 'Plata';
+alter table public.drivers drop constraint if exists drivers_nivel_check;
+alter table public.drivers add constraint drivers_nivel_check check (nivel in ('Plata','Oro','Platium'));
+alter table public.erp_users add column if not exists permisos jsonb;
+alter table public.erp_users drop constraint if exists erp_users_rol_check;
 
 -- ============================================================================
 --  12. PARÁMETROS FISCALES
@@ -438,6 +458,11 @@ create trigger trg_entries_updated_at
   before update on public.accounting_entries
   for each row execute function public.set_updated_at();
 
+drop trigger if exists trg_roles_updated_at on public.erp_roles;
+create trigger trg_roles_updated_at
+  before update on public.erp_roles
+  for each row execute function public.set_updated_at();
+
 drop trigger if exists trg_users_updated_at on public.erp_users;
 create trigger trg_users_updated_at
   before update on public.erp_users
@@ -509,6 +534,7 @@ alter table public.withholding_vouchers    enable row level security;
 alter table public.accounting_rules        enable row level security;
 alter table public.accounting_entries      enable row level security;
 alter table public.accounting_entry_lines  enable row level security;
+alter table public.erp_roles               enable row level security;
 alter table public.erp_users               enable row level security;
 alter table public.tax_parameters          enable row level security;
 alter table public.wallet_movements        enable row level security;
@@ -522,7 +548,7 @@ begin
   foreach t in array array[
     'clients','drivers','suppliers','chart_of_accounts','services_orders',
     'accounts_payable','withholding_vouchers','accounting_rules',
-    'accounting_entries','accounting_entry_lines','erp_users',
+    'accounting_entries','accounting_entry_lines','erp_roles','erp_users',
     'tax_parameters','wallet_movements'
   ]
   loop
@@ -600,6 +626,19 @@ create policy envia_storage_delete
 
 insert into public.tax_parameters (id) values (1)
 on conflict (id) do nothing;
+
+-- Roles base. Los permisos se administran desde Usuarios del sistema.
+insert into public.erp_roles (id, nombre, descripcion, icono, admin, sistema, permisos)
+values
+  ('role_superadmin', 'SuperAdmin', 'Acceso ilimitado a todos los módulos, configuración, usuarios y sincronización.', 'shield', true, true,
+    '{"*":{"ver":true,"tabs":["*"],"acciones":["*"]}}'::jsonb),
+  ('role_contador', 'Contador / Fiscal', 'Contabilidad, tributos, libros SENIAT, cuentas por pagar y maestros.', 'book', false, true,
+    '{"dashboard":{"ver":true,"tabs":[],"acciones":["ver","reportes"]},"services":{"ver":true,"tabs":[],"acciones":["ver","crear","editar","eliminar","exportar","imprimir","reportes"]},"clients":{"ver":true,"tabs":[],"acciones":["ver","crear","editar","eliminar","billetera","documentos","exportar","imprimir","reportes"]},"drivers":{"ver":true,"tabs":[],"acciones":["ver","crear","editar","eliminar","documentos","liquidar","exportar","imprimir","reportes"]},"accounting":{"ver":true,"tabs":["entries","accounts","rules","journal","ledger","trial","balance","income","sales","purchases"],"acciones":["ver","crear","editar","eliminar","exportar","imprimir","reportes"]},"taxes":{"ver":true,"tabs":[],"acciones":["ver","editar","exportar","imprimir","reportes"]},"payables":{"ver":true,"tabs":["invoices","suppliers","settlements"],"acciones":["ver","crear","editar","eliminar","pagar","exportar","imprimir","reportes"]}}'::jsonb),
+  ('role_tesorero', 'Tesorero / Cuentas por Pagar', 'Pagos, proveedores, liquidaciones, maestros y consulta tributaria.', 'wallet', false, true,
+    '{"dashboard":{"ver":true,"tabs":[],"acciones":["ver","reportes"]},"services":{"ver":true,"tabs":[],"acciones":["ver","crear","editar","eliminar","exportar","imprimir","reportes"]},"clients":{"ver":true,"tabs":[],"acciones":["ver","crear","editar","eliminar","billetera","documentos","exportar","imprimir","reportes"]},"drivers":{"ver":true,"tabs":[],"acciones":["ver","crear","editar","eliminar","documentos","liquidar","exportar","imprimir","reportes"]},"payables":{"ver":true,"tabs":["invoices","suppliers","settlements"],"acciones":["ver","crear","editar","eliminar","pagar","exportar","imprimir","reportes"]},"taxes":{"ver":true,"tabs":[],"acciones":["ver","editar","exportar","imprimir","reportes"]}}'::jsonb),
+  ('role_auditor', 'Auditor / Operaciones', 'Consulta de todos los módulos financieros y operativos en modo solo lectura.', 'eye', false, true,
+    '{"dashboard":{"ver":true,"tabs":[],"acciones":["ver","reportes"]},"services":{"ver":true,"tabs":[],"acciones":["ver","exportar","imprimir","reportes"]},"clients":{"ver":true,"tabs":[],"acciones":["ver","exportar","imprimir","reportes"]},"drivers":{"ver":true,"tabs":[],"acciones":["ver","exportar","imprimir","reportes"]},"accounting":{"ver":true,"tabs":["entries","accounts","rules","journal","ledger","trial","balance","income","sales","purchases"],"acciones":["ver","exportar","imprimir","reportes"]},"taxes":{"ver":true,"tabs":[],"acciones":["ver","exportar","imprimir","reportes"]},"payables":{"ver":true,"tabs":["invoices","suppliers","settlements"],"acciones":["ver","exportar","imprimir","reportes"]}}'::jsonb)
+on conflict (nombre) do nothing;
 
 insert into public.erp_users (id, usuario, password, nombre, rol, correo, activo)
 values

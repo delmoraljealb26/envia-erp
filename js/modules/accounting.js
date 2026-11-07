@@ -40,7 +40,14 @@
     const tb = store.trialBalance();
     const totals = tb.reduce((s, r) => ({ debe: s.debe + r.debe, haber: s.haber + r.haber, deudor: s.deudor + r.deudor, acreedor: s.acreedor + r.acreedor }), { debe: 0, haber: 0, deudor: 0, acreedor: 0 });
     const diff = Math.abs(totals.debe - totals.haber);
-    const canWrite = NS.app.canWrite();
+    const canWrite = NS.app.canAction('accounting', 'editar');
+    const canDelete = NS.app.canAction('accounting', 'eliminar');
+    const allowedTabs = TABS.filter((t) => NS.app.canTab('accounting', t.id));
+    if (!allowedTabs.length) {
+      view.innerHTML = ui.empty('lock', 'Sin opciones contables asignadas', 'Tu rol no tiene pestañas habilitadas dentro de Contabilidad. Solicita permisos al administrador.');
+      return;
+    }
+    if (!allowedTabs.some((t) => t.id === state.tab)) state.tab = allowedTabs[0].id;
 
     view.innerHTML = `
       <div class="page-head">
@@ -50,8 +57,9 @@
           <p class="page-sub">${db.entries.length} asientos · ${db.accounts.length} cuentas · ${db.accountingRules.length} reglas automáticas · Moneda funcional VES a tasa ${ui.bs(db.taxParams.bcvRate)} / USD.</p>
         </div>
         <div class="page-actions">
+          ${NS.reports.button('accounting')}
           <span class="balance-chip ${diff < 0.02 ? 'ok' : 'bad'}">${ui.icon(diff < 0.02 ? 'check' : 'alert', 15)} ${diff < 0.02 ? 'Partida doble cuadrada' : 'Descuadre ' + ui.bs(diff)}</span>
-          ${canWrite ? `<button class="btn btn-primary" id="acc-new-entry">${ui.icon('plus', 16)} Asiento manual</button>` : ''}
+          ${NS.app.canAction('accounting', 'crear') ? `<button class="btn btn-primary" id="acc-new-entry">${ui.icon('plus', 16)} Asiento manual</button>` : ''}
         </div>
       </div>
 
@@ -64,7 +72,7 @@
 
       <div class="tabs-scroll">
         <div class="tabs">
-          ${TABS.map((t) => `<button class="tab ${state.tab === t.id ? 'active' : ''}" data-tab="${t.id}">${ui.icon(t.icon, 15)} ${t.label}</button>`).join('')}
+          ${allowedTabs.map((t) => `<button class="tab ${state.tab === t.id ? 'active' : ''}" data-tab="${t.id}">${ui.icon(t.icon, 15)} ${t.label}</button>`).join('')}
         </div>
       </div>
       <div id="acc-tab-content"></div>
@@ -95,7 +103,7 @@
   function renderEntries(el) {
     const ui = NS.ui;
     const db = NS.store.db;
-    const canWrite = NS.app.canWrite();
+    const canDelete = NS.app.canAction('accounting', 'eliminar');
     const q = state.q.toLowerCase();
     const list = db.entries.slice().sort((a, b) => b.fecha.localeCompare(a.fecha) || b.numero.localeCompare(a.numero)).filter((e) => {
       if (!q) return true;
@@ -129,7 +137,7 @@
                 <td>${Math.abs(d - h) < 0.02 ? ui.badge('Cuadra', 'success') : ui.badge('Descuadre', 'danger')}</td>
                 <td class="actions-col">
                   <button class="icon-btn" data-view-entry="${ui.esc(e.id)}" title="Ver comprobante">${ui.icon('eye', 16)}</button>
-                  ${canWrite && e.origen === 'manual' ? `<button class="icon-btn danger" data-del-entry="${ui.esc(e.id)}" title="Eliminar asiento manual">${ui.icon('trash', 16)}</button>` : ''}
+                  ${canDelete && e.origen === 'manual' ? `<button class="icon-btn danger" data-del-entry="${ui.esc(e.id)}" title="Eliminar asiento manual">${ui.icon('trash', 16)}</button>` : ''}
                 </td>
               </tr>`;
             }).join('') : `<tr><td colspan="9">${ui.empty('book', 'Sin asientos', 'No hay partidas que coincidan con la búsqueda.')}</td></tr>`}
@@ -204,7 +212,7 @@
 
   function openEntryForm() {
     const ui = NS.ui;
-    if (!NS.app.canWrite()) return ui.toast('Tu rol es de solo lectura.', 'warning');
+    if (!NS.app.canAction('accounting', 'crear')) return ui.toast('No tienes permiso para crear asientos.', 'warning');
     const options = leafAccounts().map((a) => `<option value="${ui.esc(a.codigo)}">${ui.esc(a.codigo)} · ${ui.esc(a.nombre)}</option>`).join('');
     const lineHtml = (d, h) => `<div class="entry-line" data-line>
       <select class="line-account">${options}</select>
@@ -305,7 +313,9 @@
   function renderAccounts(el, view) {
     const ui = NS.ui;
     const db = NS.store.db;
-    const canWrite = NS.app.canWrite();
+    const canWrite = NS.app.canAction('accounting', 'editar');
+    const canCreate = NS.app.canAction('accounting', 'crear');
+    const canDelete = NS.app.canAction('accounting', 'eliminar');
     const q = state.accountQ.toLowerCase();
     const balances = NS.store.getAccountBalances();
     const balMap = {};
@@ -317,7 +327,7 @@
         <div class="search-box">${ui.icon('search', 17)}<input id="account-search" type="search" placeholder="Buscar cuenta por código o nombre..." value="${ui.esc(state.accountQ)}"></div>
         <div class="toolbar-right">
           <button class="btn btn-ghost btn-sm" id="accounts-print">${ui.icon('print', 15)} Imprimir plan</button>
-          ${canWrite ? `<button class="btn btn-primary btn-sm" id="account-new">${ui.icon('plus', 15)} Nueva cuenta</button>` : ''}
+          ${canCreate ? `<button class="btn btn-primary btn-sm" id="account-new">${ui.icon('plus', 15)} Nueva cuenta</button>` : ''}
         </div>
       </div>
       <div class="table-wrap">
@@ -338,7 +348,7 @@
                 <td class="num">${b && (b.debe || b.haber) ? `<strong>${ui.bs(Math.abs(saldo))}</strong><small class="block muted">${saldo >= 0 ? 'Deudor' : 'Acreedor'}</small>` : '<span class="muted">—</span>'}</td>
                 <td class="actions-col">
                   ${canWrite ? `<button class="icon-btn" data-edit-account="${ui.esc(a.codigo)}" title="Editar">${ui.icon('edit', 15)}</button>` : ''}
-                  ${canWrite ? `<button class="icon-btn danger" data-del-account="${ui.esc(a.codigo)}" title="Eliminar">${ui.icon('trash', 15)}</button>` : ''}
+                  ${canDelete ? `<button class="icon-btn danger" data-del-account="${ui.esc(a.codigo)}" title="Eliminar">${ui.icon('trash', 15)}</button>` : ''}
                 </td>
               </tr>`;
             }).join('') : `<tr><td colspan="8">${ui.empty('grid', 'Sin cuentas', 'Ajusta la búsqueda o crea una nueva cuenta contable.')}</td></tr>`}
@@ -370,7 +380,7 @@
 
   function openAccountForm(codigo) {
     const ui = NS.ui;
-    if (!NS.app.canWrite()) return ui.toast('Tu rol es de solo lectura.', 'warning');
+    if (!NS.app.canAction('accounting', codigo ? 'editar' : 'crear')) return ui.toast('No tienes permiso para administrar el plan de cuentas.', 'warning');
     const a = codigo ? ACC().find((x) => x.codigo === codigo) : null;
     const overlay = ui.modal({
       title: a ? 'Editar cuenta contable' : 'Nueva cuenta contable',
@@ -416,7 +426,7 @@
   function renderRules(el, view) {
     const ui = NS.ui;
     const db = NS.store.db;
-    const canWrite = NS.app.canWrite();
+    const canWrite = NS.app.canAction('accounting', 'editar');
     el.innerHTML = `<div class="rule-grid">
       ${db.accountingRules.map((r) => `<article class="rule-card">
         <div class="rule-head"><span class="rule-ico">${ui.icon(ruleIcon(r.evento), 20)}</span><div><strong>${ui.esc(r.nombre)}</strong><span class="event-pill">${ui.esc(r.evento)}</span></div>${ui.badge(r.activo ? 'Activa' : 'Inactiva')}</div>
@@ -441,7 +451,7 @@
 
   function openRuleForm(ev) {
     const ui = NS.ui;
-    if (!NS.app.canWrite()) return ui.toast('Tu rol es de solo lectura.', 'warning');
+    if (!NS.app.canAction('accounting', 'editar')) return ui.toast('No tienes permiso para editar reglas contables.', 'warning');
     const r = NS.store.db.accountingRules.find((x) => x.evento === ev);
     if (!r) return;
     const opts = (selected) => `<option value="">— Sin cuenta —</option>` + leafAccounts().map((a) => `<option value="${ui.esc(a.codigo)}" ${selected === a.codigo ? 'selected' : ''}>${ui.esc(a.codigo)} · ${ui.esc(a.nombre)}</option>`).join('');

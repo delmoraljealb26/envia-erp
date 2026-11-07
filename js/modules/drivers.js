@@ -27,7 +27,10 @@
     const ui = NS.ui;
     const store = NS.store;
     const db = store.db;
-    const canWrite = NS.app.canWrite();
+    const canCreate = NS.app.canAction('drivers', 'crear');
+    const canEdit = NS.app.canAction('drivers', 'editar');
+    const canDelete = NS.app.canAction('drivers', 'eliminar');
+    const canExport = NS.app.canAction('drivers', 'exportar');
     const q = filters.q.toLowerCase();
     const list = db.drivers.filter((d) => {
       const hay = [d.cedula_rif, d.nombres, d.apellidos, d.placa, d.marca, d.modelo, d.telefono, d.correo, d.tipo_servicio].join(' ').toLowerCase();
@@ -48,8 +51,9 @@
           <p class="page-sub">${db.drivers.length} conductores · ${totals.inService} en servicio · ${totals.incomplete} con expediente incompleto · ${ui.usd(totals.liquidar)} por liquidar.</p>
         </div>
         <div class="page-actions">
-          <button class="btn btn-ghost" id="drivers-export">${ui.icon('download', 16)} Exportar CSV</button>
-          ${canWrite ? `<button class="btn btn-primary" id="drivers-new">${ui.icon('plus', 16)} Nuevo conductor</button>` : ''}
+          ${NS.reports.button('drivers')}
+          ${canExport ? `<button class="btn btn-ghost" id="drivers-export">${ui.icon('download', 16)} Exportar CSV</button>` : ''}
+          ${canCreate ? `<button class="btn btn-primary" id="drivers-new">${ui.icon('plus', 16)} Nuevo conductor</button>` : ''}
         </div>
       </div>
 
@@ -78,7 +82,7 @@
         <div class="table-wrap">
           <table class="data-table">
             <thead><tr>
-              <th>Conductor</th><th>Cédula / RIF</th><th>Vehículo</th><th>Contacto</th>
+              <th>Conductor</th><th>Cédula / RIF</th><th>Nivel</th><th>Vehículo</th><th>Contacto</th>
               <th class="num">Comisión</th><th class="num">Por liquidar</th><th>Expediente</th><th>Estatus</th><th class="actions-col">Acciones</th>
             </tr></thead>
             <tbody>
@@ -90,6 +94,7 @@
                     <span><strong>${ui.esc(d.nombres + ' ' + d.apellidos)}</strong><small class="block muted">${ui.esc(d.correo || 'Sin correo')}</small></span>
                   </button></td>
                   <td><span class="mono strong">${ui.esc(d.cedula_rif)}</span><small class="block muted">${ui.esc(d.banco || '—')}</small></td>
+                  <td>${ui.badge(d.nivel || 'Plata', d.nivel === 'Platium' ? 'purple' : d.nivel === 'Oro' ? 'warning' : 'info')}</td>
                   <td><span class="vehicle-cell"><b>${ui.esc(d.marca)} ${ui.esc(d.modelo)}</b><em>${ui.esc(d.placa)}</em></span><small class="block muted">${ui.esc(d.tipo_servicio)} · ${d.anio} · ${ui.esc(d.color)}</small></td>
                   <td><span>${ui.esc(d.telefono)}</span><small class="block muted">Pago móvil ${ui.esc(d.telefono_pago_movil || '—')}</small></td>
                   <td class="num"><strong>${d.porcentaje_comision}%</strong><small class="block muted">ENVIA</small></td>
@@ -98,11 +103,11 @@
                   <td>${ui.badge(d.estatus_conductor)}</td>
                   <td class="actions-col">
                     <button class="icon-btn" data-driver="${ui.esc(d.cedula_rif)}" title="Ver expediente">${ui.icon('eye', 16)}</button>
-                    ${canWrite ? `<button class="icon-btn" data-edit-driver="${ui.esc(d.cedula_rif)}" title="Editar">${ui.icon('edit', 16)}</button>` : ''}
-                    ${canWrite ? `<button class="icon-btn danger" data-del-driver="${ui.esc(d.cedula_rif)}" title="Eliminar">${ui.icon('trash', 16)}</button>` : ''}
+                    ${canEdit ? `<button class="icon-btn" data-edit-driver="${ui.esc(d.cedula_rif)}" title="Editar">${ui.icon('edit', 16)}</button>` : ''}
+                    ${canDelete ? `<button class="icon-btn danger" data-del-driver="${ui.esc(d.cedula_rif)}" title="Eliminar">${ui.icon('trash', 16)}</button>` : ''}
                   </td>
                 </tr>`;
-              }).join('') : `<tr><td colspan="9">${ui.empty('car', 'No hay conductores que coincidan', 'Ajusta los filtros o registra un nuevo aliado operativo.', canWrite ? '<button class="btn btn-primary" id="drivers-empty-new">Nuevo conductor</button>' : '')}</td></tr>`}
+              }).join('') : `<tr><td colspan="10">${ui.empty('car', 'No hay conductores que coincidan', 'Ajusta los filtros o registra un nuevo aliado operativo.', canCreate ? '<button class="btn btn-primary" id="drivers-empty-new">Nuevo conductor</button>' : '')}</td></tr>`}
             </tbody>
           </table>
         </div>
@@ -125,7 +130,8 @@
     if (newBtn) newBtn.addEventListener('click', () => openForm());
     const emptyNew = $('#drivers-empty-new');
     if (emptyNew) emptyNew.addEventListener('click', () => openForm());
-    $('#drivers-export').addEventListener('click', exportCsv);
+    const exportBtn = $('#drivers-export');
+    if (exportBtn) exportBtn.addEventListener('click', exportCsv);
     view.querySelectorAll('[data-driver]').forEach((b) => b.addEventListener('click', () => openDetail(b.dataset.driver)));
     view.querySelectorAll('[data-edit-driver]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); openForm(b.dataset.editDriver); }));
     view.querySelectorAll('[data-del-driver]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); askDelete(b.dataset.delDriver); }));
@@ -133,8 +139,8 @@
 
   function exportCsv() {
     const db = NS.store.db;
-    const rows = [['Cédula/RIF', 'Nombres', 'Apellidos', 'Teléfono', 'Correo', 'Dirección', 'Tipo servicio', 'Placa', 'Marca', 'Modelo', 'Año', 'Color', 'Banco', 'Teléfono pago móvil', 'Cédula pago móvil', 'Cuenta bancaria', '% Comisión', 'Saldo por liquidar USD', 'Estatus', 'Docs aprobados']];
-    db.drivers.forEach((d) => rows.push([d.cedula_rif, d.nombres, d.apellidos, d.telefono, d.correo, d.direccion, d.tipo_servicio, d.placa, d.marca, d.modelo, d.anio, d.color, d.banco, d.telefono_pago_movil, d.cedula_pago_movil, d.cuenta_bancaria, d.porcentaje_comision, d.saldo_por_liquidar_usd, d.estatus_conductor, docsInfo(d).approved + '/5']));
+    const rows = [['Cédula/RIF', 'Nombres', 'Apellidos', 'Nivel', 'Teléfono', 'Correo', 'Dirección', 'Tipo servicio', 'Placa', 'Marca', 'Modelo', 'Año', 'Color', 'Banco', 'Teléfono pago móvil', 'Cédula pago móvil', 'Cuenta bancaria', '% Comisión', 'Saldo por liquidar USD', 'Estatus', 'Docs aprobados']];
+    db.drivers.forEach((d) => rows.push([d.cedula_rif, d.nombres, d.apellidos, d.nivel || 'Plata', d.telefono, d.correo, d.direccion, d.tipo_servicio, d.placa, d.marca, d.modelo, d.anio, d.color, d.banco, d.telefono_pago_movil, d.cedula_pago_movil, d.cuenta_bancaria, d.porcentaje_comision, d.saldo_por_liquidar_usd, d.estatus_conductor, docsInfo(d).approved + '/5']));
     NS.ui.downloadFile('ENVIA_conductores_' + NS.store.today() + '.csv', NS.ui.csv(rows));
     NS.ui.toast('Maestro de conductores exportado a CSV.', 'success');
   }
@@ -145,6 +151,7 @@
       <div class="form-section-title"><span>01</span><div><strong>Datos personales</strong><small>La cédula / RIF identifica de forma única al conductor en toda la plataforma.</small></div></div>
       <label class="field"><span>Cédula / RIF *</span><input name="cedula_rif" value="${ui.esc(d.cedula_rif || '')}" placeholder="V-16874321" ${isNew ? '' : 'disabled'} required></label>
       <label class="field"><span>Estatus operativo</span><select name="estatus_conductor">${NS.store.DRIVER_STATUS.map((s) => `<option ${d.estatus_conductor === s ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
+      <label class="field"><span>Nivel del conductor</span><select name="nivel">${NS.store.DRIVER_LEVELS.map((n) => `<option value="${n}" ${(d.nivel || 'Plata') === n ? 'selected' : ''}>${n}</option>`).join('')}</select><small>Plata, Oro o Platium según desempeño y cumplimiento.</small></label>
       <label class="field"><span>Nombres *</span><input name="nombres" value="${ui.esc(d.nombres || '')}" placeholder="Carlos Luis" required></label>
       <label class="field"><span>Apellidos *</span><input name="apellidos" value="${ui.esc(d.apellidos || '')}" placeholder="Pérez Marcano" required></label>
       <label class="field"><span>Teléfono móvil *</span><input name="telefono" value="${ui.esc(d.telefono || '')}" placeholder="0412-555-7788" required></label>
@@ -172,7 +179,7 @@
 
   function openForm(cedula) {
     const ui = NS.ui;
-    if (!NS.app.canWrite()) return ui.toast('Tu rol es de solo lectura.', 'warning');
+    if (!NS.app.canAction('drivers', cedula ? 'editar' : 'crear')) return ui.toast('No tienes permiso para esta acción en conductores.', 'warning');
     const d = cedula ? NS.store.db.drivers.find((x) => x.cedula_rif === cedula) : null;
     const data = d || {};
     const overlay = ui.modal({
@@ -210,7 +217,10 @@
   function detailHtml(d) {
     const ui = NS.ui;
     const db = NS.store.db;
-    const canWrite = NS.app.canWrite();
+    const canEdit = NS.app.canAction('drivers', 'editar');
+    const canDelete = NS.app.canAction('drivers', 'eliminar');
+    const canDocs = NS.app.canAction('drivers', 'documentos');
+    const canSettle = NS.app.canAction('drivers', 'liquidar');
     const info = docsInfo(d);
     const st = d.docs_estado || {};
     const services = db.services.filter((s) => s.conductor_cedula_rif === d.cedula_rif).slice(0, 4);
@@ -219,10 +229,10 @@
       <div class="profile-head">
         ${ui.avatar(d.nombres + ' ' + d.apellidos, 58)}
         <div class="profile-id">
-          <div class="profile-name">${ui.esc(d.nombres + ' ' + d.apellidos)} ${ui.badge(d.estatus_conductor)}</div>
-          <div class="profile-meta"><span class="mono">${ui.esc(d.cedula_rif)}</span><span>${ui.esc(d.tipo_servicio)}</span><span>${ui.esc(d.placa)}</span><span>${ui.esc(d.telefono)}</span></div>
+          <div class="profile-name">${ui.esc(d.nombres + ' ' + d.apellidos)} ${ui.badge(d.estatus_conductor)} ${ui.badge(d.nivel || 'Plata', d.nivel === 'Platium' ? 'purple' : d.nivel === 'Oro' ? 'warning' : 'info')}</div>
+          <div class="profile-meta"><span class="mono">${ui.esc(d.cedula_rif)}</span><span>Nivel ${ui.esc(d.nivel || 'Plata')}</span><span>${ui.esc(d.tipo_servicio)}</span><span>${ui.esc(d.placa)}</span><span>${ui.esc(d.telefono)}</span></div>
         </div>
-        <div class="profile-actions">${canWrite ? `<button class="btn btn-ghost btn-sm" id="driver-detail-edit">${ui.icon('edit', 15)} Editar</button>` : ''}</div>
+        <div class="profile-actions">${canEdit ? `<button class="btn btn-ghost btn-sm" id="driver-detail-edit">${ui.icon('edit', 15)} Editar</button>` : ''}</div>
       </div>
 
       <div class="detail-grid">
@@ -254,22 +264,22 @@
           <div class="detail-block">
             <h4>Expediente documental <span class="h4-note">${info.approved}/5 aprobados${info.rejected ? ' · ' + info.rejected + ' rechazado(s)' : ''}</span></h4>
             <div class="doc-grid doc-grid-driver">
-              ${DOCS.map((doc) => docCard(d, doc, st[doc.key] || 'Pendiente', canWrite)).join('')}
+              ${DOCS.map((doc) => docCard(d, doc, st[doc.key] || 'Pendiente', canDocs)).join('')}
             </div>
             <p class="upload-hint">${ui.icon('cloud', 14)} Arrastra un archivo sobre la tarjeta o usa “Subir”. Bucket: <strong>documentos-conductores/${ui.esc(d.cedula_rif)}</strong>. Validación: Aprobado / Rechazado.</p>
           </div>
 
           <div class="detail-block">
             <h4>Fotos del vehículo <span class="h4-note">Frontal · lateral · placa (múltiples)</span> ${ui.badge(st.vehiculo || 'Pendiente')}</h4>
-            <div class="vehicle-gallery ${canWrite ? 'droppable' : ''}" id="vehicle-drop">
+            <div class="vehicle-gallery ${canDocs ? 'droppable' : ''}" id="vehicle-drop">
               ${photos.map((p, i) => `<div class="vehicle-photo">
                 <img src="${ui.esc(NS.supabase.resolve(p))}" alt="Foto vehículo ${i + 1}" data-preview="${ui.esc(p)}" data-label="Foto del vehículo ${d.placa}">
-                ${canWrite ? `<button class="photo-remove" data-remove-photo="${i}" title="Eliminar foto">${ui.icon('x', 13)}</button>` : ''}
+                ${canDocs ? `<button class="photo-remove" data-remove-photo="${i}" title="Eliminar foto">${ui.icon('x', 13)}</button>` : ''}
               </div>`).join('')}
-              ${canWrite ? `<button class="vehicle-add" id="vehicle-add" type="button">${ui.icon('camera', 24)}<span>Agregar fotos</span><small>JPG / PNG</small></button>
+              ${canDocs ? `<button class="vehicle-add" id="vehicle-add" type="button">${ui.icon('camera', 24)}<span>Agregar fotos</span><small>JPG / PNG</small></button>
               <input type="file" id="vehicle-file" class="hidden-file" accept="image/*" multiple>` : ''}
             </div>
-            ${canWrite ? `<div class="inline-actions"><button class="btn btn-xs btn-success-ghost" data-approve-vehicle="1">${ui.icon('check', 13)} Aprobar fotos</button><button class="btn btn-xs btn-danger-ghost" data-reject-vehicle="1">${ui.icon('x', 13)} Rechazar fotos</button></div>` : ''}
+            ${canDocs ? `<div class="inline-actions"><button class="btn btn-xs btn-success-ghost" data-approve-vehicle="1">${ui.icon('check', 13)} Aprobar fotos</button><button class="btn btn-xs btn-danger-ghost" data-reject-vehicle="1">${ui.icon('x', 13)} Rechazar fotos</button></div>` : ''}
           </div>
         </div>
 
@@ -278,7 +288,7 @@
             <span>Saldo por liquidar</span>
             <strong>${ui.usd(d.saldo_por_liquidar_usd)}</strong>
             <small>${ui.bs(ui.toBs(d.saldo_por_liquidar_usd))} · comisión ENVIA ${d.porcentaje_comision}%</small>
-            ${canWrite ? `<button class="btn btn-primary btn-block btn-sm" id="driver-settle" ${d.saldo_por_liquidar_usd <= 0 ? 'disabled' : ''}>${ui.icon('bank', 15)} Registrar liquidación</button>` : ''}
+            ${canSettle ? `<button class="btn btn-primary btn-block btn-sm" id="driver-settle" ${d.saldo_por_liquidar_usd <= 0 ? 'disabled' : ''}>${ui.icon('bank', 15)} Registrar liquidación</button>` : ''}
           </div>
           <div class="side-metrics">
             <div class="side-metric"><span>Servicios</span><strong>${db.services.filter((s) => s.conductor_cedula_rif === d.cedula_rif).length}</strong></div>
@@ -296,7 +306,7 @@
           <div class="detail-block">
             <h4>Acciones</h4>
             <div class="stack-actions">
-              ${canWrite ? `<button class="btn btn-danger-ghost btn-block" id="driver-detail-delete">${ui.icon('trash', 15)} Eliminar conductor</button>` : ''}
+              ${canDelete ? `<button class="btn btn-danger-ghost btn-block" id="driver-detail-delete">${ui.icon('trash', 15)} Eliminar conductor</button>` : ''}
             </div>
           </div>
           <div class="audit-note">${ui.icon('shield', 14)} Cédula / RIF como identificador maestro único · Documentos con control de validación</div>
@@ -467,7 +477,7 @@
 
   function openSettle(cedula) {
     const ui = NS.ui;
-    if (!NS.app.canWrite()) return ui.toast('Tu rol es de solo lectura.', 'warning');
+    if (!NS.app.canAction('drivers', 'liquidar')) return ui.toast('No tienes permiso para registrar liquidaciones.', 'warning');
     const d = NS.store.db.drivers.find((x) => x.cedula_rif === cedula);
     if (!d) return;
     const overlay = ui.modal({

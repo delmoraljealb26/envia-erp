@@ -14,7 +14,8 @@
     const ui = NS.ui;
     const store = NS.store;
     const db = store.db;
-    const canWrite = NS.app.canWrite();
+    const canCreate = NS.app.canAction('services', 'crear');
+    const canExport = NS.app.canAction('services', 'exportar');
     const q = filters.q.toLowerCase();
     const list = db.services.filter((s) => {
       const c = db.clients.find((x) => x.cedula_rif === s.cliente_cedula_rif);
@@ -32,8 +33,9 @@
           <p class="page-sub">Cada servicio genera ingreso, IVA, IGTF cuando aplica y la liquidación del conductor en partida doble.</p>
         </div>
         <div class="page-actions">
-          <button class="btn btn-ghost" id="services-export">${ui.icon('download', 16)} Exportar CSV</button>
-          ${canWrite ? `<button class="btn btn-primary" id="services-new">${ui.icon('plus', 16)} Nuevo servicio</button>` : ''}
+          ${NS.reports.button('services')}
+          ${canExport ? `<button class="btn btn-ghost" id="services-export">${ui.icon('download', 16)} Exportar CSV</button>` : ''}
+          ${canCreate ? `<button class="btn btn-primary" id="services-new">${ui.icon('plus', 16)} Nuevo servicio</button>` : ''}
         </div>
       </div>
 
@@ -105,7 +107,8 @@
     $('#service-method').addEventListener('change', rerender);
     const newBtn = $('#services-new');
     if (newBtn) newBtn.addEventListener('click', () => openForm());
-    $('#services-export').addEventListener('click', exportCsv);
+    const exportBtn = $('#services-export');
+    if (exportBtn) exportBtn.addEventListener('click', exportCsv);
     view.querySelectorAll('[data-service]').forEach((b) => b.addEventListener('click', () => openDetail(b.dataset.service)));
     view.querySelectorAll('[data-client]').forEach((b) => b.addEventListener('click', () => NS.modules.clients.openDetail(b.dataset.client)));
     view.querySelectorAll('[data-driver]').forEach((b) => b.addEventListener('click', () => NS.modules.drivers.openDetail(b.dataset.driver)));
@@ -163,7 +166,7 @@
 
   function openForm() {
     const ui = NS.ui;
-    if (!NS.app.canWrite()) return ui.toast('Tu rol es de solo lectura.', 'warning');
+    if (!NS.app.canAction('services', 'crear')) return ui.toast('No tienes permiso para registrar servicios.', 'warning');
     const overlay = ui.modal({
       title: 'Nuevo servicio',
       eyebrow: 'Operación · carrera o encomienda',

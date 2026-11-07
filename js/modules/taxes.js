@@ -12,7 +12,7 @@
     const ui = NS.ui;
     const db = NS.store.db;
     const p = db.taxParams;
-    const canWrite = NS.app.canWrite();
+    const canWrite = NS.app.canAction('taxes', 'editar');
     const vouchers = db.withholdings.slice().sort((a, b) => b.numero_comprobante.localeCompare(a.numero_comprobante));
     const totals = vouchers.reduce((s, v) => ({ iva: s.iva + v.ret_iva_ves, islr: s.islr + v.ret_islr_ves, total: s.total + v.total_retenido_ves }), { iva: 0, islr: 0, total: 0 });
     const salesIva = db.services.reduce((s, x) => s + x.iva_usd, 0);
@@ -27,6 +27,7 @@
           <p class="page-sub">Tasa BCV, IVA, IGTF, unidad tributaria y tarifas de ISLR parametrizables. Comprobantes con formato ${new Date().getFullYear()}MM + 8 dígitos.</p>
         </div>
         <div class="page-actions">
+          ${NS.reports.button('taxes')}
           ${canWrite ? `<button class="btn btn-ghost" id="taxes-rate-refresh" title="Consultar la tasa oficial en DolarAPI">${ui.icon('refresh', 16)} Sincronizar BCV</button>` : ''}
           <button class="btn btn-ghost" id="taxes-export">${ui.icon('download', 16)} Exportar retenciones</button>
           <span class="chip chip-orange">${ui.icon('percent', 14)} IVA ${p.ivaGeneral}% / ${p.ivaReducido}%</span>

@@ -15,7 +15,9 @@
     const db = store.db;
     const m = store.metrics();
     const rate = ui.rate();
-    const canWrite = NS.app.canWrite();
+    const canNewClient = NS.app.canAction('clients', 'crear');
+    const canNewPayable = NS.app.canAction('payables', 'crear');
+    const canNewService = NS.app.canAction('services', 'crear');
     const todayKey = store.today();
     const todayRaw = new Date(todayKey + 'T12:00:00').toLocaleDateString('es-VE', {
       weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
@@ -134,9 +136,10 @@
           <p class="page-sub">${m.activeDrivers} de ${m.totalDrivers} conductores activos y ${pendingAll.length} facturas pendientes por revisar.</p>
         </div>
         <div class="page-actions">
-          ${canWrite ? `<button class="btn btn-ghost" id="dash-new-client">${ui.icon('plus', 16)} Cliente</button>` : ''}
-          ${canWrite ? `<button class="btn btn-ghost" id="dash-new-payable">${ui.icon('receipt', 16)} Factura</button>` : ''}
-          ${canWrite ? `<button class="btn btn-primary" id="dash-new-service">${ui.icon('route', 16)} Nuevo servicio</button>` : `<span class="readonly-chip">${ui.icon('eye', 14)} Modo auditoría · solo lectura</span>`}
+          ${NS.reports.button('dashboard')}
+          ${canNewClient ? `<button class="btn btn-ghost" id="dash-new-client">${ui.icon('plus', 16)} Cliente</button>` : ''}
+          ${canNewPayable ? `<button class="btn btn-ghost" id="dash-new-payable">${ui.icon('receipt', 16)} Factura</button>` : ''}
+          ${canNewService ? `<button class="btn btn-primary" id="dash-new-service">${ui.icon('route', 16)} Nuevo servicio</button>` : `<span class="readonly-chip">${ui.icon('eye', 14)} Modo auditoría · solo lectura</span>`}
         </div>
       </div>
 

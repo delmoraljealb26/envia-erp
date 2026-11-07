@@ -1,9 +1,11 @@
 # MEMORY.md - ENVIA ERP
 ## Registro del proyecto para continuación de tareas
 
-**Fecha:** 05 de noviembre de 2026  
-**Estado:** Proyecto completo y funcional  
-**Versión:** 1.0.0  
+**Fecha:** 06 de noviembre de 2026
+
+**Estado:** Proyecto completo y funcional
+
+**Versión:** 1.4.0
 
 ---
 
@@ -16,19 +18,21 @@ EnVia/
 ├── js/
 │   ├── app.js                     # Login, sesión, RBAC, router, shell
 │   ├── services/
-│   │   ├── store.js               # Motor de datos, contabilidad, CRUD, seed, reports
-│   │   └── supabaseService.js     # REST/Storage, sync, fallback
+│   │   ├── store.js               # Datos, contabilidad, CRUD, seed, roles y permisos
+│   │   ├── supabaseService.js     # REST/Storage, IndexedDB, sync, fallback
+│   │   └── exchangeRateService.js # Tasa BCV oficial (DolarVZLA), caché e históricos
 │   └── modules/
 │       ├── ui.js                  # Helpers, modales, print/CSV, gráficos, validación
 │       ├── dashboard.js           # Dashboard ejecutivo con KPIs y gráficos
 │       ├── clients.js             # Maestro de clientes
-│       ├── drivers.js             # Maestro de conductores y flota
+│       ├── drivers.js             # Maestro de conductores, flota y nivel
 │       ├── services.js            # Servicios (carreras y encomiendas)
 │       ├── accounting.js          # Contabilidad: asientos, libros, reportes
 │       ├── taxes.js               # Tributos: IVA, IGTF, ISLR, retenciones
 │       ├── payables.js            # Cuentas por pagar: proveedores, facturas, pagos
+│       ├── reports.js             # Centro de reportes, impresión y Excel por módulo
 │       ├── audit.js               # Bitácora de auditoría
-│       ├── users.js               # Usuarios del ERP y RBAC
+│       ├── users.js               # Usuarios del sistema, roles y permisos granulares
 │       └── settings.js            # Configuración Supabase y sistema
 ├── sql/supabase_schema.sql        # Esquema SQL completo (tablas, buckets, RLS, seeds)
 ├── docs/
@@ -53,7 +57,7 @@ EnVia/
 
 ---
 
-## 3. Módulos implementados (9 rutas)
+## 3. Módulos implementados (10 rutas)
 
 1. **Dashboard** - Tablero de operación: banda de 14 días, ritmo de ingresos, composición/cobros, CxP y servicios recientes
 2. **Servicios** - Carreras y encomiendas con IVA/IGTF/comisión, asientos automáticos
@@ -63,7 +67,7 @@ EnVia/
 6. **Tributos & BCV** - IVA (16%/8%/0%), IGTF (3%), ISLR (Decreto 1.808), retenciones
 7. **Cuentas por Pagar** - Proveedores, facturas, retenciones IVA/ISLR, pagos, envejecimiento
 8. **Bitácora de Auditoría** - Quién modificó qué, cuándo, usuario, fecha y hora
-9. **Usuarios del ERP** - Gestión de usuarios y roles RBAC
+9. **Usuarios del sistema** - Usuarios, roles base/personalizados, permisos por módulo/pestaña/acción
 10. **Configuración Supabase** - Conexión opcional a Supabase
 
 ---
@@ -80,10 +84,10 @@ EnVia/
 - **Tasa BCV:** Parametrizable, configurable en Tributos & BCV.
 - **Claves primarias:** clientes y conductores = `cedula_rif`; proveedores = `rif`.
 - **Formatos válidos:** V-12345678, E-12345678, J-123456789.
-- **Roles:** SuperAdmin, Contador/Fiscal, Tesorero/CxP, Auditor/Operaciones (solo lectura).
-- **Sesión:** 12 horas expiración, sessionStorage.
-- **Documentos:** ruta `/{bucket}/{cedula_rif}/{tipoDocumento}_{timestamp}.{ext}`, máximo 10 MB, PDF/JPG/PNG/WEBP.
-- **Supabase:** Opcional. App funciona 100% en local con `localStorage` y Data URL fallback.
+- **Roles base:** SuperAdmin, Contador/Fiscal, Tesorero/CxP, Auditor/Operaciones (solo lectura). Se pueden crear roles personalizados y permisos por usuario.
+- **Sesión:** 12 horas expiración, sessionStorage. Cada inicio de sesión abre el Dashboard.
+- **Documentos:** ruta `/{bucket}/{cedula_rif}/{tipoDocumento}_{timestamp}.{ext}`, máximo 10 MB, PDF/JPG/PNG/WEBP; IndexedDB con fallback local.
+- **Supabase:** Opcional. App funciona 100% en local con `localStorage` y archivos en IndexedDB.
 
 ---
 
@@ -220,6 +224,55 @@ EnVia/
 
 ---
 
+## 5.5 Permisos granulares, reportes, niveles y persistencia (06/11/2026)
+
+**Objetivo:** convertir el RBAC fijo en roles administrables, agregar reportes imprimibles/Excel en todos los módulos, incorporar el nivel del conductor, mejorar la navegación de pestañas y corregir la pérdida de clientes por falta de persistencia.
+
+| Archivo | Cambio |
+|---------|--------|
+| `js/services/store.js` | Catálogo de 10 módulos, pestañas y acciones; roles base y personalizados en `db.roles`; `permissionsFor()`, `can()`, `canAction()`, CRUD de roles y auditoría. Migración de `nivel`; corrección de `deleteClient()`; verificación de escritura y errores de cuota. |
+| `js/app.js` | Inicio de sesión siempre en Dashboard; helpers `canAction`, `canTab`, `isAdmin`; botón Reportes inyectado como respaldo; etiqueta “Usuarios del sistema”. |
+| `js/modules/users.js` | Reescrito: tarjetas de roles, “Nuevo rol”, editor de permisos por módulo/pestaña/acción, permisos personalizados por usuario, cambio de clave y borrado seguro de roles. |
+| `js/modules/reports.js` | **NUEVO**: registro de 34 reportes en 10 módulos, catálogo modal, impresión con `ui.printHTML` y descarga Excel `.xls`. Botón reutilizable `NS.reports.button(module)`. |
+| `js/modules/clients.js`, `drivers.js`, `services.js`, `accounting.js`, `taxes.js`, `payables.js`, `audit.js`, `settings.js`, `dashboard.js` | Botones y acciones condicionados por permisos granulares; botón Reportes persistente tras cambiar pestañas o filtros. |
+| `js/modules/drivers.js` | Campo `nivel` con opciones exactas `Plata`, `Oro` y `Platium`; visible en formulario, listado, detalle, CSV y reportes. |
+| `js/services/supabaseService.js` | Documentos en IndexedDB (`envia_files_db`) con migración desde `envia_files_v1`; límite de archivo alineado a 10 MB; sincronización de `erp_roles`. |
+| `sql/supabase_schema.sql` | `drivers.nivel`, `erp_roles`, `erp_users.permisos`, migraciones idempotentes, RLS y seeds de roles base. |
+| `css/styles.css` | Pestañas en cuadrícula sin scroll horizontal; estilos del centro de reportes, tarjetas de roles, editor de permisos y checkbox de línea. |
+| `index.html`, `manual.html`, `docs/manual_usuario.md`, `README.md` | Manual v1.4, nuevas capturas y documentación de roles, reportes, niveles y persistencia. |
+
+**Permisos:**
+- Permiso por módulo (`ver`) y acciones: `crear`, `editar`, `eliminar`, `exportar`, `imprimir`, `reportes`, `billetera`, `documentos`, `liquidar`, `pagar`, `roles`.
+- Pestañas internas por módulo (Contabilidad y CxP) seleccionables por separado.
+- Los permisos personalizados de un usuario sustituyen los del rol solo para ese usuario.
+- SuperAdmin conserva acceso total y no puede degradarse; los roles del sistema no se eliminan.
+- La UI oculta lo no permitido y `store`/`app` rechazan la acción en la capa de datos.
+
+**Reportes:**
+- Dashboard 3 · Servicios 3 · Clientes 3 · Conductores 3 · Contabilidad 7 · Tributos 4 · CxP 4 · Auditoría 3 · Usuarios 3 · Configuración 1.
+- La impresión usa el diálogo del navegador; Excel descarga un `.xls` HTML en UTF-8 con BOM.
+- Todos los reportes muestran tasa BCV, usuario y fecha; los contables incluyen el período consultado.
+
+**Persistencia (causa probable del cliente perdido):**
+- La base se guarda en `localStorage` con clave `envia_db_v1` y respaldo `envia_db_v1_backup`; se relee y verifica después de guardar.
+- Los documentos ya no consumen el cupo de `localStorage`: viven en IndexedDB y se migran automáticamente.
+- Si la escritura falla por cuota, ahora se lanza un error visible en lugar de cerrar el formulario silenciosamente.
+- `deleteClient()` ya calcula `hasSvc` localmente antes de borrar; antes referenciaba una variable inexistente.
+
+**Validación (Chrome headless/CDP):**
+- `node --check` en los 16 archivos JS sin errores.
+- 10 módulos renderizados, botón Reportes presente y persistente al cambiar pestañas de Contabilidad y CxP.
+- Los 34 reportes construyen columnas y filas sin excepciones; la descarga Excel genera el archivo y registra auditoría.
+- Pestañas de Contabilidad (10) y CxP (3) sin scroll horizontal, en cuadrícula.
+- Login tras logout abre `#/dashboard`; recarga conserva cliente creado.
+- Rol personalizado solo con acceso a Clientes: no puede entrar a Contabilidad, no puede crear clientes y sí puede abrir reportes.
+- 64 checkboxes de acciones y 13 pestañas en el editor de roles; “Acceso” solo concede `ver` y las pestañas, “Todo” concede todas las acciones.
+- Documento de prueba guardado como `local://` en IndexedDB, resuelto como Data URL y eliminado correctamente.
+- Manual con 12 secciones, 17 imágenes cargadas y cero errores de consola.
+- Capturas nuevas: `16-centro-reportes.png` y `17-editor-roles-permisos.png`; manual con 12 secciones.
+
+---
+
 ## 6. Próximas tareas pendientes (opcionales)
 
 1. **Integración WhatsApp** para notificaciones a conductores (pendiente de conversación con equipo).
@@ -227,7 +280,7 @@ EnVia/
 3. **API BCV real** solo si se consigue fuente oficial con autenticación.
 4. **PWA** (Progressive Web App) para instalación como aplicación.
 5. **Geolocalización** de conductores y rutas óptimas.
-6. **Reportes PDF** nativos (actualmente son print/CSV).
+6. **Reportes PDF nativos** (actualmente se imprimen desde el navegador y se exportan a Excel).
 
 ---
 
@@ -235,7 +288,7 @@ EnVia/
 
 1. Abrir `index.html` directamente en Chrome (doble clic o `file:///`).
 2. Iniciar sesión con `ENVIA` / `123456789`.
-3. Todos los 9 módulos están operativos.
+3. Todos los 10 módulos están operativos.
 4. Si necesita agregar una función nueva:
    - Crear módulo en `js/modules/`.
    - Registrar ruta en `js/app.js` (objeto `MODULES`).

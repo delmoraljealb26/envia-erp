@@ -18,7 +18,7 @@
     taxes: { label: 'Tributos & BCV', sub: 'IVA, IGTF, ISLR, unidad tributaria y retenciones', icon: 'percent', group: 'Finanzas', module: 'taxes' },
     payables: { label: 'Cuentas por Pagar', sub: 'Proveedores, facturas, retenciones y pagos', icon: 'wallet', group: 'Finanzas', module: 'payables' },
     audit: { label: 'Bitácora de Auditoría', sub: 'Quién modificó qué, cuándo y con qué usuario', icon: 'activity', group: 'Sistema', module: 'audit' },
-    users: { label: 'Usuarios del ERP', sub: 'Roles, accesos y seguridad', icon: 'shield', group: 'Sistema', module: 'users' },
+    users: { label: 'Usuarios del sistema', sub: 'Roles, accesos y seguridad', icon: 'shield', group: 'Sistema', module: 'users' },
     settings: { label: 'Configuración Supabase', sub: 'Conexión, almacenamiento y sincronización', icon: 'database', group: 'Sistema', module: 'settings' }
   };
 
@@ -158,22 +158,32 @@
     $('#app-shell').classList.remove('hidden');
     buildSidebar();
     buildTopbar();
-    const requested = (location.hash || '').replace(/^#\/?/, '') || 'dashboard';
-    navigate(requested, true);
+    // La sesión siempre inicia en el Dashboard, sin recordar el último módulo.
+    history.replaceState(null, '', '#/dashboard');
+    navigate('dashboard', true);
     // Tasa oficial BCV: se actualiza automáticamente al iniciar sesión.
     if (NS.exchangeRate && typeof NS.exchangeRate.start === 'function') NS.exchangeRate.start();
   }
 
   function can(module) {
-    return session ? NS.store.can(session.rol, module) : false;
+    return session ? NS.store.can(session.rol, module, session.usuario) : false;
   }
-  function canWrite() {
-    return session ? NS.store.canWrite(session.rol) : false;
+  function canTab(module, tab) {
+    return session ? NS.store.canTab(session.rol, module, tab, session.usuario) : false;
+  }
+  function canAction(module, action) {
+    return session ? NS.store.canAction(session.rol, module, action, session.usuario) : false;
+  }
+  function canWrite(module, action) {
+    return session ? NS.store.canWrite(session.rol, session.usuario) && (!module || canAction(module, action || 'editar')) : false;
+  }
+  function isAdmin() {
+    return session ? NS.store.isAdmin(session.rol) : false;
   }
 
   function buildSidebar() {
     const nav = $('#sidebar-nav');
-    const access = NS.store.accessFor(session.rol);
+    const access = NS.store.accessFor(session.rol, session.usuario);
     nav.innerHTML = GROUPS.map((group) => {
       const items = Object.values(MODULES).filter((m) => m.group === group && (access.modules.includes('*') || access.modules.includes(m.module)));
       if (!items.length) return '';
@@ -230,8 +240,8 @@
         <div class="rate-widget ${isHistoric ? 'rate-historic' : ''}" title="Tasa oficial del BCV · solo lectura (se actualiza desde DolarVZLA o por fecha)">
           <div class="rate-line">
             <span class="rate-value" id="bcv-rate-value">${NS.ui.icon('bank', 13)} Bs ${NS.ui.num(rate, 2)} <small>/ USD</small></span>
-            ${canWrite() ? `<button type="button" id="bcv-calendar" class="rate-calendar" title="Seleccionar la tasa de una fecha">${NS.ui.icon('calendar', 14)}</button>` : ''}
-            ${canWrite() ? `<button type="button" id="bcv-refresh" class="rate-refresh" title="Actualizar la tasa de hoy">${NS.ui.icon('refresh', 14)}</button>` : ''}
+            ${canAction('taxes', 'editar') ? `<button type="button" id="bcv-calendar" class="rate-calendar" title="Seleccionar la tasa de una fecha">${NS.ui.icon('calendar', 14)}</button>` : ''}
+            ${canAction('taxes', 'editar') ? `<button type="button" id="bcv-refresh" class="rate-refresh" title="Actualizar la tasa de hoy">${NS.ui.icon('refresh', 14)}</button>` : ''}
           </div>
           <span class="rate-date" title="${NS.ui.esc(updatedFull)} · ${NS.ui.esc(sourceLabel)}">${NS.ui.icon('clock', 11)} Tasa BCV · ${NS.ui.esc(updatedLabel)} · ${NS.ui.esc(sourceLabel)}</span>
         </div>
@@ -276,7 +286,7 @@
   }
 
   async function openRateCalendar() {
-    if (!canWrite()) return NS.ui.toast('Tu rol es de solo lectura: no puedes cambiar la tasa BCV.', 'warning');
+    if (!canAction('taxes', 'editar')) return NS.ui.toast('Tu rol es de solo lectura: no puedes cambiar la tasa BCV.', 'warning');
     if (!NS.exchangeRate) return NS.ui.toast('Servicio de tasa BCV no disponible.', 'error');
 
     const trigger = $('#bcv-calendar');
@@ -408,6 +418,22 @@
       if (!mod || typeof mod.render !== 'function') throw new Error('Módulo no disponible.');
       view.innerHTML = '';
       mod.render(view);
+
+      // Centro de reportes común a todos los módulos.
+      if (NS.reports && NS.reports.has(route) && canAction(route, 'reportes')) {
+        const actions = view.querySelector('.page-head .page-actions');
+        if (actions && !actions.querySelector('[data-module-reports]')) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'btn btn-ghost';
+          btn.id = 'module-reports-btn';
+          btn.dataset.moduleReports = route;
+          btn.innerHTML = NS.ui.icon('chart', 16) + ' Reportes';
+          btn.title = 'Abrir el centro de reportes de este módulo';
+          actions.insertBefore(btn, actions.firstChild);
+        }
+      }
+
       view.classList.remove('view-enter');
       void view.offsetWidth;
       view.classList.add('view-enter');
@@ -454,11 +480,16 @@
     if (NS.ui && e.message) console.error('ENVIA global', e.error || e.message);
   });
 
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
     bindLogin();
     updateLoginClock();
     const btnManual = document.getElementById('btn-manual');
     if (btnManual) btnManual.addEventListener('click', () => { location.href = 'manual.html'; });
+    // Espera la migración de archivos a IndexedDB para que las previsualizaciones
+    // estén disponibles antes del primer render.
+    if (NS.supabase && NS.supabase.filesReady) {
+      try { await NS.supabase.filesReady; } catch (e) { console.warn('ENVIA: archivos locales', e); }
+    }
     const existing = readSession();
     if (existing) {
       try {
@@ -479,7 +510,10 @@
     logout: logoutRequest,
     get session() { return session; },
     can,
+    canTab,
+    canAction,
     canWrite,
+    isAdmin,
     MODULES
   };
   NS.modules = NS.modules || {};

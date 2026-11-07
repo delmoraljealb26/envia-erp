@@ -37,7 +37,7 @@
     const db = store.db;
     const cfg = NS.supabase.getConfig();
     const configured = NS.supabase.isConfigured();
-    const canWrite = NS.app.canWrite();
+    const canWrite = NS.app.canAction('settings', 'editar');
     const files = NS.supabase.listFiles();
     const fileCount = Object.keys(files).length;
     const fileSize = JSON.stringify(files).length;
@@ -51,6 +51,7 @@
           <p class="page-sub">Conecta PostgreSQL + Storage o mantén el ERP en modo local con respaldo automático en el navegador.</p>
         </div>
         <div class="page-actions">
+          ${NS.reports.button('settings')}
           <span class="connection-pill ${configured ? 'online' : 'offline'}"><span class="dot"></span>${configured ? 'Supabase configurado' : 'Modo local'}</span>
           <button class="btn btn-primary" id="settings-sync" ${configured ? '' : 'disabled'}>${ui.icon('refresh', 16)} Sincronizar ahora</button>
         </div>

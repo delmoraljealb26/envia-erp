@@ -198,6 +198,7 @@
           </div>
 
           <div class="note info"><strong>¿Olvidaste la clave?</strong> En esta versión demo las claves se gestionan localmente. Contacta al SuperAdmin para restablecer acceso.</div>
+          <div class="note"><strong>Inicio seguro:</strong> cada vez que inicies sesión, el sistema abre el <b>Dashboard</b>. No se restaura el último módulo visitado.</div>
         </section>
 
         <!-- 2. Dashboard -->
@@ -214,7 +215,7 @@
               <h2 class="step-title">Ingresar al Dashboard</h2>
               <span class="step-meta">Menú lateral → Dashboard</span>
             </div>
-            <div class="step-body">Al iniciar sesión el sistema abre automáticamente el Dashboard. Aquí ves el resumen ejecutivo del día.</div>
+            <div class="step-body">Al iniciar sesión el sistema abre siempre el Dashboard, sin importar el módulo en el que estabas antes. Aquí ves el resumen ejecutivo del día.</div>
           </div>
 
           <div class="grid-2">
@@ -247,7 +248,7 @@
             <img src="imagen/manual/02-dashboard.png" alt="Dashboard ENVIA ERP">
             <div class="img-cap">Dashboard actual: banda de operación de 14 días, ritmo de ingresos, cuentas por pagar y composición de los cobros.</div>
           </div>
-          <div class="note"><strong>Tasa BCV:</strong> se muestra en la barra superior. Se edita desde <a href="#sec-7">Tributos &amp; BCV</a>.</div>
+          <div class="note"><strong>Tasa BCV:</strong> se muestra en la barra superior. Se consulta y sincroniza desde <a href="#sec-7">Tributos &amp; BCV</a>.</div>
         </section>
 
         <!-- 3. Clientes -->
@@ -321,7 +322,7 @@
             <div class="step-body">
               <ul class="step-list">
                 <li><span class="ord">1</span><span class="txt">Ve a <b>Maestros → Conductores y Flota</b> → <b>Nuevo conductor</b>.</span></li>
-                <li><span class="ord">2</span><span class="txt">Ingresa cédula/RIF, nombres, apellidos, teléfono y correo.</span></li>
+                <li><span class="ord">2</span><span class="txt">Ingresa cédula/RIF, nombres, apellidos, teléfono, correo y <b>nivel del conductor</b>.</span></li>
                 <li><span class="ord">3</span><span class="txt">Define tipo de servicio, placa, marca, modelo, año y color del vehículo.</span></li>
                 <li><span class="ord">4</span><span class="txt">Configura banco, teléfono y cédula de Pago Móvil, y cuenta bancaria.</span></li>
                 <li><span class="ord">5</span><span class="txt">Asigna el porcentaje de comisión (ej. 20%).</span></li>
@@ -332,11 +333,26 @@
 
           <div class="img-ref">
             <img src="imagen/manual/06-conductor-formulario.png" alt="Formulario para registrar un conductor">
-            <div class="img-cap">Formulario de alta de conductor: datos personales, vehículo, Pago Móvil, cuenta bancaria y comisión.</div>
+            <div class="img-cap">Formulario de alta de conductor: datos personales, nivel, vehículo, Pago Móvil, cuenta bancaria y comisión.</div>
           </div>
 
           <div class="step-card">
-            <div class="step-head"><span class="step-badge">2</span><h2 class="step-title">Estado de documentos</h2></div>
+            <div class="step-head"><span class="step-badge">2</span><h2 class="step-title">Nivel del conductor</h2></div>
+            <div class="step-body">
+              El campo <b>Nivel</b> clasifica al conductor y se muestra como etiqueta en el listado y en los reportes:
+              <table class="data-table" style="margin-top:10px">
+                <thead><tr><th>Nivel</th><th>Uso sugerido</th></tr></thead>
+                <tbody>
+                  <tr><td><b>Plata</b></td><td>Conductor nuevo o en período de evaluación.</td></tr>
+                  <tr><td><b>Oro</b></td><td>Conductor con buen desempeño y cumplimiento.</td></tr>
+                  <tr><td><b>Platium</b></td><td>Conductor destacado o de máxima prioridad operativa.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">3</span><h2 class="step-title">Estado de documentos</h2></div>
             <div class="step-body">
               Cada documento tiene estados: <b>Pendiente</b>, <b>Aprobado</b> o <b>Rechazado</b>. Cuando todos estén aprobados (cédula, RIF, licencia, circulación), el conductor puede pasar de <i>En Revisión Documental</i> a <b>Activo / Disponible</b>.
             </div>
@@ -424,7 +440,8 @@
             <div class="img-cap">Contabilidad · Libro Diario con asientos, cuentas, débitos y créditos del período.</div>
           </div>
 
-          <div class="note"><strong>Todos los reportes</strong> se pueden imprimir y exportar a CSV/Excel (UTF-8 con BOM).</div>
+          <div class="note"><strong>Navegación:</strong> las opciones de Contabilidad se muestran en una cuadrícula de pestañas que se ajusta al ancho de la pantalla, sin desplazamiento horizontal.</div>
+          <div class="note"><strong>Reportes:</strong> el botón <b>Reportes</b> de la esquina superior derecha abre el centro de reportes del módulo. Desde allí puedes imprimir con el diálogo del navegador o descargar el reporte en Excel. Ver <a href="#sec-11">sección 11</a>.</div>
         </section>
 
         <!-- 7. Tributos -->
@@ -588,44 +605,111 @@
         <!-- 10. Usuarios -->
         <section class="manual-section" id="sec-10">
           <div class="section-head">
-            <span class="section-kicker"><span class="num">10</span> Usuarios y RBAC</span>
-            <h1 class="section-title">Roles, accesos y seguridad</h1>
-            <p class="section-sub">ENVIA ERP tiene 4 roles exactos. El usuario maestro <code>ENVIA</code> es SuperAdmin y no se puede eliminar ni cambiar de rol.</p>
+            <span class="section-kicker"><span class="num">10</span> Usuarios del sistema</span>
+            <h1 class="section-title">Roles, permisos y seguridad</h1>
+            <p class="section-sub">ENVIA ERP incluye cuatro roles base y permite crear roles personalizados con permisos por módulo, pestaña y acción. El usuario maestro <code>ENVIA</code> es SuperAdmin y no se puede eliminar ni cambiar de rol.</p>
           </div>
 
           <div class="img-ref">
-            <img src="imagen/manual/15-usuarios.png" alt="Usuarios del ERP y roles">
-            <div class="img-cap">Usuarios del ERP: cuentas activas, rol asignado y matriz de permisos por módulo.</div>
+            <img src="imagen/manual/15-usuarios.png" alt="Usuarios del sistema y roles">
+            <div class="img-cap">Usuarios del sistema: cuentas activas, roles asignados y matriz de permisos por módulo.</div>
           </div>
 
           <table class="data-table">
-            <thead><tr><th>Rol</th><th>Acceso</th><th>Escritura</th></tr></thead>
+            <thead><tr><th>Rol base</th><th>Acceso</th><th>Escritura</th></tr></thead>
             <tbody>
-              <tr><td>SuperAdmin</td><td>Todos los módulos</td><td>Sí</td></tr>
+              <tr><td>SuperAdmin</td><td>Todos los módulos, usuarios, roles y configuración</td><td>Sí</td></tr>
               <tr><td>Contador / Fiscal</td><td>Dashboard, servicios, clientes, conductores, contabilidad, fiscal, CxP</td><td>Sí</td></tr>
               <tr><td>Tesorero / CxP</td><td>Dashboard, servicios, clientes, conductores, CxP, fiscal</td><td>Sí</td></tr>
               <tr><td>Auditor / Operaciones</td><td>Dashboard, servicios, clientes, conductores, contabilidad, fiscal, CxP</td><td><b>No</b> (solo lectura)</td></tr>
             </tbody>
           </table>
 
+          <div class="img-ref">
+            <img src="imagen/manual/17-editor-roles-permisos.png" alt="Editor de roles y permisos granulares">
+            <div class="img-cap">Editor de roles: acceso por módulo, opciones internas y acciones separadas como crear, editar, exportar o abrir reportes.</div>
+          </div>
+
           <div class="step-card">
-            <div class="step-head"><span class="step-badge">1</span><h2 class="step-title">Crear un usuario</h2></div>
+            <div class="step-head"><span class="step-badge">1</span><h2 class="step-title">Crear o editar un rol</h2></div>
             <div class="step-body">
               <ul class="step-list">
-                <li><span class="ord">1</span><span class="txt">Ve a <b>Sistema → Usuarios del ERP</b> → <b>Nuevo usuario</b>.</span></li>
-                <li><span class="ord">2</span><span class="txt">Asigna usuario, clave, nombre, correo y rol.</span></li>
-                <li><span class="ord">3</span><span class="txt">Presiona <b>Guardar</b>.</span></li>
+                <li><span class="ord">1</span><span class="txt">Ve a <b>Sistema → Usuarios del sistema</b>.</span></li>
+                <li><span class="ord">2</span><span class="txt">Usa el lápiz de una tarjeta para editar sus permisos o presiona <b>Nuevo rol</b>.</span></li>
+                <li><span class="ord">3</span><span class="txt">Escribe nombre, descripción e icono del rol.</span></li>
+                <li><span class="ord">4</span><span class="txt">Activa <b>Acceso</b> en los módulos permitidos: habilita el módulo y sus pestañas con la acción <b>Ver / consultar</b>.</span></li>
+                <li><span class="ord">5</span><span class="txt">Marca <b>Todo</b> si el rol tendrá todas las acciones del módulo.</span></li>
+                <li><span class="ord">6</span><span class="txt">Para un permiso más fino, selecciona solo las <b>opciones / pestañas</b> y <b>acciones</b> necesarias.</span></li>
+                <li><span class="ord">7</span><span class="txt">Presiona <b>Guardar</b>.</span></li>
               </ul>
             </div>
           </div>
 
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">2</span><h2 class="step-title">Crear un usuario</h2></div>
+            <div class="step-body">
+              <ul class="step-list">
+                <li><span class="ord">1</span><span class="txt">En <b>Usuarios del sistema</b>, presiona <b>Nuevo usuario</b>.</span></li>
+                <li><span class="ord">2</span><span class="txt">Asigna usuario, clave, nombre, correo y rol.</span></li>
+                <li><span class="ord">3</span><span class="txt">Opcionalmente activa <b>Permisos personalizados para este usuario</b> y ajusta la matriz. Esos permisos reemplazan los del rol solo para esa persona.</span></li>
+                <li><span class="ord">4</span><span class="txt">Presiona <b>Guardar</b>.</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="note info"><strong>Acciones granulares:</strong> ver, crear, editar, eliminar, exportar, imprimir, centro de reportes, gestionar documentos, liquidar, pagar, administrar la billetera y administrar roles. Si una acción no está habilitada, el botón no aparece y la operación se rechaza en la capa de datos.</div>
           <div class="note warn"><strong>La sesión expira a las 12 horas.</strong> Las contraseñas se almacenan localmente (demo); en producción se migran a un sistema de autenticación seguro con hash.</div>
         </section>
 
-        <!-- 11. Reglas -->
+        <!-- 11. Reportes -->
         <section class="manual-section" id="sec-11">
           <div class="section-head">
-            <span class="section-kicker"><span class="num">11</span> Reglas de negocio</span>
+            <span class="section-kicker"><span class="num">11</span> Reportes</span>
+            <h1 class="section-title">Imprimir y exportar a Excel desde cualquier módulo</h1>
+            <p class="section-sub">Cada módulo tiene un botón <b>Reportes</b> en la esquina superior derecha. Abre el catálogo de reportes con los datos actuales y permite imprimir o descargar un archivo compatible con Excel.</p>
+          </div>
+
+          <div class="img-ref">
+            <img src="imagen/manual/16-centro-reportes.png" alt="Centro de reportes de ENVIA ERP">
+            <div class="img-cap">Centro de reportes de Contabilidad: catálogo de reportes con botones Imprimir y Excel.</div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">1</span><h2 class="step-title">Generar un reporte</h2></div>
+            <div class="step-body">
+              <ul class="step-list">
+                <li><span class="ord">1</span><span class="txt">Entra al módulo que necesitas.</span></li>
+                <li><span class="ord">2</span><span class="txt">Haz clic en <b>Reportes</b>.</span></li>
+                <li><span class="ord">3</span><span class="txt">Elige el reporte que necesitas de la lista.</span></li>
+                <li><span class="ord">4</span><span class="txt">Presiona <b>Imprimir</b> para abrir el diálogo de impresoras del navegador, o <b>Excel</b> para descargar el archivo.</span></li>
+                <li><span class="ord">5</span><span class="txt">Cierra el centro con la <b>X</b> o con <b>Cerrar</b>.</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <table class="data-table">
+            <thead><tr><th>Módulo</th><th>Reportes principales</th></tr></thead>
+            <tbody>
+              <tr><td>Dashboard</td><td>Resumen ejecutivo, servicios de los últimos 14 días, clientes por estatus.</td></tr>
+              <tr><td>Servicios</td><td>Listado general, ingresos por tipo de servicio, comisiones por conductor.</td></tr>
+              <tr><td>Clientes</td><td>Maestro de clientes, saldos de billetera, clientes por estatus.</td></tr>
+              <tr><td>Conductores y Flota</td><td>Maestro de conductores y flota, conductores por nivel, saldos por liquidar.</td></tr>
+              <tr><td>Contabilidad</td><td>Libro diario, libro mayor, balance de comprobación, estado de resultados, balance general, libro de ventas y libro de compras.</td></tr>
+              <tr><td>Tributos &amp; BCV</td><td>Resumen fiscal, comprobantes de retención, retenciones de IVA y de ISLR.</td></tr>
+              <tr><td>Cuentas por Pagar</td><td>Facturas de compra, antigüedad de saldos, proveedores y liquidaciones a conductores.</td></tr>
+              <tr><td>Bitácora de Auditoría</td><td>Bitácora completa, actividad por usuario y eventos por módulo.</td></tr>
+              <tr><td>Usuarios del sistema</td><td>Usuarios y roles, roles y permisos, matriz de permisos.</td></tr>
+              <tr><td>Configuración</td><td>Parámetros del sistema, almacenamiento y tasa BCV.</td></tr>
+            </tbody>
+          </table>
+
+          <div class="note"><strong>Control de acceso:</strong> el botón Reportes solo aparece si el rol o el usuario tiene habilitada la acción <b>Centro de reportes</b> para ese módulo. Todos los reportes incluyen la tasa BCV, el usuario y la fecha de generación.</div>
+        </section>
+
+        <!-- 12. Reglas -->
+        <section class="manual-section" id="sec-12">
+          <div class="section-head">
+            <span class="section-kicker"><span class="num">12</span> Reglas de negocio</span>
             <h1 class="section-title">Reglas irrenunciables de ENVIA ERP</h1>
             <p class="section-sub">Estas reglas rigen toda operación y no se pueden saltar.</p>
           </div>
@@ -637,11 +721,14 @@
             <li><span class="ord">4</span><span class="txt"><b>No eliminar con dependencias:</b> no se puede borrar cliente con servicios, ni proveedor con facturas, ni cuenta con movimientos.</span></li>
             <li><span class="ord">5</span><span class="txt"><b>Documentos:</b> ruta <code>/{bucket}/{cedula_rif}/{tipoDocumento}_{timestamp}.{ext}</code>, máximo 10 MB, tipos PDF/JPG/PNG/WEBP.</span></li>
             <li><span class="ord">6</span><span class="txt"><b>Usuario maestro:</b> <code>ENVIA</code> / <code>123456789</code>, rol SuperAdmin, no editable.</span></li>
+            <li><span class="ord">7</span><span class="txt"><b>Permisos:</b> la interfaz oculta lo no permitido y la capa de datos rechaza la operación aunque se intente ejecutar directamente.</span></li>
+            <li><span class="ord">8</span><span class="txt"><b>Persistencia:</b> la base se guarda en <code>localStorage</code> y los documentos en IndexedDB. Los datos siguen disponibles al recargar la página.</span></li>
+            <li><span class="ord">9</span><span class="txt"><b>Inicio de sesión:</b> cada sesión abre el Dashboard, nunca el último módulo visitado.</span></li>
           </ul>
         </section>
 
         <div class="footer-manual">
-          ENVIA ERP · Manual de Usuario v1.3 · noviembre de 2026 · <br>
+          ENVIA ERP · Manual de Usuario v1.4 · noviembre de 2026 · <br>
           <strong>Moneda funcional:</strong> Bolívares (VES) · <strong>Tasa BCV:</strong> automática y solo lectura · <strong>Auditoría:</strong> bitácora de cambios activada
         </div>
       </main>

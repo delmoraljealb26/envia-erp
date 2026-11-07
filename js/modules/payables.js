@@ -13,7 +13,19 @@
   function render(view) {
     const ui = NS.ui;
     const db = NS.store.db;
-    const canWrite = NS.app.canWrite();
+    const canCreate = NS.app.canAction('payables', 'crear');
+    const canPay = NS.app.canAction('payables', 'pagar');
+    const canExport = NS.app.canAction('payables', 'exportar');
+    const tabs = [
+      { id: 'invoices', label: 'Facturas de compra', icon: 'receipt' },
+      { id: 'suppliers', label: 'Maestro de proveedores', icon: 'building' },
+      { id: 'settlements', label: 'Liquidaciones a conductores', icon: 'moto' }
+    ].filter((t) => NS.app.canTab('payables', t.id));
+    if (!tabs.length) {
+      view.innerHTML = ui.empty('lock', 'Sin opciones de cuentas por pagar', 'Tu rol no tiene pestañas habilitadas en este módulo. Solicita permisos al administrador.');
+      return;
+    }
+    if (!tabs.some((t) => t.id === state.tab)) state.tab = tabs[0].id;
     const totals = db.payables.reduce((s, p) => {
       const pend = Math.max(0, p.neto_pagar_usd - p.pagado_usd);
       const overdue = p.fecha_vencimiento < NS.store.today() && pend > 0.01;
@@ -35,9 +47,10 @@
           <p class="page-sub">${db.payables.length} facturas registradas · ${db.suppliers.length} proveedores · ${db.drivers.filter((d) => d.saldo_por_liquidar_usd > 0).length} conductores con saldo por liquidar.</p>
         </div>
         <div class="page-actions">
-          <button class="btn btn-ghost" id="cxp-export">${ui.icon('download', 16)} Exportar</button>
-          ${canWrite ? `<button class="btn btn-ghost" id="cxp-new-supplier">${ui.icon('building', 16)} Proveedor</button>` : ''}
-          ${canWrite ? `<button class="btn btn-primary" id="cxp-new-invoice">${ui.icon('plus', 16)} Nueva factura</button>` : ''}
+          ${NS.reports.button('payables')}
+          ${canExport ? `<button class="btn btn-ghost" id="cxp-export">${ui.icon('download', 16)} Exportar</button>` : ''}
+          ${canCreate ? `<button class="btn btn-ghost" id="cxp-new-supplier">${ui.icon('building', 16)} Proveedor</button>` : ''}
+          ${canCreate ? `<button class="btn btn-primary" id="cxp-new-invoice">${ui.icon('plus', 16)} Nueva factura</button>` : ''}
         </div>
       </div>
 
@@ -49,9 +62,7 @@
       </div>
 
       <div class="tabs">
-        <button class="tab ${state.tab === 'invoices' ? 'active' : ''}" data-cxp-tab="invoices">${ui.icon('receipt', 15)} Facturas de compra</button>
-        <button class="tab ${state.tab === 'suppliers' ? 'active' : ''}" data-cxp-tab="suppliers">${ui.icon('building', 15)} Maestro de proveedores</button>
-        <button class="tab ${state.tab === 'settlements' ? 'active' : ''}" data-cxp-tab="settlements">${ui.icon('moto', 15)} Liquidaciones a conductores</button>
+        ${tabs.map((t) => `<button class="tab ${state.tab === t.id ? 'active' : ''}" data-cxp-tab="${t.id}">${ui.icon(t.icon, 15)} ${t.label}</button>`).join('')}
       </div>
       <div id="cxp-content"></div>`;
 
@@ -64,11 +75,14 @@
     else if (state.tab === 'suppliers') renderSuppliers(content, view);
     else renderSettlements(content, view);
 
-    if (canWrite) {
-      $('#cxp-new-invoice').addEventListener('click', () => openInvoiceForm());
-      $('#cxp-new-supplier').addEventListener('click', () => openSupplierForm());
+    if (canCreate) {
+      const newInvoice = $('#cxp-new-invoice');
+      const newSupplier = $('#cxp-new-supplier');
+      if (newInvoice) newInvoice.addEventListener('click', () => openInvoiceForm());
+      if (newSupplier) newSupplier.addEventListener('click', () => openSupplierForm());
     }
-    $('#cxp-export').addEventListener('click', exportAll);
+    const exportBtn = $('#cxp-export');
+    if (exportBtn) exportBtn.addEventListener('click', exportAll);
   }
 
   function pendingOf(p) { return Math.max(0, Math.round((p.neto_pagar_usd - p.pagado_usd) * 100) / 100); }
@@ -76,7 +90,9 @@
   function renderInvoices(el, view) {
     const ui = NS.ui;
     const db = NS.store.db;
-    const canWrite = NS.app.canWrite();
+    const canPay = NS.app.canAction('payables', 'pagar');
+    const canDelete = NS.app.canAction('payables', 'eliminar');
+    const canEdit = NS.app.canAction('payables', 'editar');
     const q = state.q.toLowerCase();
     const list = db.payables.filter((p) => {
       const sup = db.suppliers.find((s) => s.rif === p.proveedor_rif);
@@ -115,8 +131,8 @@
               <td>${ui.badge(p.estatus)}</td>
               <td class="actions-col">
                 <button class="icon-btn" data-payable="${ui.esc(p.id)}" title="Ver factura">${ui.icon('eye', 16)}</button>
-                ${canWrite && pendingOf(p) > 0.01 ? `<button class="icon-btn success" data-pay="${ui.esc(p.id)}" title="Registrar pago">${ui.icon('bank', 16)}</button>` : ''}
-                ${canWrite ? `<button class="icon-btn danger" data-del-payable="${ui.esc(p.id)}" title="Eliminar">${ui.icon('trash', 16)}</button>` : ''}
+                ${canPay && pendingOf(p) > 0.01 ? `<button class="icon-btn success" data-pay="${ui.esc(p.id)}" title="Registrar pago">${ui.icon('bank', 16)}</button>` : ''}
+                ${canDelete ? `<button class="icon-btn danger" data-del-payable="${ui.esc(p.id)}" title="Eliminar">${ui.icon('trash', 16)}</button>` : ''}
               </td>
             </tr>`;
           }).join('') : `<tr><td colspan="12">${ui.empty('receipt', 'Sin facturas', 'No hay facturas que coincidan con los filtros.')}</td></tr>`}</tbody>
@@ -140,7 +156,8 @@
   function renderSuppliers(el, view) {
     const ui = NS.ui;
     const db = NS.store.db;
-    const canWrite = NS.app.canWrite();
+    const canEdit = NS.app.canAction('payables', 'editar');
+    const canDelete = NS.app.canAction('payables', 'eliminar');
     el.innerHTML = `<section class="card card-flush">
       <div class="table-wrap">
         <table class="data-table">
@@ -158,8 +175,8 @@
               <td class="num">${invs.length}<small class="block muted">${ui.usd(invs.reduce((x, p) => x + p.total_usd, 0))}</small></td>
               <td>${ui.badge(s.estatus)}</td>
               <td class="actions-col">
-                ${canWrite ? `<button class="icon-btn" data-edit-supplier="${ui.esc(s.rif)}" title="Editar">${ui.icon('edit', 16)}</button>` : ''}
-                ${canWrite ? `<button class="icon-btn danger" data-del-supplier="${ui.esc(s.rif)}" title="Eliminar">${ui.icon('trash', 16)}</button>` : ''}
+                ${canEdit ? `<button class="icon-btn" data-edit-supplier="${ui.esc(s.rif)}" title="Editar">${ui.icon('edit', 16)}</button>` : ''}
+                ${canDelete ? `<button class="icon-btn danger" data-del-supplier="${ui.esc(s.rif)}" title="Eliminar">${ui.icon('trash', 16)}</button>` : ''}
               </td>
             </tr>`;
           }).join('')}</tbody>
@@ -174,7 +191,7 @@
   function renderSettlements(el, view) {
     const ui = NS.ui;
     const db = NS.store.db;
-    const canWrite = NS.app.canWrite();
+    const canSettle = NS.app.canAction('payables', 'pagar');
     const list = db.drivers.slice().sort((a, b) => b.saldo_por_liquidar_usd - a.saldo_por_liquidar_usd);
     const total = list.reduce((s, d) => s + d.saldo_por_liquidar_usd, 0);
     el.innerHTML = `<section class="card card-flush">
@@ -189,7 +206,7 @@
             <td>${ui.esc(d.banco)}<small class="block muted">${ui.esc(d.telefono_pago_movil)}</small></td>
             <td class="num">${d.porcentaje_comision}%</td>
             <td class="num"><strong class="${d.saldo_por_liquidar_usd > 0 ? 'text-orange' : ''}">${ui.usd(d.saldo_por_liquidar_usd)}</strong><small class="block muted">${ui.bs(ui.toBs(d.saldo_por_liquidar_usd))}</small></td>
-            <td>${canWrite && d.saldo_por_liquidar_usd > 0 ? `<button class="btn btn-xs btn-primary" data-settle="${ui.esc(d.cedula_rif)}">${ui.icon('bank', 12)} Liquidar</button>` : '<span class="muted small">Sin saldo</span>'}</td>
+            <td>${canSettle && d.saldo_por_liquidar_usd > 0 ? `<button class="btn btn-xs btn-primary" data-settle="${ui.esc(d.cedula_rif)}">${ui.icon('bank', 12)} Liquidar</button>` : '<span class="muted small">Sin saldo</span>'}</td>
           </tr>`).join('')}</tbody>
           <tfoot><tr><td colspan="5">TOTAL POR LIQUIDAR</td><td class="num">${ui.usd(total)}</td><td></td></tr></tfoot>
         </table>
@@ -213,7 +230,7 @@
 
   function openInvoiceForm() {
     const ui = NS.ui;
-    if (!NS.app.canWrite()) return ui.toast('Tu rol es de solo lectura.', 'warning');
+    if (!NS.app.canAction('payables', 'crear')) return ui.toast('No tienes permiso para registrar facturas.', 'warning');
     const db = NS.store.db;
     if (!db.suppliers.length) return ui.toast('Primero registra un proveedor.', 'warning');
     const tariffs = db.taxParams.islrTariffs;
@@ -296,7 +313,7 @@
 
   function openSupplierForm(rif) {
     const ui = NS.ui;
-    if (!NS.app.canWrite()) return ui.toast('Tu rol es de solo lectura.', 'warning');
+    if (!NS.app.canAction('payables', rif ? 'editar' : 'crear')) return ui.toast('No tienes permiso para administrar proveedores.', 'warning');
     const s = rif ? NS.store.db.suppliers.find((x) => x.rif === rif) : null;
     const d = s || {};
     const tariffs = NS.store.db.taxParams.islrTariffs;
@@ -381,7 +398,7 @@
     const sup = db.suppliers.find((s) => s.rif === p.proveedor_rif);
     const voucher = db.withholdings.find((v) => v.factura_id === p.id);
     const overdue = p.fecha_vencimiento < NS.store.today() && pendingOf(p) > 0.01;
-    const canWrite = NS.app.canWrite();
+    const canWrite = NS.app.canAction('payables', 'pagar');
     const body = `
       <div class="invoice-hero">
         <div><span class="eyebrow">${ui.esc(p.id)}</span><h3>${ui.esc(sup ? sup.razon_social : p.proveedor_rif)}</h3><p>${ui.esc(p.concepto)}</p>
@@ -454,7 +471,7 @@
 
   function openPayment(id) {
     const ui = NS.ui;
-    if (!NS.app.canWrite()) return ui.toast('Tu rol es de solo lectura.', 'warning');
+    if (!NS.app.canAction('payables', 'pagar')) return ui.toast('No tienes permiso para registrar pagos.', 'warning');
     const p = NS.store.db.payables.find((x) => x.id === id);
     if (!p) return;
     const pend = pendingOf(p);

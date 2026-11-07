@@ -43,7 +43,8 @@
   function render(view) {
     const ui = NS.ui;
     const db = NS.store.db;
-    const canWrite = NS.app.canWrite();
+    const canWrite = NS.app.isAdmin();
+    const canExport = NS.app.canAction('audit', 'exportar');
     const logs = NS.store.getAuditLog();
 
     // Filtros
@@ -59,8 +60,9 @@
           <p class="page-sub">${logs.length} eventos registrados · Usuario actual: <strong>${NS.store.getCurrentUser() ? NS.store.getCurrentUser().usuario : '—'}</strong> · Cada guardar/borrar queda grabado con fecha, hora y responsable.</p>
         </div>
         <div class="page-actions">
+          ${NS.reports.button('audit')}
           ${canWrite ? `<button class="btn btn-ghost" id="audit-clear">${ui.icon('trash', 16)} Limpiar bitácora</button>` : ''}
-          <button class="btn btn-primary" id="audit-export">${ui.icon('download', 16)} Exportar CSV</button>
+          ${canExport ? `<button class="btn btn-primary" id="audit-export">${ui.icon('download', 16)} Exportar CSV</button>` : ''}
         </div>
       </div>
 
@@ -146,7 +148,8 @@
     }
 
     // Exportar CSV
-    $('#audit-export').addEventListener('click', () => {
+    const btnExport = $('#audit-export');
+    if (btnExport) btnExport.addEventListener('click', () => {
       const ui = NS.ui;
       const filas = logs.map((l) => [
         l.fecha, l.hora, l.usuario, l.rol, ACCION_LABEL[l.accion] || l.accion, MODULO_LABEL[l.modulo] || l.modulo, l.detalle, l.referencia

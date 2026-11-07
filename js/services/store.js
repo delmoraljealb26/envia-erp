@@ -9,6 +9,7 @@
 
   const NS = (window.ENVIA = window.ENVIA || {});
   const DB_KEY = 'envia_db_v1';
+  const DB_BACKUP_KEY = 'envia_db_v1_backup';
   const PREFS_KEY = 'envia_prefs_v1';
   const FILES_KEY = 'envia_files_v1';
 
@@ -31,31 +32,141 @@
   /* ------------------------------------------------------------------ *
    *  CATÁLOGOS BASE
    * ------------------------------------------------------------------ */
-  const ROLES = [
-    'SuperAdmin',
-    'Contador / Fiscal',
-    'Tesorero / Cuentas por Pagar',
-    'Auditor / Operaciones'
-  ];
+  const ACTION_LABELS = {
+    ver: 'Ver / consultar',
+    crear: 'Crear',
+    editar: 'Editar',
+    eliminar: 'Eliminar',
+    exportar: 'Exportar',
+    imprimir: 'Imprimir',
+    reportes: 'Centro de reportes',
+    billetera: 'Billetera / recargas',
+    documentos: 'Gestionar documentos',
+    liquidar: 'Registrar liquidaciones',
+    pagar: 'Registrar pagos',
+    roles: 'Administrar roles y permisos'
+  };
 
-  const ROLE_ACCESS = {
-    SuperAdmin: { modules: ['*'], write: true },
-    'Contador / Fiscal': {
-      modules: ['dashboard', 'services', 'clients', 'drivers', 'accounting', 'taxes', 'payables'],
-      write: true
+  const PERMISSION_CATALOG = {
+    dashboard: {
+      label: 'Dashboard', group: 'Operación', icon: 'dashboard',
+      tabs: [], actions: ['ver', 'exportar', 'imprimir', 'reportes']
     },
-    'Tesorero / Cuentas por Pagar': {
-      modules: ['dashboard', 'services', 'clients', 'drivers', 'payables', 'taxes'],
-      write: true
+    services: {
+      label: 'Servicios', group: 'Operación', icon: 'route',
+      tabs: [], actions: ['ver', 'crear', 'editar', 'eliminar', 'exportar', 'imprimir', 'reportes']
     },
-    'Auditor / Operaciones': {
-      modules: ['dashboard', 'services', 'clients', 'drivers', 'accounting', 'taxes', 'payables'],
-      write: false
+    clients: {
+      label: 'Clientes', group: 'Maestros', icon: 'users',
+      tabs: [], actions: ['ver', 'crear', 'editar', 'eliminar', 'billetera', 'documentos', 'exportar', 'imprimir', 'reportes']
+    },
+    drivers: {
+      label: 'Conductores y Flota', group: 'Maestros', icon: 'car',
+      tabs: [], actions: ['ver', 'crear', 'editar', 'eliminar', 'documentos', 'liquidar', 'exportar', 'imprimir', 'reportes']
+    },
+    accounting: {
+      label: 'Contabilidad', group: 'Finanzas', icon: 'book',
+      tabs: [
+        { id: 'entries', label: 'Asientos' },
+        { id: 'accounts', label: 'Plan de cuentas' },
+        { id: 'rules', label: 'Reglas automáticas' },
+        { id: 'journal', label: 'Libro Diario' },
+        { id: 'ledger', label: 'Libro Mayor' },
+        { id: 'trial', label: 'Balance de Comprobación' },
+        { id: 'balance', label: 'Balance General' },
+        { id: 'income', label: 'Estado de Resultados' },
+        { id: 'sales', label: 'Libro de Ventas' },
+        { id: 'purchases', label: 'Libro de Compras' }
+      ],
+      actions: ['ver', 'crear', 'editar', 'eliminar', 'exportar', 'imprimir', 'reportes']
+    },
+    taxes: {
+      label: 'Tributos & BCV', group: 'Finanzas', icon: 'percent',
+      tabs: [], actions: ['ver', 'editar', 'exportar', 'imprimir', 'reportes']
+    },
+    payables: {
+      label: 'Cuentas por Pagar', group: 'Finanzas', icon: 'wallet',
+      tabs: [
+        { id: 'invoices', label: 'Facturas de compra' },
+        { id: 'suppliers', label: 'Maestro de proveedores' },
+        { id: 'settlements', label: 'Liquidaciones a conductores' }
+      ],
+      actions: ['ver', 'crear', 'editar', 'eliminar', 'pagar', 'exportar', 'imprimir', 'reportes']
+    },
+    audit: {
+      label: 'Bitácora de Auditoría', group: 'Sistema', icon: 'activity',
+      tabs: [], actions: ['ver', 'exportar', 'imprimir', 'reportes']
+    },
+    users: {
+      label: 'Usuarios del sistema', group: 'Sistema', icon: 'shield',
+      tabs: [], actions: ['ver', 'crear', 'editar', 'eliminar', 'roles', 'exportar', 'imprimir', 'reportes']
+    },
+    settings: {
+      label: 'Configuración Supabase', group: 'Sistema', icon: 'database',
+      tabs: [], actions: ['ver', 'editar', 'reportes']
     }
   };
 
+  function allPermissions() {
+    const out = {};
+    Object.keys(PERMISSION_CATALOG).forEach((key) => {
+      const meta = PERMISSION_CATALOG[key];
+      out[key] = { ver: true, tabs: (meta.tabs || []).map((t) => t.id), acciones: ['*'] };
+    });
+    return out;
+  }
+
+  function permissionsForModules(modules, actions) {
+    const out = {};
+    modules.forEach((key) => {
+      const meta = PERMISSION_CATALOG[key];
+      if (!meta) return;
+      out[key] = {
+        ver: true,
+        tabs: (meta.tabs || []).map((t) => t.id),
+        acciones: actions.slice()
+      };
+    });
+    return out;
+  }
+
+  function defaultRoles() {
+    return clone([
+      {
+        id: 'role_superadmin', nombre: 'SuperAdmin', icono: 'shield', admin: true, sistema: true,
+        descripcion: 'Acceso ilimitado a todos los módulos, configuración, usuarios y sincronización.',
+        permisos: allPermissions()
+      },
+      {
+        id: 'role_contador', nombre: 'Contador / Fiscal', icono: 'book', admin: false, sistema: true,
+        descripcion: 'Contabilidad, tributos, libros SENIAT, cuentas por pagar y maestros.',
+        permisos: permissionsForModules(
+          ['dashboard', 'services', 'clients', 'drivers', 'accounting', 'taxes', 'payables'],
+          ['ver', 'crear', 'editar', 'eliminar', 'exportar', 'imprimir', 'reportes', 'documentos', 'liquidar', 'pagar', 'billetera']
+        )
+      },
+      {
+        id: 'role_tesorero', nombre: 'Tesorero / Cuentas por Pagar', icono: 'wallet', admin: false, sistema: true,
+        descripcion: 'Pagos, proveedores, liquidaciones, maestros y consulta tributaria.',
+        permisos: permissionsForModules(
+          ['dashboard', 'services', 'clients', 'drivers', 'payables', 'taxes'],
+          ['ver', 'crear', 'editar', 'eliminar', 'exportar', 'imprimir', 'reportes', 'documentos', 'liquidar', 'pagar', 'billetera']
+        )
+      },
+      {
+        id: 'role_auditor', nombre: 'Auditor / Operaciones', icono: 'eye', admin: false, sistema: true,
+        descripcion: 'Consulta de todos los módulos financieros y operativos en modo solo lectura.',
+        permisos: permissionsForModules(
+          ['dashboard', 'services', 'clients', 'drivers', 'accounting', 'taxes', 'payables'],
+          ['ver', 'exportar', 'imprimir', 'reportes']
+        )
+      }
+    ]);
+  }
+
   const PAYMENT_METHODS = ['Pago Móvil', 'Efectivo USD', 'Zelle', 'Tarjeta', 'Wallet'];
   const VEHICLE_TYPES = ['Moto Delivery', 'Moto Taxi', 'Vehículo Sedán', 'Camioneta Carga'];
+  const DRIVER_LEVELS = ['Plata', 'Oro', 'Platium'];
   const CLIENT_STATUS = ['Activo', 'Corporativo', 'Suspendido', 'Pendiente de Verificación'];
   const DRIVER_STATUS = ['Activo / Disponible', 'En Servicio', 'En Revisión Documental', 'Suspendido'];
 
@@ -445,7 +556,19 @@
         urls_fotos_vehiculo: ['demo://vehiculo/AI234QR/frontal', 'demo://vehiculo/AI234QR/lateral', 'demo://vehiculo/AI234QR/placa'],
         docs_estado: { cedula: 'Aprobado', rif: 'Aprobado', licencia: 'Aprobado', circulacion: 'Aprobado', vehiculo: 'Aprobado' }
       }
-    ].map((d) => ({ ...d, created_at: stamp(), updated_at: stamp() }));
+    ].map((d) => {
+      const niveles = {
+        'V-16874321': 'Platium',
+        'V-19234567': 'Oro',
+        'V-20345678': 'Plata',
+        'V-22109876': 'Oro',
+        'V-18765432': 'Platium',
+        'V-17456789': 'Plata',
+        'V-19876543': 'Plata',
+        'V-20987654': 'Oro'
+      };
+      return { ...d, nivel: niveles[d.cedula_rif] || 'Plata', created_at: stamp(), updated_at: stamp() };
+    });
   }
 
   /* ------------------------------------------------------------------ *
@@ -627,6 +750,8 @@
    *  BASE DE DATOS
    * ------------------------------------------------------------------ */
   let current = null;
+  let storageReady = false;
+  let recoveredFromBackup = false;
   const seeded = buildSeed();
   const loaded = loadDb();
   current = loaded || seeded;
@@ -646,6 +771,7 @@
       accountingRules: clone(DEFAULT_RULES).map((r) => ({ ...r, id: 'rule_' + r.evento, updated_at: stamp() })),
       entries: [],
       taxParams: { ...DEFAULT_TAX, islrTariffs: clone(ISLR_TARIFFS) },
+      roles: defaultRoles(),
       users: [
         { id: 'usr_envia', usuario: 'ENVIA', password: '123456789', nombre: 'Administrador ENVIA', rol: 'SuperAdmin', correo: 'admin@envia.com.ve', activo: true, created_at: stamp() },
         { id: 'usr_contador', usuario: 'contador', password: 'Contador2026', nombre: 'Ana Belén Rojas', rol: 'Contador / Fiscal', correo: 'contabilidad@envia.com.ve', activo: true, created_at: stamp() },
@@ -927,26 +1053,45 @@
   /* ------------------------------------------------------------------ *
    *  PERSISTENCIA / API
    * ------------------------------------------------------------------ */
-  function loadDb() {
+  function parseDb(raw) {
+    if (!raw) return null;
     try {
-      const raw = localStorage.getItem(DB_KEY);
-      if (!raw) return null;
       const db = JSON.parse(raw);
-      if (!db || !db.clients || !db.accounts) return null;
+      if (!db || !Array.isArray(db.clients) || !Array.isArray(db.accounts)) return null;
       return db;
     } catch (e) {
-      console.warn('ENVIA: no se pudo leer la base local', e);
       return null;
     }
+  }
+
+  function loadDb() {
+    const primary = parseDb(localStorage.getItem(DB_KEY));
+    if (primary) return primary;
+    const backup = parseDb(localStorage.getItem(DB_BACKUP_KEY));
+    if (backup) {
+      recoveredFromBackup = true;
+      console.warn('ENVIA: base principal ilegible; se recuperó la copia de seguridad local.');
+      return backup;
+    }
+    return null;
   }
 
   function persist() {
     try {
       current.meta.updatedAt = stamp();
-      localStorage.setItem(DB_KEY, JSON.stringify(current));
+      const payload = JSON.stringify(current);
+      const previous = localStorage.getItem(DB_KEY);
+      if (previous && previous !== payload) {
+        try { localStorage.setItem(DB_BACKUP_KEY, previous); } catch (e) { /* la copia es opcional */ }
+      }
+      localStorage.setItem(DB_KEY, payload);
+      const verify = localStorage.getItem(DB_KEY);
+      if (!verify || verify.length !== payload.length) throw new Error('La verificación de guardado local falló.');
+      return true;
     } catch (err) {
       console.error('ENVIA: error guardando datos', err);
-      if (NS.ui && NS.ui.toast) NS.ui.toast('Almacenamiento lleno. Exporta un respaldo y libera documentos.', 'error');
+      if (!storageReady) return false;
+      throw new Error('No se pudieron guardar los datos en este navegador. Revisa el espacio libre o exporta un respaldo antes de continuar.');
     }
   }
 
@@ -955,7 +1100,38 @@
    * usuario. Se ejecuta al cargar una base local existente.
    */
   function ensureCatalogs(db) {
-    let changed = false;
+    let changed = !!recoveredFromBackup;
+    if (!Array.isArray(db.clients)) { db.clients = []; changed = true; }
+    if (!Array.isArray(db.drivers)) { db.drivers = []; changed = true; }
+    if (!Array.isArray(db.users)) { db.users = []; changed = true; }
+    if (!Array.isArray(db.roles) || !db.roles.length) {
+      db.roles = defaultRoles();
+      changed = true;
+    } else {
+      const superRole = db.roles.find((r) => r.nombre === 'SuperAdmin');
+      if (!superRole) {
+        db.roles.unshift(defaultRoles()[0]);
+        changed = true;
+      } else if (!superRole.admin || !superRole.sistema) {
+        superRole.admin = true;
+        superRole.sistema = true;
+        changed = true;
+      }
+      db.roles.forEach((r) => {
+        if (!r.permisos || typeof r.permisos !== 'object') {
+          r.permisos = {};
+          changed = true;
+        }
+        if (!r.icono) { r.icono = 'shield'; changed = true; }
+      });
+    }
+    const roleNames = db.roles.map((r) => r.nombre);
+    db.users.forEach((u) => {
+      if (!roleNames.includes(u.rol)) {
+        u.rol = 'Auditor / Operaciones';
+        changed = true;
+      }
+    });
     if (!Array.isArray(db.walletMovements)) { db.walletMovements = []; changed = true; }
     if (!db.taxParams || !db.taxParams.islrTariffs) {
       db.taxParams = { ...DEFAULT_TAX, ...(db.taxParams || {}), islrTariffs: clone(ISLR_TARIFFS) };
@@ -978,6 +1154,10 @@
     if (!db.meta) { db.meta = { entrySeq: 0, voucherSeq: 0 }; changed = true; }
 
     if (!Array.isArray(db.auditLog)) { db.auditLog = []; changed = true; }
+
+    db.drivers.forEach((d) => {
+      if (!DRIVER_LEVELS.includes(d.nivel)) { d.nivel = 'Plata'; changed = true; }
+    });
 
     // Migración demo: reemplaza el cliente "María Fernanda" por "Jesús Alberto"
     // y actualiza sus referencias en servicios y movimientos de billetera.
@@ -1011,6 +1191,7 @@
   }
 
   if (!loadDb()) persist();
+  storageReady = true;
 
   function nextServiceId() {
     const prefix = 'SRV-' + new Date().getFullYear() + '-';
@@ -1019,6 +1200,58 @@
       if (String(s.id || '').startsWith(prefix)) max = Math.max(max, Number(s.id.slice(prefix.length)) || 0);
     });
     return prefix + String(max + 1).padStart(4, '0');
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  PERMISOS EFECTIVOS
+   * ------------------------------------------------------------------ */
+  function roleByName(nombre) {
+    return (current.roles || []).find((r) => r.nombre === nombre);
+  }
+
+  function userByUsuario(usuario) {
+    return usuario ? (current.users || []).find((u) => u.usuario.toUpperCase() === String(usuario).toUpperCase()) : null;
+  }
+
+  function effectivePermissions(rol, usuario) {
+    const role = roleByName(rol);
+    if (role && role.admin) return allPermissions();
+    const user = userByUsuario(usuario);
+    if (user && user.permisos && typeof user.permisos === 'object' && Object.keys(user.permisos).length) {
+      return clone(user.permisos);
+    }
+    return role && role.permisos ? clone(role.permisos) : {};
+  }
+
+  function modulePermission(perms, module) {
+    const p = perms && perms[module];
+    return p && p.ver !== false ? p : null;
+  }
+
+  function hasTab(perms, module, tab) {
+    const p = modulePermission(perms, module);
+    if (!p || !tab) return !!p;
+    if (!Array.isArray(p.tabs) || p.tabs.includes('*')) return true;
+    return p.tabs.includes(tab);
+  }
+
+  function hasAction(perms, module, action) {
+    const p = modulePermission(perms, module);
+    if (!p || !action) return !!p;
+    if (!Array.isArray(p.acciones) || p.acciones.includes('*')) return true;
+    return p.acciones.includes(action);
+  }
+
+  function accessFor(rol, usuario) {
+    const perms = effectivePermissions(rol, usuario);
+    const role = roleByName(rol);
+    if (role && role.admin) {
+      return { modules: ['*'], write: true, tabs: '*', actions: '*', permissions: perms };
+    }
+    const modules = Object.keys(PERMISSION_CATALOG).filter((m) => !!modulePermission(perms, m));
+    const writeActions = ['crear', 'editar', 'eliminar', 'billetera', 'documentos', 'liquidar', 'pagar', 'roles'];
+    const write = modules.some((m) => writeActions.some((a) => hasAction(perms, m, a)));
+    return { modules, write, tabs: perms, actions: perms, permissions: perms };
   }
 
   const api = {
@@ -1031,19 +1264,72 @@
     setPrefs(p) { localStorage.setItem(PREFS_KEY, JSON.stringify({ ...api.prefs, ...p })); },
 
     /* catálogos */
-    ROLES, ROLE_ACCESS, PAYMENT_METHODS, VEHICLE_TYPES, CLIENT_STATUS, DRIVER_STATUS,
-    ACCOUNT_LEVELS, ISLR_TARIFFS,
+    get ROLES() { return (current.roles || []).map((r) => r.nombre); },
+    PAYMENT_METHODS, VEHICLE_TYPES, DRIVER_LEVELS, CLIENT_STATUS, DRIVER_STATUS,
+    ACCOUNT_LEVELS, ISLR_TARIFFS, PERMISSION_CATALOG, ACTION_LABELS,
 
     save: persist,
     round, today, uid, iso,
     computePayable,
 
-    accessFor(rol) { return ROLE_ACCESS[rol] || { modules: [], write: false }; },
-    can(rol, module) {
-      const a = api.accessFor(rol);
+    roles() { return clone(current.roles || []); },
+    role(nombre) { const r = roleByName(nombre); return r ? clone(r) : null; },
+    permissionsFor(rol, usuario) { return effectivePermissions(rol, usuario); },
+    defaultPermissions() { return allPermissions(); },
+    accessFor,
+    can(rol, module, usuario) {
+      const a = accessFor(rol, usuario);
       return a.modules.includes('*') || a.modules.includes(module);
     },
-    canWrite(rol) { return api.accessFor(rol).write; },
+    canTab(rol, module, tab, usuario) { return hasTab(effectivePermissions(rol, usuario), module, tab); },
+    canAction(rol, module, action, usuario) { return hasAction(effectivePermissions(rol, usuario), module, action); },
+    canWrite(rol, usuario) { return accessFor(rol, usuario).write; },
+    isAdmin(rol) { const r = roleByName(rol); return !!(r && r.admin); },
+    upsertRole(data) {
+      const nombre = norm(data.nombre);
+      if (!nombre) throw new Error('El nombre del rol es obligatorio.');
+      const existing = current.roles.find((r) => r.nombre === nombre);
+      if (existing && existing.nombre === 'SuperAdmin' && data.admin === false) {
+        throw new Error('El rol SuperAdmin debe conservar el acceso administrativo.');
+      }
+      if (!existing && current.roles.some((r) => r.nombre.toLowerCase() === nombre.toLowerCase())) {
+        throw new Error('Ya existe un rol con ese nombre.');
+      }
+      if (existing && existing.sistema && existing.nombre !== nombre) {
+        throw new Error('Los roles del sistema no se pueden renombrar.');
+      }
+      const rec = {
+        ...(existing || {}),
+        id: existing ? existing.id : uid('role'),
+        nombre: existing ? existing.nombre : nombre,
+        descripcion: norm(data.descripcion),
+        icono: data.icono || (existing ? existing.icono : 'shield'),
+        admin: existing && existing.nombre === 'SuperAdmin' ? true : !!data.admin,
+        sistema: existing ? !!existing.sistema : false,
+        permisos: data.permisos && typeof data.permisos === 'object' ? clone(data.permisos) : (existing ? existing.permisos : {}),
+        updated_at: stamp(),
+        created_at: existing ? existing.created_at : stamp()
+      };
+      if (existing) {
+        if (existing.nombre === 'SuperAdmin') rec.permisos = allPermissions();
+        Object.assign(existing, rec);
+      } else {
+        current.roles.push(rec);
+      }
+      api.addAuditLog(existing ? 'actualizar' : 'crear', 'roles', `Rol ${nombre}`, nombre);
+      persist();
+      return rec;
+    },
+    deleteRole(nombre) {
+      const role = current.roles.find((r) => r.nombre === nombre);
+      if (!role) return;
+      if (role.sistema || role.admin) throw new Error('Los roles del sistema no se pueden eliminar.');
+      const assigned = current.users.filter((u) => u.rol === nombre);
+      if (assigned.length) throw new Error(`No se puede eliminar: ${assigned.length} usuario(s) tienen asignado este rol.`);
+      current.roles = current.roles.filter((r) => r.nombre !== nombre);
+      api.addAuditLog('eliminar', 'roles', `Rol ${nombre}`, nombre);
+      persist();
+    },
 
     /* tasas */
     setRate(rate, when, source) {
@@ -1085,6 +1371,7 @@
       return rec;
     },
     deleteClient(cedula) {
+      const hasSvc = current.services.some((s) => s.cliente_cedula_rif === cedula);
       if (hasSvc) throw new Error('No se puede eliminar: el cliente tiene servicios asociados.');
       current.clients = current.clients.filter((c) => c.cedula_rif !== cedula);
       api.addAuditLog('eliminar', 'clientes', `Cliente ${cedula}`, cedula);
@@ -1133,6 +1420,7 @@
         ...(existing || {}),
         ...data,
         cedula_rif: cedula,
+        nivel: DRIVER_LEVELS.includes(data.nivel) ? data.nivel : (existing && DRIVER_LEVELS.includes(existing.nivel) ? existing.nivel : 'Plata'),
         porcentaje_comision: Number(data.porcentaje_comision) || 0,
         saldo_por_liquidar_usd: round(data.saldo_por_liquidar_usd),
         anio: Number(data.anio) || new Date().getFullYear(),
@@ -1395,14 +1683,18 @@
       const usuario = norm(data.usuario).toUpperCase();
       if (!usuario) throw new Error('El usuario es obligatorio.');
       if (!data.password) throw new Error('La clave es obligatoria.');
+      const role = current.roles.find((r) => r.nombre === data.rol);
+      if (!role) throw new Error('Selecciona un rol válido.');
       const existing = current.users.find((u) => u.usuario.toUpperCase() === usuario);
       if (existing && existing.usuario === 'ENVIA' && data.rol !== 'SuperAdmin') throw new Error('El usuario ENVIA debe conservar el rol SuperAdmin.');
       const rec = {
         ...(existing || {}),
         ...data,
+        id: existing ? existing.id : (data.id || uid('usr')),
         usuario,
         password: data.password,
         rol: data.rol,
+        permisos: data.permisos && typeof data.permisos === 'object' ? clone(data.permisos) : null,
         activo: data.activo !== false,
         updated_at: stamp(),
         created_at: existing ? existing.created_at : stamp()
@@ -1511,14 +1803,29 @@
       persist();
     },
     exportJSON() {
-      return JSON.stringify({ exportedAt: stamp(), db: current, files: JSON.parse(localStorage.getItem(FILES_KEY) || '{}') }, null, 2);
+      const files = NS.supabase && NS.supabase.listFiles ? NS.supabase.listFiles() : {};
+      return JSON.stringify({ exportedAt: stamp(), db: current, files }, null, 2);
     },
     importJSON(json) {
       const parsed = JSON.parse(json);
       if (!parsed.db || !parsed.db.clients) throw new Error('El archivo no tiene el formato de respaldo ENVIA.');
       current = parsed.db;
+      ensureCatalogs(current);
       persist();
-      if (parsed.files) localStorage.setItem(FILES_KEY, JSON.stringify(parsed.files));
+      if (parsed.files && NS.supabase && NS.supabase.importFiles) {
+        NS.supabase.importFiles(parsed.files).catch((e) => console.warn('ENVIA: no se pudieron importar los archivos', e));
+      }
+    },
+    storageInfo() {
+      let dbBytes = 0;
+      try { dbBytes = (localStorage.getItem(DB_KEY) || '').length; } catch (e) { /* ignore */ }
+      const files = NS.supabase && NS.supabase.listFiles ? Object.keys(NS.supabase.listFiles()).length : 0;
+      return {
+        dbBytes,
+        files,
+        lastSavedAt: current.meta && current.meta.updatedAt ? current.meta.updatedAt : null,
+        backup: !!localStorage.getItem(DB_BACKUP_KEY)
+      };
     },
 
     /* auditoría / bitácora */

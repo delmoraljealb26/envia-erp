@@ -9,6 +9,8 @@
   const NS = (window.ENVIA = window.ENVIA || {});
   const CONFIG_KEY = 'envia_supabase';
   const FILES_KEY = 'envia_files_v1';
+  const FILES_DB = 'envia_files_db';
+  const FILES_STORE = 'files';
 
   function getConfig() {
     try {
@@ -85,30 +87,129 @@
   }
 
   /* ---------------------------- Archivos ---------------------------- */
-  function getFiles() {
-    try { return JSON.parse(localStorage.getItem(FILES_KEY)) || {}; } catch (e) { return {}; }
+  // Los documentos viven en IndexedDB para no consumir el cupo de localStorage
+  // (que se reserva para la base de datos). La caché en memoria mantiene la API
+  // síncrona que usan las vistas.
+  let filesCache = {};
+  let fileDb = null;
+  let fileDbReady = false;
+
+  function openFileDb() {
+    return new Promise((resolve, reject) => {
+      if (!window.indexedDB) return reject(new Error('IndexedDB no disponible.'));
+      const req = indexedDB.open(FILES_DB, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(FILES_STORE)) db.createObjectStore(FILES_STORE);
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error || new Error('No se pudo abrir IndexedDB.'));
+    });
   }
 
-  function saveFile(key, dataUrl) {
-    const files = getFiles();
-    files[key] = dataUrl;
+  function idbGetAll(db) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(FILES_STORE, 'readonly');
+      const store = tx.objectStore(FILES_STORE);
+      const out = {};
+      const req = store.openCursor();
+      req.onsuccess = () => {
+        const cursor = req.result;
+        if (cursor) { out[cursor.key] = cursor.value; cursor.continue(); }
+        else resolve(out);
+      };
+      req.onerror = () => reject(req.error || new Error('No se pudieron leer los archivos locales.'));
+    });
+  }
+
+  function idbPut(key, value) {
+    return new Promise((resolve, reject) => {
+      if (!fileDb) return reject(new Error('IndexedDB no disponible.'));
+      const tx = fileDb.transaction(FILES_STORE, 'readwrite');
+      tx.objectStore(FILES_STORE).put(value, key);
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => reject(tx.error || new Error('No se pudo guardar el archivo.'));
+    });
+  }
+
+  function idbDelete(key) {
+    return new Promise((resolve, reject) => {
+      if (!fileDb) return reject(new Error('IndexedDB no disponible.'));
+      const tx = fileDb.transaction(FILES_STORE, 'readwrite');
+      tx.objectStore(FILES_STORE).delete(key);
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => reject(tx.error || new Error('No se pudo eliminar el archivo.'));
+    });
+  }
+
+  function saveLegacyFiles() {
     try {
-      localStorage.setItem(FILES_KEY, JSON.stringify(files));
+      localStorage.setItem(FILES_KEY, JSON.stringify(filesCache));
     } catch (e) {
       throw new Error('El almacenamiento local está lleno. Conecta Supabase Storage o elimina documentos antiguos.');
     }
   }
 
-  function removeFile(key) {
-    const files = getFiles();
-    delete files[key];
-    localStorage.setItem(FILES_KEY, JSON.stringify(files));
+  async function initFiles() {
+    try {
+      fileDb = await openFileDb();
+      filesCache = await idbGetAll(fileDb);
+      fileDbReady = true;
+    } catch (e) {
+      console.warn('ENVIA: IndexedDB no disponible; se usa localStorage para archivos.', e);
+      fileDb = null;
+    }
+    // Migración transparente de documentos que aún estaban en localStorage.
+    try {
+      const raw = localStorage.getItem(FILES_KEY);
+      if (raw) {
+        const legacy = JSON.parse(raw) || {};
+        filesCache = { ...filesCache, ...legacy };
+        if (fileDbReady) {
+          for (const key of Object.keys(legacy)) await idbPut(key, legacy[key]);
+          localStorage.removeItem(FILES_KEY);
+        }
+      }
+    } catch (e) {
+      console.warn('ENVIA: no se pudieron migrar los archivos locales.', e);
+    }
+  }
+
+  const filesReady = initFiles();
+
+  function getFiles() { return filesCache; }
+
+  async function saveFile(key, dataUrl) {
+    filesCache[key] = dataUrl;
+    if (fileDbReady) {
+      try { await idbPut(key, dataUrl); return; } catch (e) { console.warn('ENVIA: fallback de archivo a localStorage', e); }
+    }
+    saveLegacyFiles();
+  }
+
+  async function removeFile(key) {
+    delete filesCache[key];
+    if (fileDbReady) {
+      try { await idbDelete(key); return; } catch (e) { console.warn('ENVIA: fallback al eliminar archivo', e); }
+    }
+    saveLegacyFiles();
+  }
+
+  async function importFiles(files) {
+    if (!files || typeof files !== 'object') return false;
+    Object.keys(files).forEach((key) => { filesCache[key] = files[key]; });
+    if (fileDbReady) {
+      for (const key of Object.keys(files)) await idbPut(key, files[key]);
+      return true;
+    }
+    saveLegacyFiles();
+    return true;
   }
 
   function fileToDataUrl(file, compress) {
     return new Promise((resolve, reject) => {
       if (!file) return reject(new Error('No se seleccionó ningún archivo.'));
-      if (file.size > 8 * 1024 * 1024) return reject(new Error('El archivo supera el límite de 8 MB.'));
+      if (file.size > 10 * 1024 * 1024) return reject(new Error('El archivo supera el límite de 10 MB.'));
       const isPdf = /pdf/i.test(file.type) || /\.pdf$/i.test(file.name);
       const reader = new FileReader();
       reader.onerror = () => reject(new Error('No se pudo leer el archivo.'));
@@ -193,7 +294,7 @@
 
     const dataUrl = await fileToDataUrl(file, !/pdf/i.test(file.type));
     const key = bucket + '/' + path;
-    saveFile(key, dataUrl);
+    await saveFile(key, dataUrl);
     return {
       bucket, path, key, ref: 'local://' + key, url: dataUrl, local: true, fallback: true,
       error: isConfigured() ? 'No se pudo subir a Supabase Storage. Se guardó localmente.' : ''
@@ -304,6 +405,7 @@
     withholdings: { table: 'withholding_vouchers', conflict: 'numero_comprobante' },
     accounts: { table: 'chart_of_accounts', conflict: 'codigo' },
     accountingRules: { table: 'accounting_rules', conflict: 'evento' },
+    roles: { table: 'erp_roles', conflict: 'nombre' },
     users: { table: 'erp_users', conflict: 'usuario' }
   };
 
@@ -422,6 +524,7 @@
     getConfig, saveConfig, isConfigured, testConnection,
     uploadDocument, getDocumentUrl, resolve, deleteDocument, fileToDataUrl,
     syncAll, pullClientsDrivers,
+    filesReady, importFiles,
     listFiles: getFiles
   };
 })();
