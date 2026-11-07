@@ -68,12 +68,16 @@
     document.body.classList.add('on-login');
     const form = $('#login-form');
     if (form) {
-      form.elements.usuario.value = '';
-      form.elements.password.value = '';
+      // Demo: credenciales de prueba precargadas; el usuario solo pulsa Ingresar.
+      form.elements.usuario.value = 'ENVIA';
+      form.elements.password.value = '123456789';
       const err = $('#login-error');
       err.classList.add('hidden');
       err.textContent = '';
-      setTimeout(() => form.elements.usuario.focus(), 100);
+      setTimeout(() => {
+        const submit = $('#login-submit');
+        if (submit) submit.focus();
+      }, 100);
     }
     updateLoginClock();
   }
@@ -96,15 +100,6 @@
       input.type = show ? 'text' : 'password';
       toggle.innerHTML = NS.ui.icon(show ? 'x' : 'eye', 18);
       toggle.setAttribute('aria-label', show ? 'Ocultar clave' : 'Mostrar clave');
-    });
-
-    document.querySelectorAll('[data-fill-demo]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        form.elements.usuario.value = 'ENVIA';
-        form.elements.password.value = '123456789';
-        input.focus();
-        NS.ui.toast('Credenciales maestras cargadas. Presiona “Ingresar al ERP”.', 'info');
-      });
     });
 
     form.addEventListener('submit', (e) => {
