@@ -1,11 +1,11 @@
 # MEMORY.md - ENVIA ERP
 ## Registro del proyecto para continuación de tareas
 
-**Fecha:** 06 de noviembre de 2026
+**Fecha:** 07 de noviembre de 2026
 
 **Estado:** Proyecto completo y funcional
 
-**Versión:** 1.4.0
+**Versión:** 1.5.0
 
 ---
 
@@ -16,16 +16,23 @@ EnVia/
 ├── index.html                     # Punto de entrada (file://)
 ├── css/styles.css                 # Estilos visuales
 ├── js/
-│   ├── app.js                     # Login, sesión, RBAC, router, shell
+│   ├── app.js                     # Arranque, RBAC global y errores
 │   ├── services/
 │   │   ├── store.js               # Datos, contabilidad, CRUD, seed, roles y permisos
 │   │   ├── supabaseService.js     # REST/Storage, IndexedDB, sync, fallback
-│   │   └── exchangeRateService.js # Tasa BCV oficial (DolarVZLA), caché e históricos
+│   │   ├── exchangeRateService.js # Tasa BCV oficial (DolarVZLA), caché e históricos
+│   │   ├── ocrService.js          # Lectura IA opcional de fechas de documentos
+│   │   ├── sessionService.js      # Sesión, RBAC y expiración
+│   │   ├── routerService.js       # Rutas, shell, topbar, sidebar y tasa BCV
+│   │   └── errorService.js        # Errores centralizados y feedback
 │   └── modules/
 │       ├── ui.js                  # Helpers, modales, print/CSV, gráficos, validación
-│       ├── dashboard.js           # Dashboard ejecutivo con KPIs y gráficos
+│       ├── login.js               # Pantalla de acceso
+│       ├── dashboard.js           # Dashboard ejecutivo con KPIs, alertas y gráficos
 │       ├── clients.js             # Maestro de clientes
-│       ├── drivers.js             # Maestro de conductores, flota y nivel
+│       ├── drivers.js             # Conductores, flota, RCV, vencimientos y wallet
+│       ├── partners.js            # Negocios asociados y cartera de comisiones
+│       ├── inventory.js           # Tienda del conductor, stock y financiamientos
 │       ├── services.js            # Servicios (carreras y encomiendas)
 │       ├── accounting.js          # Contabilidad: asientos, libros, reportes
 │       ├── taxes.js               # Tributos: IVA, IGTF, ISLR, retenciones
@@ -57,18 +64,20 @@ EnVia/
 
 ---
 
-## 3. Módulos implementados (10 rutas)
+## 3. Módulos implementados (12 rutas)
 
-1. **Dashboard** - Tablero de operación: banda de 14 días, ritmo de ingresos, composición/cobros, CxP y servicios recientes
+1. **Dashboard** - Tablero de operación: banda de 14 días, ritmo de ingresos, composición/cobros, CxP, alertas documentales, stock y cartera de asociados
 2. **Servicios** - Carreras y encomiendas con IVA/IGTF/comisión, asientos automáticos
 3. **Clientes** - Maestro de clientes (clave: cedula_rif V-/E-/J-)
-4. **Conductores y Flota** - Conductores, vehículos, documentos, liquidaciones
-5. **Contabilidad** - Plan de cuentas, asientos, libro diario, mayor, balance, resultados, libros SENIAT
-6. **Tributos & BCV** - IVA (16%/8%/0%), IGTF (3%), ISLR (Decreto 1.808), retenciones
-7. **Cuentas por Pagar** - Proveedores, facturas, retenciones IVA/ISLR, pagos, envejecimiento
-8. **Bitácora de Auditoría** - Quién modificó qué, cuándo, usuario, fecha y hora
-9. **Usuarios del sistema** - Usuarios, roles base/personalizados, permisos por módulo/pestaña/acción
-10. **Configuración Supabase** - Conexión opcional a Supabase
+4. **Conductores y Flota** - Conductores, vehículos, documentos, RCV, vencimientos, wallet y liquidaciones
+5. **Negocios Asociados** - Comercios aliados, comisiones por cobrar, recaudaciones por pagar y movimientos
+6. **Tienda & Inventario** - Catálogo, stock, asignación a conductores y financiamiento por cuotas
+7. **Contabilidad** - Plan de cuentas, asientos, libro diario, mayor, balance, resultados, libros SENIAT
+8. **Tributos & BCV** - IVA (16%/8%/0%), IGTF (3%), ISLR (Decreto 1.808), retenciones
+9. **Cuentas por Pagar** - Proveedores, facturas, retenciones IVA/ISLR, pagos, envejecimiento
+10. **Bitácora de Auditoría** - Quién modificó qué, cuándo, usuario, fecha y hora
+11. **Usuarios del sistema** - Usuarios, roles base/personalizados, permisos por módulo/pestaña/acción
+12. **Configuración Supabase** - Conexión opcional a Supabase
 
 ---
 
@@ -177,7 +186,7 @@ EnVia/
 
 ## 5.3 Sidebar sin bloque de usuario (06/11/2026)
 
-**Objetivo:** quitar el avatar, nombre, rol y botón de logout del pie del sidebar; el cierre de sesión ya está en la barra superior. Ganar altura para mostrar los 10 módulos sin scrollbar.
+**Objetivo:** quitar el avatar, nombre, rol y botón de logout del pie del sidebar; el cierre de sesión ya está en la barra superior. Ganar altura para mostrar los 10 módulos sin scrollbar. **Nota 07/11:** se revirtió parcialmente en 5.6; el usuario pidió recuperar un botón de **Cerrar sesión** al final del menú, con separación después de Configuración Supabase.
 
 | Archivo | Cambio |
 |---------|--------|
@@ -260,9 +269,9 @@ EnVia/
 - `deleteClient()` ya calcula `hasSvc` localmente antes de borrar; antes referenciaba una variable inexistente.
 
 **Validación (Chrome headless/CDP):**
-- `node --check` en los 16 archivos JS sin errores.
-- 10 módulos renderizados, botón Reportes presente y persistente al cambiar pestañas de Contabilidad y CxP.
-- Los 34 reportes construyen columnas y filas sin excepciones; la descarga Excel genera el archivo y registra auditoría.
+- `node --check` en todos los archivos JS sin errores.
+- 12 módulos renderizados (incluye Negocios Asociados y Tienda & Inventario), botón Reportes presente y persistente al cambiar pestañas de Contabilidad y CxP.
+- Reportes de asociados e inventario construyen columnas y filas sin excepciones; la descarga Excel genera el archivo y registra auditoría.
 - Pestañas de Contabilidad (10) y CxP (3) sin scroll horizontal, en cuadrícula.
 - Login tras logout abre `#/dashboard`; recarga conserva cliente creado.
 - Rol personalizado solo con acceso a Clientes: no puede entrar a Contabilidad, no puede crear clientes y sí puede abrir reportes.
@@ -270,6 +279,33 @@ EnVia/
 - Documento de prueba guardado como `local://` en IndexedDB, resuelto como Data URL y eliminado correctamente.
 - Manual con 12 secciones, 17 imágenes cargadas y cero errores de consola.
 - Capturas nuevas: `16-centro-reportes.png` y `17-editor-roles-permisos.png`; manual con 12 secciones.
+
+---
+
+## 5.6 Móvil, asociados, tienda, RCV y vencimientos (07/11/2026)
+
+**Objetivo:** mejorar el uso en teléfono, recuperar el cierre de sesión en el menú, renombrar los niveles, agregar negocios aliados, incorporar el Seguro RCV, controlar vencimientos documentales y crear la tienda del conductor con financiamiento y wallet.
+
+| Archivo | Cambio |
+|---------|--------|
+| `js/services/routerService.js` | Nuevas rutas `partners` e `inventory`; menú de usuario en el topbar (perfil y logout); botón **Cerrar sesión** al final del sidebar con separación; corrección de `available2` en el calendario BCV. |
+| `js/services/store.js` | Niveles `Zafiro/Esmeralda/Diamante`; estado `Inactivo por Documentos Vencidos`; cuentas 1.1.2.03, 1.1.6.01, 2.1.1.03, 4.2.1.02, 4.2.1.03, 5.2.2.01; reglas de asociados y tienda; CRUD de negocios, productos, financiamientos y movimientos; wallet del conductor; alertas y metadatos documentales; asientos demo. |
+| `js/modules/drivers.js` | Documento **Seguro RCV**; fechas emisión/vencimiento por documento; lectura IA opcional; badges de vencimiento; inactivación/reactivación; wallet con ganancias, comisiones, compras y deuda; botón para asignar producto. |
+| `js/modules/partners.js` | **NUEVO**: negocios asociados, cartera por cobrar/pagar, movimientos y asientos. |
+| `js/modules/inventory.js` | **NUEVO**: catálogo, stock, ajustes, asignación a conductores, cuotas y abonos. |
+| `js/services/ocrService.js` | **NUEVO**: lectura opcional de fechas vía endpoint compatible con OpenAI Vision; fallback manual. |
+| `js/modules/dashboard.js` | Panel **Alertas operativas**: documentos vencidos/por vencer, stock bajo y comisiones de asociados. |
+| `css/styles.css` | Menú de usuario, logout lateral, wallet, alertas documentales, cálculo de asignación, grilla de alertas y mejoras móviles (touch, tipografía, logout visible). |
+| `index.html` | Carga de `ocrService.js`, `partners.js` e `inventory.js`. |
+| `js/services/supabaseService.js` | Sincronización de `partners`, `partner_movements`, `products`, `driver_charges` y `driver_movements`. |
+| `sql/supabase_schema.sql` | Nuevas tablas, columnas RCV/docs_meta, niveles, estado de inactividad, índices, triggers y RLS. |
+| `docs/manual_usuario.md`, `MEMORY.md` | Manual v1.5 y registro de la sesión. |
+
+**Decisiones de negocio:**
+- **Negocios Asociados es un módulo independiente** (no una pestaña de proveedores). El asociado puede deber comisiones (CxC) y ENVIA puede deberle recaudaciones (CxP); separar las carteras evita mezclar antigüedad de CxP con ingresos por comisión.
+- **Seguro RCV** se maneja como documento del conductor y como producto de tienda de $25; son dos controles distintos: el documento acredita la cobertura y el producto registra la venta/financiamiento.
+- **Tienda:** toda asignación descuenta stock, genera CxC al conductor (1.1.2.02), ingreso por tienda (4.2.1.03) y costo (5.2.2.01). El saldo se muestra en la wallet y puede abonarse.
+- **IA:** la lectura automática es opcional y configurable; si no hay endpoint o falla, se capturan las fechas manualmente. No se hardcodean claves ni se bloquea la carga.
 
 ---
 
@@ -288,7 +324,7 @@ EnVia/
 
 1. Abrir `index.html` directamente en Chrome (doble clic o `file:///`).
 2. Iniciar sesión con `ENVIA` / `123456789`.
-3. Todos los 10 módulos están operativos.
+3. Todos los 12 módulos están operativos (incluye Negocios Asociados y Tienda & Inventario).
 4. Si necesita agregar una función nueva:
    - Crear módulo en `js/modules/`.
    - Registrar ruta en `js/app.js` (objeto `MODULES`).

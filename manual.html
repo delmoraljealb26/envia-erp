@@ -188,7 +188,7 @@
                 <li><span class="ord">1</span><span class="txt"><b>Usuario:</b> ENVIA</span></li>
                 <li><span class="ord">2</span><span class="txt"><b>Clave de acceso:</b> 123456789</span></li>
               </ul>
-              O presiona el botón <b>“Usar”</b> bajo <i>Credenciales maestras</i> para autocompletar. Luego presiona <b>Ingresar</b>.
+              Las credenciales demo ya vienen precargadas; solo presiona <b>Ingresar</b>. Si usas otro usuario, escribe sus datos.
             </div>
           </div>
 
@@ -199,6 +199,7 @@
 
           <div class="note info"><strong>¿Olvidaste la clave?</strong> En esta versión demo las claves se gestionan localmente. Contacta al SuperAdmin para restablecer acceso.</div>
           <div class="note"><strong>Inicio seguro:</strong> cada vez que inicies sesión, el sistema abre el <b>Dashboard</b>. No se restaura el último módulo visitado.</div>
+          <div class="note info"><strong>Cerrar sesión:</strong> en escritorio usa el icono de salida de la barra superior o toca tus iniciales para abrir el menú de usuario. En móvil, abre el menú lateral (☰) y usa <b>Cerrar sesión</b>, que aparece al final después de Configuración Supabase.</div>
         </section>
 
         <!-- 2. Dashboard -->
@@ -343,9 +344,9 @@
               <table class="data-table" style="margin-top:10px">
                 <thead><tr><th>Nivel</th><th>Uso sugerido</th></tr></thead>
                 <tbody>
-                  <tr><td><b>Plata</b></td><td>Conductor nuevo o en período de evaluación.</td></tr>
-                  <tr><td><b>Oro</b></td><td>Conductor con buen desempeño y cumplimiento.</td></tr>
-                  <tr><td><b>Platium</b></td><td>Conductor destacado o de máxima prioridad operativa.</td></tr>
+                  <tr><td><b>Zafiro</b></td><td>Conductor nuevo o en período de evaluación.</td></tr>
+                  <tr><td><b>Esmeralda</b></td><td>Conductor con buen desempeño y cumplimiento.</td></tr>
+                  <tr><td><b>Diamante</b></td><td>Conductor destacado o de máxima prioridad operativa.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -354,13 +355,27 @@
           <div class="step-card">
             <div class="step-head"><span class="step-badge">3</span><h2 class="step-title">Estado de documentos</h2></div>
             <div class="step-body">
-              Cada documento tiene estados: <b>Pendiente</b>, <b>Aprobado</b> o <b>Rechazado</b>. Cuando todos estén aprobados (cédula, RIF, licencia, circulación), el conductor puede pasar de <i>En Revisión Documental</i> a <b>Activo / Disponible</b>.
+              Cada documento tiene estados: <b>Pendiente</b>, <b>Aprobado</b> o <b>Rechazado</b>. Los requisitos son cédula, RIF, licencia, circulación y <b>Seguro RCV</b>. Cuando todos estén aprobados, el conductor puede pasar de <i>En Revisión Documental</i> a <b>Activo / Disponible</b>.
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">4</span><h2 class="step-title">Vencimientos, alertas y lectura IA</h2></div>
+            <div class="step-body">
+              Al subir o reemplazar un documento, registra su <b>emisión</b> y <b>vencimiento</b>. Si el administrador configuró un endpoint de visión, el botón <b>Leer fechas con IA</b> intenta extraerlas de la foto; si no, se capturan manualmente. El ERP avisa 30 días antes y marca los vencidos. Un documento obligatorio vencido deja al conductor <b>Inactivo por Documentos Vencidos</b> hasta que actualice el archivo y las fechas.
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">5</span><h2 class="step-title">Wallet del conductor</h2></div>
+            <div class="step-body">
+              El expediente muestra el detalle de <b>ganancias</b>, <b>comisiones ENVIA</b>, <b>compras de la tienda</b>, <b>liquidaciones pagadas</b>, el <b>saldo wallet</b> y la <b>deuda de tienda</b>. Este historial se conserva para estadísticas y para explicar cada liquidación.
             </div>
           </div>
 
           <div class="img-ref">
             <img src="imagen/manual/07-conductor-expediente.png" alt="Expediente del conductor">
-            <div class="img-cap">Expediente del conductor con documentos, vehículo, datos de pago y liquidaciones.</div>
+            <div class="img-cap">Expediente del conductor con documentos, RCV, vehículo, wallet y liquidaciones.</div>
           </div>
 
           <div class="note warn"><strong>No se puede eliminar</strong> un conductor que tenga servicios asociados.</div>
@@ -564,6 +579,67 @@
           <div class="note warn"><strong>No se puede eliminar</strong> una factura que tenga pagos registrados. Primero anula los pagos.</div>
         </section>
 
+        <!-- 8.1 Negocios Asociados -->
+        <section class="manual-section" id="sec-8-1" data-nav="8.1">
+          <div class="section-head">
+            <span class="section-kicker"><span class="num">8.1</span> Negocios Asociados</span>
+            <h1 class="section-title">Comercios aliados, comisiones y recaudaciones</h1>
+            <p class="section-sub">Módulo independiente para restaurantes, farmacias y comercios que generan pedidos de delivery. Se separa de Cuentas por Pagar porque el asociado puede deber comisiones (CxC) y ENVIA puede deberle recaudaciones (CxP).</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">1</span><h2 class="step-title">Registrar un negocio</h2></div>
+            <div class="step-body">
+              <ul class="step-list">
+                <li><span class="ord">1</span><span class="txt">Ve a <b>Operación → Negocios Asociados</b> → <b>Nuevo negocio</b>.</span></li>
+                <li><span class="ord">2</span><span class="txt">Ingresa RIF, razón social, tipo, contacto, teléfono, correo y dirección.</span></li>
+                <li><span class="ord">3</span><span class="txt">Define el <b>% de comisión</b> pactado y el estatus.</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <table class="data-table">
+            <thead><tr><th>Movimiento</th><th>Efecto</th><th>Asiento</th></tr></thead>
+            <tbody>
+              <tr><td>Comisión por cobrar</td><td>Aumenta CxC</td><td>DEBE 1.1.2.03 · HABER 4.2.1.02</td></tr>
+              <tr><td>Cobro recibido</td><td>Reduce CxC</td><td>DEBE 1.1.1.02 · HABER 1.1.2.03</td></tr>
+              <tr><td>Recaudación por pagar</td><td>Aumenta CxP</td><td>DEBE 1.1.1.01 · HABER 2.1.1.03</td></tr>
+              <tr><td>Pago al negocio</td><td>Reduce CxP</td><td>DEBE 2.1.1.03 · HABER 1.1.1.02</td></tr>
+            </tbody>
+          </table>
+          <div class="note warn"><strong>No se puede eliminar</strong> un negocio con movimientos de cartera registrados.</div>
+        </section>
+
+        <!-- 8.2 Tienda & Inventario -->
+        <section class="manual-section" id="sec-8-2" data-nav="8.2">
+          <div class="section-head">
+            <span class="section-kicker"><span class="num">8.2</span> Tienda &amp; Inventario</span>
+            <h1 class="section-title">Uniformes, equipamiento y financiamiento al conductor</h1>
+            <p class="section-sub">Catálogo con control de stock y ventas financiadas contra la cartera del conductor en cuotas.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">1</span><h2 class="step-title">Crear o ajustar productos</h2></div>
+            <div class="step-body">
+              En <b>Operación → Tienda &amp; Inventario</b>, usa <b>Nuevo producto</b> para definir SKU, nombre, categoría, precio, costo, stock y stock mínimo. Usa el icono de refresco para ajustar stock por compras, devoluciones o mermas.
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">2</span><h2 class="step-title">Asignar y financiar</h2></div>
+            <div class="step-body">
+              <ul class="step-list">
+                <li><span class="ord">1</span><span class="txt">Pulsa <b>Asignar producto</b> o hazlo desde el expediente del conductor.</span></li>
+                <li><span class="ord">2</span><span class="txt">Selecciona conductor, producto, cantidad y cuotas (1, 2, 4, 8, 12 o 24).</span></li>
+                <li><span class="ord">3</span><span class="txt">El sistema descuenta stock, crea CxC al conductor (1.1.2.02), ingreso por tienda (4.2.1.03) y costo (5.2.2.01).</span></li>
+                <li><span class="ord">4</span><span class="txt">Registra abonos desde <b>Financiamientos</b>; la deuda aparece en la wallet del conductor.</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="note info"><strong>Productos demo:</strong> Bolso Delivery $80 · Franela manga larga tipo chemis $25 · Casco personalizado $50 · Seguro RCV $25 · Chaqueta cortaviento $50 · Portacelular $25.</div>
+        </section>
+
         <!-- 9. Auditoría -->
         <section class="manual-section" id="sec-9">
           <div class="section-head">
@@ -752,7 +828,7 @@
           var kicker = sec.querySelector('.section-kicker');
           var title = sec.querySelector('.section-title');
           var label = (title ? title.textContent : id) || id;
-          var num = kicker ? kicker.textContent.replace(/\D/g,'') : '';
+          var num = sec.getAttribute('data-nav') || (kicker ? kicker.textContent.replace(/[^0-9.]/g,'') : '');
           itemsHTML += '<a class="manual-item" href="#' + id + '"><span class="ico">' + (num ? num : '•') + '</span>' + label + '</a>';
         });
         nav.innerHTML = itemsHTML;

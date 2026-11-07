@@ -17,6 +17,8 @@
 6. [Contabilidad (libros y estados)](#6-contabilidad-libros-y-estados)
 7. [Tributos y Tasa BCV](#7-tributos-y-tasa-bcv)
 8. [Cuentas por Pagar (proveedores y facturas)](#8-cuentas-por-pagar-proveedores-y-facturas)
+8.1 [Negocios Asociados](#81-negocios-asociados)
+8.2 [Tienda & Inventario del conductor](#82-tienda--inventario-del-conductor)
 9. [Bitácora de Auditoría](#9-bitacora-de-auditoria)
 10. [Usuarios del sistema](#10-usuarios-del-sistema)
 11. [Reportes en cada módulo](#11-reportes-en-cada-modulo)
@@ -37,14 +39,14 @@ En la pantalla de bienvenida verás el logotipo de ENVIA y dos campos:
 | Usuario | `ENVIA` |
 | Clave de acceso | `123456789` |
 
-Puedes presionar el botón **"Usar"** que está debajo de "Credenciales maestras" para que se llenen automáticamente, y luego presiona **"Ingresar"**.
+Las credenciales de demostración ya vienen precargadas. Solo presiona **"Ingresar"** para entrar. Si necesitas usar otro usuario, borra el campo y escribe sus credenciales.
 
 ### Paso 3 — Ver tu sesión
 Al entrar, verás tu nombre, tu rol y la tasa del dólar (BCV) en la parte superior derecha. Tu sesión dura 12 horas y se cierra automáticamente.
 
 Cada vez que inicies sesión, el sistema abrirá siempre el **Dashboard**, aunque antes hayas estado trabajando en otro módulo. Así empiezas con la visión general de la operación.
 
-El **menú lateral** muestra todos los módulos a los que tienes acceso y se adapta a la altura de la pantalla: en pantallas de portátil reduce los espacios para que veas todas las opciones sin desplazarte. Los datos del usuario y el botón de **Cerrar sesión** están únicamente en la barra superior derecha.
+El **menú lateral** muestra todos los módulos a los que tienes acceso y se adapta a la altura de la pantalla: en pantallas de portátil reduce los espacios para que veas todas las opciones sin desplazarte. En **móvil**, toca el icono de menú (☰) para abrir la navegación y usa el botón **Cerrar sesión** al final del menú. En escritorio también puedes cerrar sesión desde el icono de la barra superior o tocando tus iniciales (menú de usuario).
 
 ![Pantalla de acceso a ENVIA ERP](../imagen/manual/01-login.png)
 
@@ -133,7 +135,7 @@ Los conductores son las personas que realizan las carreras y entregas. Reciben u
 3. Llena los datos personales:
    - Cédula / RIF (único, no se repite).
    - Nombres y apellidos.
-   - **Nivel del conductor:** Plata, Oro o Platium.
+   - **Nivel del conductor:** Zafiro, Esmeralda o Diamante.
    - Teléfono y correo.
    - Dirección.
 4. Llena los datos del vehículo:
@@ -151,9 +153,9 @@ Los conductores son las personas que realizan las carreras y entregas. Reciben u
 
 | Nivel | Uso sugerido |
 |-------|--------------|
-| **Plata** | Conductor nuevo o en período de evaluación. |
-| **Oro** | Conductor con buen desempeño y cumplimiento. |
-| **Platium** | Conductor destacado o de máxima prioridad operativa. |
+| **Zafiro** | Conductor nuevo o en período de evaluación. |
+| **Esmeralda** | Conductor con buen desempeño y cumplimiento. |
+| **Diamante** | Conductor destacado o de máxima prioridad operativa. |
 
 El nivel se muestra como una etiqueta en el listado y se incluye en los reportes de conductores y liquidaciones. Puedes cambiarlo editando el expediente del conductor.
 
@@ -163,10 +165,35 @@ Cada conductor debe tener documentos que pueden estar en tres estados: Pendiente
 - RIF
 - Licencia de conducir
 - Tarjeta de circulación
+- **Seguro RCV** (responsabilidad civil de vehículos)
 
 Cuando todos los documentos estén **Aprobados**, el conductor puede pasar de "En Revisión" a **Activo / Disponible** y podrá recibir carreras.
 
 ![Expediente del conductor](../imagen/manual/07-conductor-expediente.png)
+
+### Fechas, alertas y lectura IA de documentos
+
+Cada documento guarda su **fecha de emisión** y **fecha de vencimiento**. Al subir o reemplazar un archivo, el sistema abre un cuadro para registrarlas:
+
+1. Si el administrador configuró un servicio de visión (IA), pulsa **“Leer fechas con IA”** y el sistema intenta extraerlas de la foto.
+2. Si no hay servicio configurado o la lectura falla, escribe las fechas manualmente. El flujo nunca se bloquea.
+3. Pulsa **“Guardar fechas”**.
+
+El ERP marca los documentos que vencen en **30 días o menos** y los que ya están **vencidos**. Si un documento obligatorio está vencido, el conductor pasa automáticamente a **Inactivo por Documentos Vencidos** y no se le pueden asignar servicios. Cuando sube el documento actualizado y registra una nueva fecha futura, el sistema lo reactiva.
+
+La configuración de lectura IA se guarda solo en el navegador del administrador (`Configurar IA` dentro del cuadro de fechas). En producción debe usarse un proxy del servidor para no exponer claves.
+
+### Wallet e historial del conductor
+
+Dentro del expediente, la sección **Wallet del conductor** muestra el detalle de cada movimiento:
+
+- **Ganancias brutas** por servicios.
+- **Comisiones ENVIA** descontadas.
+- **Compras de la tienda** financiadas.
+- **Liquidaciones pagadas**.
+- **Saldo wallet** y **deuda de tienda** pendiente.
+
+Este historial se conserva en el ERP para estadísticas y para explicar cualquier diferencia de liquidación.
 
 > No se puede eliminar un conductor que tenga servicios registrados.
 
@@ -327,6 +354,53 @@ Aquí gestionas lo que le debes a tus proveedores (repuestos, combustible, servi
 
 ---
 
+## 8.1 Negocios Asociados
+
+**Negocios Asociados** es un módulo independiente para los comercios aliados que generan pedidos de delivery: restaurantes, farmacias, comercios, servicios y otros. Se recomienda mantenerlo separado de **Cuentas por Pagar** porque su naturaleza contable es distinta: un asociado puede deberte comisiones (**cuenta por cobrar**) y, al mismo tiempo, tú puedes deberle recaudaciones en efectivo cobradas al cliente final (**cuenta por pagar**). Mezclarlo con proveedores de compras confundiría la antigüedad de CxP y los reportes fiscales.
+
+### Registrar un negocio
+1. Ve al menú lateral → **Negocios Asociados**.
+2. Pulsa **Nuevo negocio**.
+3. Llena RIF, razón social, tipo, contacto, teléfono, correo, dirección y el **% de comisión** pactado.
+4. Define el estatus (Activo / Inactivo) y guarda.
+
+### Registrar movimientos de cartera
+Desde la ficha del negocio puedes registrar cuatro tipos:
+
+| Movimiento | Efecto | Asiento |
+|---|---|---|
+| Comisión por cobrar | Aumenta la cuenta por cobrar | DEBE 1.1.2.03 · HABER 4.2.1.02 |
+| Cobro recibido | Reduce la cuenta por cobrar | DEBE 1.1.1.02 · HABER 1.1.2.03 |
+| Recaudación por pagar | Aumenta la cuenta por pagar | DEBE 1.1.1.01 · HABER 2.1.1.03 |
+| Pago al negocio | Reduce la cuenta por pagar | DEBE 2.1.1.03 · HABER 1.1.1.02 |
+
+La ficha muestra el saldo por cobrar, el saldo por pagar y el historial completo. No se puede eliminar un negocio con movimientos registrados.
+
+---
+
+## 8.2 Tienda & Inventario del conductor
+
+La **Tienda del Conductor** permite vender uniformes, equipamiento y seguridad a los conductores y financiar la compra contra su cartera.
+
+### Catálogo e inventario
+1. Ve al menú lateral → **Tienda & Inventario**.
+2. En **Nuevo producto** define SKU, nombre, categoría, precio de venta, costo, stock actual y stock mínimo.
+3. Puedes **ajustar stock** con el icono de refresco (compra, devolución, merma) y editar el producto.
+4. El sistema resalta los productos en o bajo el stock mínimo y calcula el valor del inventario al costo.
+
+Productos de demostración incluidos: Bolso Delivery ($80), Franela manga larga tipo chemis ($25), Casco personalizado ($50), Seguro RCV ($25), Chaqueta cortaviento ($50) y Portacelular ($25).
+
+### Asignar y financiar una compra
+1. Pulsa **Asignar producto** (o hazlo desde el expediente del conductor).
+2. Selecciona conductor, producto, cantidad y número de cuotas (1, 2, 4, 8, 12 o 24).
+3. El sistema muestra el total y la cuota estimada.
+4. Al confirmar: descuenta stock, crea una **cuenta por cobrar al conductor** (1.1.2.02), registra el ingreso por tienda (4.2.1.03) y el costo del artículo (5.2.2.01).
+5. En **Financiamientos** puedes ver el saldo y usar **Abonar** para registrar pagos parciales.
+
+La deuda aparece en la **Wallet del conductor** y puede descontarse de sus liquidaciones.
+
+---
+
 ## 9. Bitácora de Auditoría
 
 Esta sección registra todo lo que se hace en el sistema para tener un control de quién modificó qué.
@@ -375,7 +449,7 @@ ENVIA ERP incluye cuatro roles listos para usar. Además, el administrador puede
 
 ![Editor de roles y permisos](../imagen/manual/17-editor-roles-permisos.png)
 
-Las acciones disponibles incluyen ver, crear, editar, eliminar, exportar, imprimir, abrir el centro de reportes, gestionar documentos, liquidar, pagar, administrar la billetera y administrar roles. Los módulos con pestañas internas, como Contabilidad o Cuentas por Pagar, permiten habilitar cada pestaña por separado.
+Las acciones disponibles incluyen ver, crear, editar, eliminar, exportar, imprimir, abrir el centro de reportes, gestionar documentos, liquidar, pagar, cobrar, registrar movimientos de cartera, asignar productos/financiar, administrar la billetera y administrar roles. Los módulos con pestañas internas, como Contabilidad o Cuentas por Pagar, permiten habilitar cada pestaña por separado. Los roles base ya incluyen acceso a **Negocios Asociados** y **Tienda & Inventario**; el administrador puede ajustarlo por rol o por usuario.
 
 ### Crear un usuario nuevo
 1. Ve a **Usuarios del sistema**.
@@ -419,6 +493,8 @@ Todos los módulos tienen el botón **Reportes** en la esquina superior derecha.
 | Contabilidad | Libro diario, libro mayor, balance de comprobación, estado de resultados, balance general, libro de ventas y libro de compras. |
 | Tributos & BCV | Resumen fiscal, comprobantes de retención, retenciones de IVA y retenciones de ISLR. |
 | Cuentas por Pagar | Facturas de compra, antigüedad de saldos, maestro de proveedores y liquidaciones a conductores. |
+| Negocios Asociados | Cartera de comisiones, recaudaciones y movimientos por negocio. |
+| Tienda & Inventario | Catálogo, stock, valor del inventario y financiamientos a conductores. |
 | Bitácora de Auditoría | Bitácora completa, actividad por usuario y eventos por módulo. |
 | Usuarios del sistema | Usuarios y roles, roles y permisos, matriz de permisos. |
 | Configuración | Parámetros del sistema, almacenamiento y tasa BCV. |
@@ -438,6 +514,9 @@ Todos los módulos tienen el botón **Reportes** en la esquina superior derecha.
 7. **Los permisos se respetan:** Si no tienes una acción habilitada, el botón no aparece y la operación se rechaza aunque intentes ejecutarla.
 8. **Los datos se guardan en el navegador:** La base se conserva en `localStorage` y los documentos en IndexedDB. Al recargar la página, la información sigue disponible.
 9. **Cada sesión abre el Dashboard:** El sistema no vuelve al último módulo visitado.
+10. **Los documentos vencidos inactivan al conductor:** Si un documento obligatorio vence, no se le pueden asignar servicios hasta actualizarlo.
+11. **La tienda descuenta inventario y genera cartera:** Cada producto asignado crea una cuenta por cobrar al conductor y su asiento contable.
+12. **Los negocios asociados tienen cartera propia:** Las comisiones por cobrar y las recaudaciones por pagar se controlan por separado de los proveedores.
 
 ---
 

@@ -288,7 +288,7 @@
         description: 'Datos operativos, nivel, vehículo, comisión y saldo por liquidar.',
         build() {
           const rows = db().drivers.slice().sort((a, b) => a.apellidos.localeCompare(b.apellidos)).map((d) => ({
-            cedula: d.cedula_rif, conductor: d.nombres + ' ' + d.apellidos, nivel: d.nivel || 'Plata',
+            cedula: d.cedula_rif, conductor: d.nombres + ' ' + d.apellidos, nivel: d.nivel || 'Zafiro',
             tipo: d.tipo_servicio, placa: d.placa, telefono: d.telefono,
             comision: d.porcentaje_comision, saldo: d.saldo_por_liquidar_usd, estatus: d.estatus_conductor,
             docs: Object.values(d.docs_estado || {}).filter((x) => x === 'Aprobado').length + '/5'
@@ -305,8 +305,8 @@
         id: 'niveles', title: 'Conductores por nivel', icon: 'chart',
         description: 'Distribución Plata, Oro y Platium con saldos y comisión promedio.',
         build() {
-          const rows = (NS.store.DRIVER_LEVELS || ['Plata', 'Oro', 'Platium']).map((nivel) => {
-            const list = db().drivers.filter((d) => (d.nivel || 'Plata') === nivel);
+          const rows = (NS.store.DRIVER_LEVELS || ['Zafiro', 'Esmeralda', 'Diamante']).map((nivel) => {
+            const list = db().drivers.filter((d) => (d.nivel || 'Zafiro') === nivel);
             return {
               nivel, conductores: list.length,
               saldo: list.reduce((s, d) => s + MONEY(d.saldo_por_liquidar_usd), 0),
@@ -326,7 +326,7 @@
         description: 'Detalle de saldos pendientes por conductor y nivel.',
         build() {
           const rows = db().drivers.filter((d) => MONEY(d.saldo_por_liquidar_usd) > 0).sort((a, b) => b.saldo_por_liquidar_usd - a.saldo_por_liquidar_usd).map((d) => ({
-            cedula: d.cedula_rif, conductor: d.nombres + ' ' + d.apellidos, nivel: d.nivel || 'Plata',
+            cedula: d.cedula_rif, conductor: d.nombres + ' ' + d.apellidos, nivel: d.nivel || 'Zafiro',
             banco: d.banco, telefono: d.telefono_pago_movil, saldo: d.saldo_por_liquidar_usd
           }));
           return {
@@ -599,7 +599,7 @@
         description: 'Saldos pendientes y datos de pago de la flota.',
         build() {
           const rows = db().drivers.filter((d) => MONEY(d.saldo_por_liquidar_usd) > 0).map((d) => ({
-            cedula: d.cedula_rif, conductor: d.nombres + ' ' + d.apellidos, nivel: d.nivel || 'Plata',
+            cedula: d.cedula_rif, conductor: d.nombres + ' ' + d.apellidos, nivel: d.nivel || 'Zafiro',
             banco: d.banco, telefono: d.telefono_pago_movil, cedula_pago: d.cedula_pago_movil, saldo: d.saldo_por_liquidar_usd
           }));
           return {
@@ -607,6 +607,112 @@
             columns: [{ key: 'cedula', label: 'Cédula' }, { key: 'conductor', label: 'Conductor' }, { key: 'nivel', label: 'Nivel' }, { key: 'banco', label: 'Banco' }, { key: 'telefono', label: 'Pago móvil' }, { key: 'cedula_pago', label: 'Cédula pago móvil' }, { key: 'saldo', label: 'Saldo USD', type: 'usd' }],
             rows,
             totals: { saldo: rows.reduce((s, r) => s + r.saldo, 0) }
+          };
+        }
+      }
+    ],
+
+    partners: [
+      {
+        id: 'cartera', title: 'Cartera de negocios asociados', icon: 'building',
+        description: 'Comisiones por cobrar, recaudaciones por pagar y comisión pactada.',
+        build() {
+          const rows = db().partners.map((p) => ({
+            rif: p.rif, negocio: p.razon_social, tipo: p.tipo, comision: p.comision_pct,
+            porCobrar: p.saldo_por_cobrar_usd, porPagar: p.saldo_por_pagar_usd,
+            movimientos: NS.store.partnerMovements(p.rif).length, estatus: p.estatus
+          }));
+          return {
+            title: 'Cartera de negocios asociados', subtitle: 'Comisiones y recaudaciones · USD',
+            columns: [
+              { key: 'rif', label: 'RIF' }, { key: 'negocio', label: 'Negocio' }, { key: 'tipo', label: 'Tipo' },
+              { key: 'comision', label: 'Comisión', type: 'pct' }, { key: 'porCobrar', label: 'Por cobrar USD', type: 'usd' },
+              { key: 'porPagar', label: 'Por pagar USD', type: 'usd' }, { key: 'movimientos', label: 'Movimientos', type: 'int' },
+              { key: 'estatus', label: 'Estatus' }
+            ],
+            rows,
+            totals: {
+              porCobrar: rows.reduce((s, r) => s + MONEY(r.porCobrar), 0),
+              porPagar: rows.reduce((s, r) => s + MONEY(r.porPagar), 0),
+              movimientos: rows.reduce((s, r) => s + r.movimientos, 0)
+            }
+          };
+        }
+      },
+      {
+        id: 'movimientos', title: 'Movimientos de asociados', icon: 'activity',
+        description: 'Comisiones, cobros, recaudaciones y pagos con su referencia.',
+        build() {
+          const rows = db().partnerMovements.slice().sort((a, b) => String(b.fecha).localeCompare(String(a.fecha))).map((m) => {
+            const p = db().partners.find((x) => x.rif === m.partner_rif);
+            return { fecha: m.fecha, rif: m.partner_rif, negocio: p ? p.razon_social : m.partner_rif, tipo: m.tipo, concepto: m.concepto, referencia: m.referencia, monto: m.monto_usd };
+          });
+          return {
+            title: 'Movimientos de asociados', subtitle: 'Historial de cartera · USD',
+            columns: [
+              { key: 'fecha', label: 'Fecha', type: 'date' }, { key: 'rif', label: 'RIF' }, { key: 'negocio', label: 'Negocio' },
+              { key: 'tipo', label: 'Tipo' }, { key: 'concepto', label: 'Concepto' }, { key: 'referencia', label: 'Referencia' },
+              { key: 'monto', label: 'Monto USD', type: 'usd' }
+            ],
+            rows,
+            totals: { monto: rows.reduce((s, r) => s + r.monto, 0) }
+          };
+        }
+      }
+    ],
+
+    inventory: [
+      {
+        id: 'catalogo', title: 'Catálogo e inventario', icon: 'package',
+        description: 'Productos, precio, costo, stock y valor del inventario.',
+        build() {
+          const rows = db().products.map((p) => ({
+            sku: p.sku, producto: p.nombre, categoria: p.categoria, precio: p.precio_usd, costo: p.costo_usd,
+            stock: p.stock, minimo: p.stock_min, valor: MONEY(p.stock) * MONEY(p.costo_usd), activo: p.activo ? 'Sí' : 'No'
+          }));
+          return {
+            title: 'Catálogo e inventario', subtitle: 'Tienda del conductor · USD',
+            columns: [
+              { key: 'sku', label: 'SKU' }, { key: 'producto', label: 'Producto' }, { key: 'categoria', label: 'Categoría' },
+              { key: 'precio', label: 'Precio USD', type: 'usd' }, { key: 'costo', label: 'Costo USD', type: 'usd' },
+              { key: 'stock', label: 'Stock', type: 'int' }, { key: 'minimo', label: 'Mínimo', type: 'int' },
+              { key: 'valor', label: 'Valor USD', type: 'usd' }, { key: 'activo', label: 'Activo' }
+            ],
+            rows,
+            totals: {
+              stock: rows.reduce((s, r) => s + r.stock, 0),
+              valor: rows.reduce((s, r) => s + r.valor, 0)
+            }
+          };
+        }
+      },
+      {
+        id: 'financiamientos', title: 'Financiamientos a conductores', icon: 'wallet',
+        description: 'Compras a crédito, cuotas, abonos y saldo pendiente por conductor.',
+        build() {
+          const rows = db().driverCharges.map((c) => {
+            const d = db().drivers.find((x) => x.cedula_rif === c.conductor_cedula_rif);
+            return {
+              fecha: c.fecha, cedula: c.conductor_cedula_rif,
+              conductor: d ? d.nombres + ' ' + d.apellidos : c.conductor_cedula_rif,
+              producto: c.producto_nombre, cantidad: c.cantidad, total: c.total_usd,
+              pagado: c.pagado_usd, saldo: c.saldo_usd, cuotas: c.cuotas, estatus: c.estatus
+            };
+          });
+          return {
+            title: 'Financiamientos a conductores', subtitle: 'Cuentas por cobrar de la tienda · USD',
+            columns: [
+              { key: 'fecha', label: 'Fecha', type: 'date' }, { key: 'cedula', label: 'Cédula' }, { key: 'conductor', label: 'Conductor' },
+              { key: 'producto', label: 'Producto' }, { key: 'cantidad', label: 'Cant.', type: 'int' },
+              { key: 'total', label: 'Total USD', type: 'usd' }, { key: 'pagado', label: 'Pagado USD', type: 'usd' },
+              { key: 'saldo', label: 'Saldo USD', type: 'usd' }, { key: 'cuotas', label: 'Cuotas', type: 'int' }, { key: 'estatus', label: 'Estatus' }
+            ],
+            rows,
+            totals: {
+              total: rows.reduce((s, r) => s + r.total, 0),
+              pagado: rows.reduce((s, r) => s + r.pagado, 0),
+              saldo: rows.reduce((s, r) => s + r.saldo, 0)
+            }
           };
         }
       }

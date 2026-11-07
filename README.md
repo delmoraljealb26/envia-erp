@@ -31,7 +31,13 @@ roles y permisos granulares.
 - **Dashboard**: KPIs, ingresos, métodos de pago, vencimientos y actividad.
 - **Servicios**: carreras y encomiendas con IVA, IGTF, comisión y asientos.
 - **Clientes**: cédula/RIF como PK, wallet, documentos y servicios.
-- **Conductores y flota**: expediente, documentos, vehículo, nivel y liquidaciones.
+- **Conductores y flota**: expediente, documentos (incluye **Seguro RCV**), fechas
+  de vencimiento con alertas, vehículo, niveles Zafiro/Esmeralda/Diamante,
+  wallet e liquidaciones.
+- **Negocios asociados**: comercios aliados con comisiones por cobrar,
+  recaudaciones por pagar y movimientos de cartera.
+- **Tienda & inventario**: catálogo de uniformes/equipamiento, stock y compras
+  financiadas al conductor con cuotas y abonos.
 - **Contabilidad**: plan de cuentas, reglas, asientos, libro diario, libro mayor,
   balance de comprobación, balance general y estado de resultados.
 - **Tributos & BCV**: tasa BCV, IVA, IGTF, UT, tarifas ISLR y comprobantes.
@@ -86,9 +92,11 @@ se migran automáticamente para liberar espacio para la base de datos.
 ## Validación realizada
 
 - `node --check` sobre los 16 archivos JS.
-- Login y recorrido de los 10 módulos con los 4 roles base, sin errores de consola.
+- Login y recorrido de los 12 módulos con los 4 roles base, sin errores de consola.
 - Alta/edición de cliente, servicio, factura y pago con asientos cuadrados.
-- 34 reportes construidos correctamente; impresión y descarga Excel disponibles.
+- Asignación de productos con descuento de stock, cartera del conductor y abonos.
+- Movimientos de negocios asociados y alertas documentales (vencido / por vencer).
+- Reportes por módulo, incluidos asociados e inventario; impresión y Excel disponibles.
 - Creación de roles y usuarios con permisos granulares; rechazo de acciones no permitidas.
 - Subida de documento con fallback local, migración a IndexedDB y persistencia tras recarga.
 - Diseño responsive verificado a 1440 px y 390 px.
@@ -99,11 +107,12 @@ se migran automáticamente para liberar espacio para la base de datos.
 index.html
 css/styles.css
 js/app.js
-js/services/store.js
-js/services/supabaseService.js
-js/services/exchangeRateService.js
-js/modules/{ui,dashboard,clients,drivers,services,accounting,taxes,payables,reports,audit,users,settings}.js
+js/services/{store,supabaseService,exchangeRateService,sessionService,routerService,errorService,ocrService}.js
+js/modules/{login,ui,dashboard,clients,drivers,partners,inventory,services,accounting,taxes,payables,reports,audit,users,settings}.js
 sql/supabase_schema.sql
 docs/constitution.md
+docs/manual_usuario.md
+manual.html
+MEMORY.md
 .opencode/agents/*.md
 ```

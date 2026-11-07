@@ -13,14 +13,35 @@
     { key: 'cedula', label: 'Cédula de Identidad', field: 'url_foto_cedula', tipo: 'foto_cedula' },
     { key: 'rif', label: 'RIF Personal', field: 'url_foto_rif', tipo: 'foto_rif' },
     { key: 'licencia', label: 'Licencia de Conducir', field: 'url_foto_licencia', tipo: 'licencia_conducir' },
-    { key: 'circulacion', label: 'Carnet de Circulación', field: 'url_carnet_circulacion', tipo: 'carnet_circulacion' }
+    { key: 'circulacion', label: 'Carnet de Circulación', field: 'url_carnet_circulacion', tipo: 'carnet_circulacion' },
+    { key: 'rcv', label: 'Seguro RCV', field: 'url_seguro_rcv', tipo: 'seguro_rcv' }
   ];
+
+  const LEVEL_TONES = { Zafiro: 'info', Esmeralda: 'success', Diamante: 'purple' };
+  function levelBadge(nivel) {
+    const n = nivel || 'Zafiro';
+    return NS.ui.badge(n, LEVEL_TONES[n] || 'info');
+  }
 
   function docsInfo(d) {
     const st = d.docs_estado || {};
+    const total = DOCS.length + 1;
     const approved = DOCS.filter((x) => st[x.key] === 'Aprobado').length + (st.vehiculo === 'Aprobado' ? 1 : 0);
     const rejected = DOCS.filter((x) => st[x.key] === 'Rechazado').length + (st.vehiculo === 'Rechazado' ? 1 : 0);
-    return { approved, rejected, total: 5, complete: approved === 5, pending: 5 - approved - rejected };
+    return { approved, rejected, total, complete: approved === total, pending: total - approved - rejected };
+  }
+
+  function docAlertFor(d, key) {
+    const alerts = NS.store.docAlerts(d);
+    return alerts.find((a) => a.key === key) || null;
+  }
+
+  function alertBadge(a) {
+    if (!a) return '';
+    const ui = NS.ui;
+    if (a.vencido) return ui.badge('Vencido hace ' + Math.abs(a.dias) + ' d', 'danger');
+    if (a.porVencer) return ui.badge('Vence en ' + a.dias + ' d', 'warning');
+    return '';
   }
 
   function render(view) {
@@ -60,7 +81,8 @@
       <div class="stat-strip">
         <div class="stat-strip-item"><span>Saldo por liquidar</span><strong>${ui.usd(totals.liquidar)}</strong><small>${ui.bs(ui.toBs(totals.liquidar))}</small></div>
         <div class="stat-strip-item"><span>Conductores activos</span><strong>${ui.num(db.drivers.filter((d) => d.estatus_conductor === 'Activo / Disponible' || d.estatus_conductor === 'En Servicio').length, 0)}</strong><small>${totals.inService} actualmente en servicio</small></div>
-        <div class="stat-strip-item"><span>Expedientes completos</span><strong>${ui.num(db.drivers.filter((d) => docsInfo(d).complete).length, 0)}</strong><small>5 documentos aprobados</small></div>
+        <div class="stat-strip-item"><span>Expedientes completos</span><strong>${ui.num(db.drivers.filter((d) => docsInfo(d).complete).length, 0)}</strong><small>${DOCS.length + 1} requisitos aprobados</small></div>
+        <div class="stat-strip-item"><span>Alertas documentales</span><strong>${ui.num(db.drivers.filter((d) => d.estatus_conductor === 'Inactivo por Documentos Vencidos').length, 0)}</strong><small>conductores inactivos por vencimiento</small></div>
         <div class="stat-strip-item"><span>Flota registrada</span><strong>${ui.num(db.drivers.length, 0)}</strong><small>${db.drivers.filter((d) => d.tipo_servicio === 'Moto Delivery' || d.tipo_servicio === 'Moto Taxi').length} motos · ${db.drivers.filter((d) => d.tipo_servicio === 'Vehículo Sedán' || d.tipo_servicio === 'Camioneta Carga').length} vehículos</small></div>
       </div>
 
@@ -94,12 +116,13 @@
                     <span><strong>${ui.esc(d.nombres + ' ' + d.apellidos)}</strong><small class="block muted">${ui.esc(d.correo || 'Sin correo')}</small></span>
                   </button></td>
                   <td><span class="mono strong">${ui.esc(d.cedula_rif)}</span><small class="block muted">${ui.esc(d.banco || '—')}</small></td>
-                  <td>${ui.badge(d.nivel || 'Plata', d.nivel === 'Platium' ? 'purple' : d.nivel === 'Oro' ? 'warning' : 'info')}</td>
+                  <td>${levelBadge(d.nivel)}</td>
                   <td><span class="vehicle-cell"><b>${ui.esc(d.marca)} ${ui.esc(d.modelo)}</b><em>${ui.esc(d.placa)}</em></span><small class="block muted">${ui.esc(d.tipo_servicio)} · ${d.anio} · ${ui.esc(d.color)}</small></td>
                   <td><span>${ui.esc(d.telefono)}</span><small class="block muted">Pago móvil ${ui.esc(d.telefono_pago_movil || '—')}</small></td>
                   <td class="num"><strong>${d.porcentaje_comision}%</strong><small class="block muted">ENVIA</small></td>
                   <td class="num"><strong class="${d.saldo_por_liquidar_usd > 0 ? 'text-orange' : ''}">${ui.usd(d.saldo_por_liquidar_usd)}</strong><small class="block muted">${ui.bs(ui.toBs(d.saldo_por_liquidar_usd))}</small></td>
-                  <td><div class="doc-progress"><span class="doc-progress-bar"><b style="width:${(info.approved / info.total) * 100}%"></b></span><small>${info.approved}/5 aprobados</small></div></td>
+                  <td><div class="doc-progress"><span class="doc-progress-bar"><b style="width:${(info.approved / info.total) * 100}%"></b></span><small>${info.approved}/${info.total} aprobados</small></div>
+                    ${d.estatus_conductor === 'Inactivo por Documentos Vencidos' ? `<small class="text-danger block">${ui.icon('alert', 12)} Documento vencido</small>` : ''}</td>
                   <td>${ui.badge(d.estatus_conductor)}</td>
                   <td class="actions-col">
                     <button class="icon-btn" data-driver="${ui.esc(d.cedula_rif)}" title="Ver expediente">${ui.icon('eye', 16)}</button>
@@ -139,8 +162,12 @@
 
   function exportCsv() {
     const db = NS.store.db;
-    const rows = [['Cédula/RIF', 'Nombres', 'Apellidos', 'Nivel', 'Teléfono', 'Correo', 'Dirección', 'Tipo servicio', 'Placa', 'Marca', 'Modelo', 'Año', 'Color', 'Banco', 'Teléfono pago móvil', 'Cédula pago móvil', 'Cuenta bancaria', '% Comisión', 'Saldo por liquidar USD', 'Estatus', 'Docs aprobados']];
-    db.drivers.forEach((d) => rows.push([d.cedula_rif, d.nombres, d.apellidos, d.nivel || 'Plata', d.telefono, d.correo, d.direccion, d.tipo_servicio, d.placa, d.marca, d.modelo, d.anio, d.color, d.banco, d.telefono_pago_movil, d.cedula_pago_movil, d.cuenta_bancaria, d.porcentaje_comision, d.saldo_por_liquidar_usd, d.estatus_conductor, docsInfo(d).approved + '/5']));
+    const rows = [['Cédula/RIF', 'Nombres', 'Apellidos', 'Nivel', 'Teléfono', 'Correo', 'Dirección', 'Tipo servicio', 'Placa', 'Marca', 'Modelo', 'Año', 'Color', 'Banco', 'Teléfono pago móvil', 'Cédula pago móvil', 'Cuenta bancaria', '% Comisión', 'Saldo por liquidar USD', 'Estatus', 'Docs aprobados', 'Vence RCV', 'Deuda tienda USD']];
+    db.drivers.forEach((d) => {
+      const rcv = (d.docs_meta && d.docs_meta.rcv) || {};
+      const deuda = NS.store.driverCharges(d.cedula_rif).filter((c) => c.saldo_usd > 0).reduce((s, c) => s + c.saldo_usd, 0);
+      rows.push([d.cedula_rif, d.nombres, d.apellidos, d.nivel || 'Zafiro', d.telefono, d.correo, d.direccion, d.tipo_servicio, d.placa, d.marca, d.modelo, d.anio, d.color, d.banco, d.telefono_pago_movil, d.cedula_pago_movil, d.cuenta_bancaria, d.porcentaje_comision, d.saldo_por_liquidar_usd, d.estatus_conductor, docsInfo(d).approved + '/' + docsInfo(d).total, rcv.vencimiento || '', deuda.toFixed(2)]);
+    });
     NS.ui.downloadFile('ENVIA_conductores_' + NS.store.today() + '.csv', NS.ui.csv(rows));
     NS.ui.toast('Maestro de conductores exportado a CSV.', 'success');
   }
@@ -151,7 +178,7 @@
       <div class="form-section-title"><span>01</span><div><strong>Datos personales</strong><small>La cédula / RIF identifica de forma única al conductor en toda la plataforma.</small></div></div>
       <label class="field"><span>Cédula / RIF *</span><input name="cedula_rif" value="${ui.esc(d.cedula_rif || '')}" placeholder="V-16874321" ${isNew ? '' : 'disabled'} required></label>
       <label class="field"><span>Estatus operativo</span><select name="estatus_conductor">${NS.store.DRIVER_STATUS.map((s) => `<option ${d.estatus_conductor === s ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
-      <label class="field"><span>Nivel del conductor</span><select name="nivel">${NS.store.DRIVER_LEVELS.map((n) => `<option value="${n}" ${(d.nivel || 'Plata') === n ? 'selected' : ''}>${n}</option>`).join('')}</select><small>Plata, Oro o Platium según desempeño y cumplimiento.</small></label>
+      <label class="field"><span>Nivel del conductor</span><select name="nivel">${NS.store.DRIVER_LEVELS.map((n) => `<option value="${n}" ${(d.nivel || 'Zafiro') === n ? 'selected' : ''}>${n}</option>`).join('')}</select><small>Zafiro, Esmeralda o Diamante según desempeño y cumplimiento.</small></label>
       <label class="field"><span>Nombres *</span><input name="nombres" value="${ui.esc(d.nombres || '')}" placeholder="Carlos Luis" required></label>
       <label class="field"><span>Apellidos *</span><input name="apellidos" value="${ui.esc(d.apellidos || '')}" placeholder="Pérez Marcano" required></label>
       <label class="field"><span>Teléfono móvil *</span><input name="telefono" value="${ui.esc(d.telefono || '')}" placeholder="0412-555-7788" required></label>
@@ -221,16 +248,20 @@
     const canDelete = NS.app.canAction('drivers', 'eliminar');
     const canDocs = NS.app.canAction('drivers', 'documentos');
     const canSettle = NS.app.canAction('drivers', 'liquidar');
+    const canAssign = NS.app.canAction('inventory', 'asignar');
     const info = docsInfo(d);
     const st = d.docs_estado || {};
     const services = db.services.filter((s) => s.conductor_cedula_rif === d.cedula_rif).slice(0, 4);
     const photos = d.urls_fotos_vehiculo || [];
+    const wallet = NS.store.driverWallet(d.cedula_rif);
+    const charges = NS.store.driverCharges(d.cedula_rif).filter((c) => c.saldo_usd > 0);
+    const movLabels = { ganancia: 'Ganancia', comision: 'Comisión ENVIA', producto: 'Compra tienda', pago: 'Liquidación pagada', pago_producto: 'Abono financiamiento' };
     return `
       <div class="profile-head">
         ${ui.avatar(d.nombres + ' ' + d.apellidos, 58)}
         <div class="profile-id">
-          <div class="profile-name">${ui.esc(d.nombres + ' ' + d.apellidos)} ${ui.badge(d.estatus_conductor)} ${ui.badge(d.nivel || 'Plata', d.nivel === 'Platium' ? 'purple' : d.nivel === 'Oro' ? 'warning' : 'info')}</div>
-          <div class="profile-meta"><span class="mono">${ui.esc(d.cedula_rif)}</span><span>Nivel ${ui.esc(d.nivel || 'Plata')}</span><span>${ui.esc(d.tipo_servicio)}</span><span>${ui.esc(d.placa)}</span><span>${ui.esc(d.telefono)}</span></div>
+          <div class="profile-name">${ui.esc(d.nombres + ' ' + d.apellidos)} ${ui.badge(d.estatus_conductor)} ${levelBadge(d.nivel)}</div>
+          <div class="profile-meta"><span class="mono">${ui.esc(d.cedula_rif)}</span><span>Nivel ${ui.esc(d.nivel || 'Zafiro')}</span><span>${ui.esc(d.tipo_servicio)}</span><span>${ui.esc(d.placa)}</span><span>${ui.esc(d.telefono)}</span></div>
         </div>
         <div class="profile-actions">${canEdit ? `<button class="btn btn-ghost btn-sm" id="driver-detail-edit">${ui.icon('edit', 15)} Editar</button>` : ''}</div>
       </div>
@@ -262,11 +293,12 @@
           </div>
 
           <div class="detail-block">
-            <h4>Expediente documental <span class="h4-note">${info.approved}/5 aprobados${info.rejected ? ' · ' + info.rejected + ' rechazado(s)' : ''}</span></h4>
+            <h4>Expediente documental <span class="h4-note">${info.approved}/${info.total} aprobados${info.rejected ? ' · ' + info.rejected + ' rechazado(s)' : ''}</span></h4>
+            ${NS.store.docAlerts(d).some((a) => a.vencido) ? `<p class="doc-alert-banner">${ui.icon('alert', 15)} <strong>Conductor inactivo:</strong> uno o más documentos están vencidos. Actualiza el archivo y las fechas para reactivarlo.</p>` : ''}
             <div class="doc-grid doc-grid-driver">
               ${DOCS.map((doc) => docCard(d, doc, st[doc.key] || 'Pendiente', canDocs)).join('')}
             </div>
-            <p class="upload-hint">${ui.icon('cloud', 14)} Arrastra un archivo sobre la tarjeta o usa “Subir”. Bucket: <strong>documentos-conductores/${ui.esc(d.cedula_rif)}</strong>. Validación: Aprobado / Rechazado.</p>
+            <p class="upload-hint">${ui.icon('cloud', 14)} Arrastra un archivo sobre la tarjeta o usa “Subir”. Bucket: <strong>documentos-conductores/${ui.esc(d.cedula_rif)}</strong>. Registra emisión y vencimiento para activar las alertas.</p>
           </div>
 
           <div class="detail-block">
@@ -281,6 +313,31 @@
             </div>
             ${canDocs ? `<div class="inline-actions"><button class="btn btn-xs btn-success-ghost" data-approve-vehicle="1">${ui.icon('check', 13)} Aprobar fotos</button><button class="btn btn-xs btn-danger-ghost" data-reject-vehicle="1">${ui.icon('x', 13)} Rechazar fotos</button></div>` : ''}
           </div>
+
+          <div class="detail-block">
+            <h4>Wallet del conductor <span class="h4-note">Ganancias, comisiones, compras y liquidaciones</span></h4>
+            <div class="wallet-summary">
+              <div><span>Ganancias brutas</span><strong class="text-success">${ui.usd(wallet.ganancias)}</strong></div>
+              <div><span>Comisiones ENVIA</span><strong class="text-danger">− ${ui.usd(wallet.comisiones)}</strong></div>
+              <div><span>Compras tienda</span><strong class="text-danger">− ${ui.usd(wallet.productos)}</strong></div>
+              <div><span>Liquidado</span><strong>${ui.usd(wallet.pagos)}</strong></div>
+              <div class="wallet-net"><span>Saldo wallet</span><strong class="${wallet.saldo >= 0 ? 'text-success' : 'text-danger'}">${ui.usd(wallet.saldo)}</strong></div>
+              <div class="wallet-net"><span>Deuda tienda</span><strong class="${wallet.deuda > 0 ? 'text-danger' : ''}">${ui.usd(wallet.deuda)}</strong></div>
+            </div>
+            ${wallet.movimientos.length ? `<div class="table-wrap"><table class="data-table data-table-compact">
+              <thead><tr><th>Fecha</th><th>Movimiento</th><th>Tipo</th><th class="num">Monto</th></tr></thead>
+              <tbody>${wallet.movimientos.slice(0, 8).map((m) => `<tr>
+                <td>${ui.date(m.fecha)}</td>
+                <td>${ui.esc(m.concepto)}<small class="block muted mono">${ui.esc(m.referencia || '')}</small></td>
+                <td>${ui.badge(movLabels[m.tipo] || m.tipo, m.monto_usd >= 0 ? 'success' : 'warning')}</td>
+                <td class="num"><strong class="${m.monto_usd >= 0 ? 'text-success' : 'text-danger'}">${m.monto_usd >= 0 ? '+' : ''}${ui.usd(m.monto_usd)}</strong></td>
+              </tr>`).join('')}</tbody>
+            </table></div>` : `<p class="muted small">Sin movimientos de wallet. Se generan al registrar servicios, compras o liquidaciones.</p>`}
+            ${charges.length ? `<div class="charge-list">
+              <span class="charge-list-title">Financiamientos vigentes</span>
+              ${charges.map((c) => `<div class="charge-row"><span><strong>${ui.esc(c.producto_nombre)}</strong><small>${c.cuotas} cuota(s) · ${ui.usd(c.cuota_usd)} c/u</small></span><b>${ui.usd(c.saldo_usd)}</b></div>`).join('')}
+            </div>` : ''}
+          </div>
         </div>
 
         <aside class="detail-side">
@@ -290,9 +347,15 @@
             <small>${ui.bs(ui.toBs(d.saldo_por_liquidar_usd))} · comisión ENVIA ${d.porcentaje_comision}%</small>
             ${canSettle ? `<button class="btn btn-primary btn-block btn-sm" id="driver-settle" ${d.saldo_por_liquidar_usd <= 0 ? 'disabled' : ''}>${ui.icon('bank', 15)} Registrar liquidación</button>` : ''}
           </div>
+          <div class="settlement-card">
+            <span>Deuda tienda del conductor</span>
+            <strong class="${wallet.deuda > 0 ? 'text-danger' : ''}">${ui.usd(wallet.deuda)}</strong>
+            <small>${wallet.deuda > 0 ? 'Descontable de liquidaciones' : 'Sin financiamientos pendientes'}</small>
+            ${canAssign ? `<button class="btn btn-ghost btn-block btn-sm" id="driver-assign-product">${ui.icon('package', 15)} Asignar producto</button>` : ''}
+          </div>
           <div class="side-metrics">
             <div class="side-metric"><span>Servicios</span><strong>${db.services.filter((s) => s.conductor_cedula_rif === d.cedula_rif).length}</strong></div>
-            <div class="side-metric"><span>Aprobados</span><strong>${info.approved}/5</strong></div>
+            <div class="side-metric"><span>Aprobados</span><strong>${info.approved}/${info.total}</strong></div>
             <div class="side-metric"><span>Pendientes</span><strong>${info.pending}</strong></div>
           </div>
           <div class="detail-block">
@@ -319,15 +382,20 @@
     const ref = d[doc.field];
     const url = NS.supabase.resolve(ref);
     const tone = status === 'Aprobado' ? 'success' : (status === 'Rechazado' ? 'danger' : 'warning');
+    const meta = (d.docs_meta || {})[doc.key] || {};
+    const alert = docAlertFor(d, doc.key);
     return `<div class="doc-card doc-${tone} ${url ? 'has-file' : ''}" data-drop="${doc.key}">
       <div class="doc-thumb" ${url ? `data-preview="${ui.esc(ref)}" data-label="${ui.esc(doc.label)}"` : ''}>
         ${url ? (url.startsWith('data:application/pdf') ? `<span>${ui.icon('file', 26)}</span>` : `<img src="${ui.esc(url)}" alt="${ui.esc(doc.label)}">`) : `<span>${ui.icon('image', 26)}</span>`}
       </div>
       <div class="doc-body">
         <div class="doc-title-row"><strong>${doc.label}</strong>${ui.badge(status)}</div>
+        ${alert ? alertBadge(alert) : ''}
         <span class="${url ? 'text-success' : 'muted'}">${url ? 'Archivo disponible' : 'Sin archivo · arrastra aquí'}</span>
+        <small class="doc-dates">${meta.emision ? 'Emitido ' + ui.date(meta.emision) : 'Sin emisión'} · ${meta.vencimiento ? 'vence ' + ui.date(meta.vencimiento) : 'sin vencimiento'}${meta.origen === 'ia' ? ' · IA' : ''}</small>
         ${canWrite ? `<div class="doc-actions">
           <button class="btn btn-xs ${url ? 'btn-ghost' : 'btn-primary'}" data-upload-doc="${doc.key}">${ui.icon('upload', 13)} ${url ? 'Reemplazar' : 'Subir'}</button>
+          <button class="btn btn-xs btn-ghost" data-doc-meta="${doc.key}" title="Fechas del documento">${ui.icon('calendar', 12)} Fechas</button>
           ${url ? `<button class="btn btn-xs btn-success-ghost" data-doc-ok="${doc.key}" title="Aprobar">${ui.icon('check', 12)}</button><button class="btn btn-xs btn-danger-ghost" data-doc-no="${doc.key}" title="Rechazar">${ui.icon('x', 12)}</button>` : ''}
         </div>` : ''}
       </div>
@@ -348,12 +416,128 @@
       NS.store.save();
       ui.toast(res.fallback ? 'Archivo guardado localmente. Conecta Supabase para respaldarlo en la nube.' : 'Documento subido a Supabase Storage.', res.fallback ? 'warning' : 'success');
       ui.closeModal(overlay);
-      openDetail(cedula);
       NS.app.refresh(true);
+      openDocMeta(cedula, key, file);
     } catch (e) {
       if (triggerBtn) ui.setBusy(triggerBtn, false);
       ui.toast(e.message, 'error');
     }
+  }
+
+  function addYear(dateStr) {
+    const d = new Date((dateStr || NS.store.today()) + 'T12:00:00');
+    d.setFullYear(d.getFullYear() + 1);
+    return d.toISOString().slice(0, 10);
+  }
+
+  function openDocMeta(cedula, key, file) {
+    const ui = NS.ui;
+    if (!NS.app.canAction('drivers', 'documentos')) return ui.toast('No tienes permiso para editar documentos.', 'warning');
+    const d = NS.store.db.drivers.find((x) => x.cedula_rif === cedula);
+    const doc = DOCS.find((x) => x.key === key);
+    if (!d || !doc) return;
+    const meta = (d.docs_meta || {})[key] || {};
+    let sourceFile = file || null;
+    const overlay = ui.modal({
+      title: 'Fechas del documento',
+      eyebrow: doc.label + ' · ' + cedula,
+      subtitle: 'Registra la emisión y el vencimiento. Las alertas se activan automáticamente 30 días antes.',
+      size: 'sm',
+      body: `<form id="doc-meta-form" class="form-grid">
+        <label class="field"><span>Fecha de emisión</span><input name="emision" type="date" value="${ui.esc(meta.emision || '')}"></label>
+        <label class="field"><span>Fecha de vencimiento</span><input name="vencimiento" type="date" value="${ui.esc(meta.vencimiento || '')}"></label>
+        <div class="field field-full ai-reader-box">
+          <div class="ai-reader-head"><span>${ui.icon('camera', 16)} Lectura automática de la foto</span><small id="ai-reader-status">${NS.ocr && NS.ocr.isConfigured() ? 'Servicio de IA configurado' : 'Sin servicio de IA configurado'}</small></div>
+          <div class="inline-actions">
+            <button type="button" class="btn btn-xs btn-primary" id="doc-meta-ai">${ui.icon('refresh', 13)} Leer fechas con IA</button>
+            <button type="button" class="btn btn-xs btn-ghost" id="doc-meta-config">${ui.icon('settings', 13)} Configurar IA</button>
+          </div>
+          <input type="file" id="doc-meta-file" class="hidden-file" accept="image/*,.pdf,application/pdf">
+          <p class="form-note">${ui.icon('info', 14)} La lectura usa un endpoint de visión configurado por el administrador. Si no está disponible, captura las fechas manualmente.</p>
+        </div>
+      </form>`,
+      footer: `<button class="btn btn-ghost" data-cancel>Omitir por ahora</button><button class="btn btn-primary" id="doc-meta-save">${ui.icon('check', 15)} Guardar fechas</button>`
+    });
+    const form = overlay.querySelector('#doc-meta-form');
+    if (!form.elements.emision.value) form.elements.emision.value = NS.store.today();
+    if (!form.elements.vencimiento.value) form.elements.vencimiento.value = addYear(form.elements.emision.value);
+    overlay.querySelector('[data-cancel]').addEventListener('click', () => {
+      ui.closeModal(overlay);
+      openDetail(cedula);
+    });
+    const fileInput = overlay.querySelector('#doc-meta-file');
+    const aiBtn = overlay.querySelector('#doc-meta-ai');
+    aiBtn.addEventListener('click', async () => {
+      if (!NS.ocr) return ui.toast('El servicio de lectura IA no está cargado.', 'error');
+      if (!sourceFile) {
+        fileInput.click();
+        return;
+      }
+      ui.setBusy(aiBtn, true, 'Leyendo...');
+      const res = await NS.ocr.readDocument(sourceFile);
+      ui.setBusy(aiBtn, false);
+      if (!res.ok) {
+        ui.toast(res.error || 'No se pudieron leer las fechas.', 'warning');
+        return;
+      }
+      if (res.emision) form.elements.emision.value = res.emision;
+      if (res.vencimiento) form.elements.vencimiento.value = res.vencimiento;
+      overlay.querySelector('#ai-reader-status').textContent = 'Fechas detectadas por IA';
+      ui.toast('Fechas detectadas. Verifica y guarda.', 'success');
+    });
+    fileInput.addEventListener('change', () => {
+      sourceFile = fileInput.files[0] || sourceFile;
+      if (sourceFile) aiBtn.click();
+    });
+    overlay.querySelector('#doc-meta-config').addEventListener('click', () => openAiConfig(overlay));
+    overlay.querySelector('#doc-meta-save').addEventListener('click', () => {
+      try {
+        NS.store.setDocMeta(cedula, key, {
+          emision: form.elements.emision.value,
+          vencimiento: form.elements.vencimiento.value,
+          origen: overlay.querySelector('#ai-reader-status').textContent === 'Fechas detectadas por IA' ? 'ia' : 'manual'
+        });
+        ui.closeModal(overlay);
+        ui.toast('Fechas guardadas. Alertas de vencimiento actualizadas.', 'success');
+        NS.app.refresh(true);
+        openDetail(cedula);
+      } catch (e) { ui.toast(e.message, 'error'); }
+    });
+  }
+
+  function openAiConfig(parentOverlay) {
+    const ui = NS.ui;
+    if (!NS.ocr) return ui.toast('El servicio de lectura IA no está cargado.', 'error');
+    const cfg = NS.ocr.getConfig();
+    const overlay = ui.modal({
+      title: 'Configurar lectura IA',
+      eyebrow: 'Servicio opcional de visión',
+      subtitle: 'Conecta un endpoint compatible con OpenAI Vision para leer fechas de documentos.',
+      size: 'sm',
+      body: `<form id="ai-config-form" class="form-grid">
+        <label class="field field-full"><span>Endpoint (POST)</span><input name="endpoint" value="${ui.esc(cfg.endpoint || '')}" placeholder="https://api.openai.com/v1/chat/completions"></label>
+        <label class="field"><span>Modelo de visión</span><input name="model" value="${ui.esc(cfg.model || '')}" placeholder="gpt-4o-mini"></label>
+        <label class="field"><span>Token / API key</span><input name="token" type="password" value="${ui.esc(cfg.token || '')}" placeholder="Opcional según el endpoint"></label>
+        <p class="form-note field-full">${ui.icon('shield', 14)} El token se guarda solo en este navegador (localStorage). En producción debe usarse un proxy del servidor; no se envía a ENVIA ni a terceros.</p>
+      </form>`,
+      footer: `<button class="btn btn-ghost" data-cancel>Cancelar</button><button class="btn btn-primary" id="ai-config-save">${ui.icon('check', 15)} Guardar configuración</button>`
+    });
+    overlay.querySelector('[data-cancel]').addEventListener('click', () => ui.closeModal(overlay));
+    overlay.querySelector('#ai-config-save').addEventListener('click', () => {
+      try {
+        NS.ocr.saveConfig({
+          endpoint: overlay.querySelector('[name=endpoint]').value,
+          model: overlay.querySelector('[name=model]').value,
+          token: overlay.querySelector('[name=token]').value
+        });
+        ui.closeModal(overlay);
+        ui.toast('Configuración de lectura IA guardada.', 'success');
+        if (parentOverlay) {
+          const st = parentOverlay.querySelector('#ai-reader-status');
+          if (st) st.textContent = NS.ocr.isConfigured() ? 'Servicio de IA configurado' : 'Sin servicio de IA configurado';
+        }
+      } catch (e) { ui.toast(e.message, 'error'); }
+    });
   }
 
   async function addVehiclePhotos(cedula, files, overlay) {
@@ -407,6 +591,15 @@
     overlay.querySelectorAll('[data-doc-input]').forEach((input) => input.addEventListener('change', () => {
       handleUpload(cedula, input.dataset.docInput, input.files[0], overlay, overlay.querySelector(`[data-upload-doc="${input.dataset.docInput}"]`));
     }));
+    overlay.querySelectorAll('[data-doc-meta]').forEach((b) => b.addEventListener('click', () => {
+      ui.closeModal(overlay);
+      openDocMeta(cedula, b.dataset.docMeta, null);
+    }));
+    const assignProduct = overlay.querySelector('#driver-assign-product');
+    if (assignProduct) assignProduct.addEventListener('click', () => {
+      ui.closeModal(overlay);
+      if (NS.modules.inventory && NS.modules.inventory.openAssign) NS.modules.inventory.openAssign(null, cedula);
+    });
 
     // Drag & drop en tarjetas de documentos
     overlay.querySelectorAll('[data-drop]').forEach((card) => {

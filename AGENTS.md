@@ -91,7 +91,7 @@ docs/constitution.md
 2. Inspecciona el código existente y sigue sus patrones.
 3. Haz cambios pequeños y coherentes; no reescribas módulos completos sin causa.
 4. Valida sintaxis: `node --check` sobre cada archivo JS modificado.
-5. Prueba en Chrome: login, navegación por los 10 módulos, alta/edición,
+5. Prueba en Chrome: login, navegación por los 12 módulos, alta/edición,
    exportación, impresión y recarga.
 6. Verifica que la app siga abriendo con `file://` y sin Supabase.
 7. Reporta archivos tocados, pruebas ejecutadas y riesgos pendientes.
@@ -109,7 +109,7 @@ docs/constitution.md
 ## 8. Criterios de aceptación
 
 - La app abre y funciona sin servidor ni Supabase.
-- Los 10 módulos renderizan sin errores de consola y respetan los permisos
+- Los 12 módulos renderizan sin errores de consola y respetan los permisos
   granulares del rol o del usuario.
 - Los cuatro roles ven solo lo permitido y las acciones de escritura se bloquean
   para `Auditor / Operaciones`.

@@ -15,6 +15,8 @@
     services: { label: 'Servicios', sub: 'Carreras de taxi y encomiendas en vivo', icon: 'route', group: 'Operación', module: 'services' },
     clients: { label: 'Clientes', sub: 'Maestro de usuarios de la app · Cédula / RIF', icon: 'users', group: 'Maestros', module: 'clients' },
     drivers: { label: 'Conductores y Flota', sub: 'Aliados operativos, vehículos y expedientes', icon: 'car', group: 'Maestros', module: 'drivers' },
+    partners: { label: 'Negocios Asociados', sub: 'Comercios aliados, comisiones y recaudaciones', icon: 'building', group: 'Operación', module: 'partners' },
+    inventory: { label: 'Tienda & Inventario', sub: 'Uniformes, equipamiento y financiamiento al conductor', icon: 'package', group: 'Operación', module: 'inventory' },
     accounting: { label: 'Contabilidad', sub: 'Plan de cuentas, asientos y libros SENIAT', icon: 'book', group: 'Finanzas', module: 'accounting' },
     taxes: { label: 'Tributos & BCV', sub: 'IVA, IGTF, ISLR, unidad tributaria y retenciones', icon: 'percent', group: 'Finanzas', module: 'taxes' },
     payables: { label: 'Cuentas por Pagar', sub: 'Proveedores, facturas, retenciones y pagos', icon: 'wallet', group: 'Finanzas', module: 'payables' },
@@ -70,6 +72,20 @@
       status.innerHTML = `<span class="dot ${sb ? 'dot-ok' : 'dot-idle'}"></span>${sb ? 'Supabase conectado' : 'Modo local · sin Supabase'}`;
     }
 
+    const foot = $('.sidebar-foot');
+    if (foot) {
+      let logout = $('#sidebar-logout');
+      if (!logout) {
+        logout = document.createElement('button');
+        logout.type = 'button';
+        logout.id = 'sidebar-logout';
+        logout.className = 'sidebar-logout';
+        foot.appendChild(logout);
+      }
+      logout.innerHTML = NS.ui.icon('logout', 17) + ' <span>Cerrar sesión</span>';
+      logout.onclick = () => NS.login.logoutRequest();
+    }
+
     nav.querySelectorAll('a').forEach((a) => a.addEventListener('click', closeMobileNav));
   }
 
@@ -79,6 +95,8 @@
     if (module === 'drivers') return db.drivers.length;
     if (module === 'payables') return db.payables.filter((p) => p.estatus !== 'Pagado').length;
     if (module === 'services') return db.services.filter((s) => s.fecha >= NS.store.iso(1)).length;
+    if (module === 'partners') return db.partners.filter((p) => p.estatus === 'Activo').length;
+    if (module === 'inventory') return db.products.filter((p) => p.activo && p.stock <= p.stock_min).length;
     return 0;
   }
 
@@ -116,15 +134,60 @@
           <button data-cur="USD" class="${NS.ui.currency() === 'USD' ? 'active' : ''}">USD</button>
           <button data-cur="VES" class="${NS.ui.currency() === 'VES' ? 'active' : ''}">VES</button>
         </div>
-        <div class="topbar-user" title="${NS.ui.esc(s.nombre)} · ${NS.ui.esc(s.rol)}">
-          ${NS.ui.avatar(s.nombre, 36)}
-          <div><strong>${NS.ui.esc(s.nombre.split(' ').slice(0, 2).join(' '))}</strong><span>${NS.ui.esc(s.rol)}</span></div>
+        <div class="user-menu-wrap">
+          <button type="button" class="topbar-user" id="user-menu-toggle" title="${NS.ui.esc(s.nombre)} · ${NS.ui.esc(s.rol)}" aria-haspopup="menu" aria-expanded="false">
+            ${NS.ui.avatar(s.nombre, 36)}
+            <div><strong>${NS.ui.esc(s.nombre.split(' ').slice(0, 2).join(' '))}</strong><span>${NS.ui.esc(s.rol)}</span></div>
+            <span class="user-menu-caret">${NS.ui.icon('chevronDown', 14)}</span>
+          </button>
+          <div class="user-menu" id="user-menu" role="menu" hidden>
+            <div class="user-menu-head">
+              ${NS.ui.avatar(s.nombre, 42)}
+              <div><strong>${NS.ui.esc(s.nombre)}</strong><span>${NS.ui.esc(s.rol)}</span><small>${NS.ui.esc(s.usuario)}</small></div>
+            </div>
+            <button type="button" class="user-menu-item" data-menu-profile="${NS.ui.esc(s.usuario)}">${NS.ui.icon('user', 16)} Mi perfil</button>
+            <button type="button" class="user-menu-item danger" id="user-menu-logout">${NS.ui.icon('logout', 16)} Cerrar sesión</button>
+          </div>
         </div>
         <button class="icon-btn topbar-logout" id="topbar-logout" title="Cerrar sesión">${NS.ui.icon('logout', 19)}</button>
       </div>`;
 
     $('#menu-toggle').addEventListener('click', toggleMobileNav);
     $('#topbar-logout').addEventListener('click', NS.login.logoutRequest);
+
+    const userToggle = $('#user-menu-toggle');
+    const userMenu = $('#user-menu');
+    if (userToggle && userMenu) {
+      userToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const open = userMenu.hidden;
+        userMenu.hidden = !open;
+        userToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      $('#user-menu-logout').addEventListener('click', () => {
+        userMenu.hidden = true;
+        userToggle.setAttribute('aria-expanded', 'false');
+        NS.login.logoutRequest();
+      });
+      const profile = userMenu.querySelector('[data-menu-profile]');
+      if (profile) profile.addEventListener('click', () => {
+        userMenu.hidden = true;
+        userToggle.setAttribute('aria-expanded', 'false');
+        if (typeof NS.modules.users === 'object' && NS.modules.users.openProfile) NS.modules.users.openProfile();
+        else NS.ui.toast('Tu perfil se administra en Usuarios del sistema.', 'info');
+      });
+      if (!document.body.dataset.userMenuBound) {
+        document.body.dataset.userMenuBound = '1';
+        document.addEventListener('click', (ev) => {
+          const menu = $('#user-menu');
+          const toggle = $('#user-menu-toggle');
+          if (!menu || menu.hidden) return;
+          if (menu.contains(ev.target) || (toggle && toggle.contains(ev.target))) return;
+          menu.hidden = true;
+          if (toggle) toggle.setAttribute('aria-expanded', 'false');
+        });
+      }
+    }
     const refresh = $('#bcv-refresh');
     if (refresh) refresh.addEventListener('click', () => refreshRateFromApi(refresh));
     const calendar = $('#bcv-calendar');
@@ -224,7 +287,7 @@
 
       let target = value;
       if (available.length && !available.includes(value)) {
-        const closestPrevious = available2.find((d) => d <= value);
+        const closestPrevious = available.find((d) => d <= value);
         if (!closestPrevious) return NS.ui.toast('No hay tasa publicada en o antes de esa fecha.', 'error');
         target = closestPrevious;
         NS.ui.toast(`No hubo tasa el ${NS.ui.date(value)}; se usará la más cercana: ${NS.ui.date(target)}.`, 'info');

@@ -76,21 +76,44 @@ create table if not exists public.drivers (
   porcentaje_comision     numeric(5,2) not null default 20 check (porcentaje_comision between 0 and 100),
   saldo_por_liquidar_usd  numeric(14,2) not null default 0 check (saldo_por_liquidar_usd >= 0),
   estatus_conductor       text not null default 'En Revisión Documental'
-                            check (estatus_conductor in ('Activo / Disponible','En Servicio','En Revisión Documental','Suspendido')),
-  nivel                   text not null default 'Plata'
-                            check (nivel in ('Plata','Oro','Platium')),
+                            check (estatus_conductor in ('Activo / Disponible','En Servicio','En Revisión Documental','Inactivo por Documentos Vencidos','Suspendido')),
+  nivel                   text not null default 'Zafiro'
+                            check (nivel in ('Zafiro','Esmeralda','Diamante')),
   fecha_registro          date not null default current_date,
   url_foto_cedula         text,
   url_foto_rif            text,
   url_foto_licencia       text,
   url_carnet_circulacion  text,
+  url_seguro_rcv          text,
   urls_fotos_vehiculo     jsonb not null default '[]'::jsonb,
   docs_estado             jsonb not null default '{}'::jsonb,
+  docs_meta               jsonb not null default '{}'::jsonb,
+  inactivado_por_documentos boolean not null default false,
   created_at              timestamptz not null default timezone('utc', now()),
   updated_at              timestamptz not null default timezone('utc', now())
 );
 
 comment on table public.drivers is 'Conductores y vehículos. Clave primaria: cédula o RIF.';
+comment on column public.drivers.docs_meta is 'Fechas de emisión/vencimiento por documento: {cedula:{emision,vencimiento,origen}}';
+
+-- Migración idempotente para instalaciones existentes.
+alter table public.drivers add column if not exists url_seguro_rcv text;
+alter table public.drivers add column if not exists docs_meta jsonb not null default '{}'::jsonb;
+alter table public.drivers add column if not exists inactivado_por_documentos boolean not null default false;
+alter table public.drivers alter column nivel set default 'Zafiro';
+alter table public.drivers drop constraint if exists drivers_estatus_conductor_check;
+alter table public.drivers add constraint drivers_estatus_conductor_check
+  check (estatus_conductor in ('Activo / Disponible','En Servicio','En Revisión Documental','Inactivo por Documentos Vencidos','Suspendido'));
+alter table public.drivers drop constraint if exists drivers_nivel_check;
+update public.drivers
+   set nivel = case nivel
+     when 'Plata' then 'Zafiro'
+     when 'Oro' then 'Esmeralda'
+     when 'Platium' then 'Diamante'
+     else nivel end
+ where nivel in ('Plata','Oro','Platium');
+alter table public.drivers add constraint drivers_nivel_check
+  check (nivel in ('Zafiro','Esmeralda','Diamante'));
 
 -- ============================================================================
 --  4. PROVEEDORES
@@ -385,6 +408,91 @@ create table if not exists public.wallet_movements (
 comment on table public.wallet_movements is 'Recargas y consumos de la billetera del cliente.';
 
 -- ============================================================================
+--  13.1 NEGOCIOS ASOCIADOS · COMERCIOS ALIADOS
+-- ============================================================================
+create table if not exists public.partners (
+  rif                   text primary key check (rif ~ '^[VEJ]-[0-9]{7,9}$'),
+  razon_social          text not null,
+  tipo                  text not null default 'Comercio'
+                          check (tipo in ('Restaurante','Farmacia','Comercio','Delivery','Servicio','Otro')),
+  contacto              text,
+  telefono              text,
+  correo                text,
+  direccion             text,
+  comision_pct          numeric(5,2) not null default 10 check (comision_pct between 0 and 100),
+  saldo_por_cobrar_usd  numeric(14,2) not null default 0 check (saldo_por_cobrar_usd >= 0),
+  saldo_por_pagar_usd   numeric(14,2) not null default 0 check (saldo_por_pagar_usd >= 0),
+  estatus               text not null default 'Activo' check (estatus in ('Activo','Inactivo')),
+  notas                 text,
+  created_at            timestamptz not null default timezone('utc', now()),
+  updated_at            timestamptz not null default timezone('utc', now())
+);
+comment on table public.partners is 'Comercios aliados que generan pedidos de delivery. Clave primaria: RIF.';
+
+create table if not exists public.partner_movements (
+  id            text primary key,
+  partner_rif   text not null references public.partners(rif) on update cascade on delete restrict,
+  tipo          text not null check (tipo in ('comision','cobro','recaudacion','pago','ajuste')),
+  concepto      text not null,
+  monto_usd     numeric(14,2) not null check (monto_usd > 0),
+  fecha         date not null default current_date,
+  referencia    text,
+  created_at    timestamptz not null default timezone('utc', now())
+);
+comment on table public.partner_movements is 'Cartera de negocios asociados: comisiones por cobrar, cobros, recaudaciones y pagos.';
+
+-- ============================================================================
+--  13.2 TIENDA DEL CONDUCTOR · INVENTARIO Y FINANCIAMIENTOS
+-- ============================================================================
+create table if not exists public.products (
+  sku           text primary key,
+  id            text unique,
+  nombre        text not null,
+  categoria     text not null default 'Equipamiento'
+                  check (categoria in ('Uniforme','Equipamiento','Seguridad','Accesorio')),
+  precio_usd    numeric(14,2) not null check (precio_usd > 0),
+  costo_usd     numeric(14,2) not null default 0 check (costo_usd >= 0),
+  stock         integer not null default 0 check (stock >= 0),
+  stock_min     integer not null default 0 check (stock_min >= 0),
+  activo        boolean not null default true,
+  descripcion   text,
+  created_at    timestamptz not null default timezone('utc', now()),
+  updated_at    timestamptz not null default timezone('utc', now())
+);
+comment on table public.products is 'Catálogo de uniformes, equipamiento y seguridad que ENVIA financia a los conductores.';
+
+create table if not exists public.driver_charges (
+  id                    text primary key,
+  conductor_cedula_rif  text not null references public.drivers(cedula_rif) on update cascade on delete restrict,
+  producto_sku          text not null references public.products(sku) on update cascade on delete restrict,
+  producto_nombre       text not null,
+  cantidad              integer not null default 1 check (cantidad > 0),
+  precio_unit_usd       numeric(14,2) not null check (precio_unit_usd > 0),
+  total_usd             numeric(14,2) not null check (total_usd >= 0),
+  cuotas                integer not null default 1 check (cuotas between 1 and 52),
+  cuota_usd             numeric(14,2) not null default 0 check (cuota_usd >= 0),
+  pagado_usd            numeric(14,2) not null default 0 check (pagado_usd >= 0),
+  saldo_usd             numeric(14,2) not null default 0 check (saldo_usd >= 0),
+  fecha                 date not null default current_date,
+  estatus               text not null default 'Vigente' check (estatus in ('Vigente','Pagado','Anulado')),
+  created_at            timestamptz not null default timezone('utc', now()),
+  updated_at            timestamptz not null default timezone('utc', now())
+);
+comment on table public.driver_charges is 'Cuentas por cobrar a conductores por compras financiadas de la tienda.';
+
+create table if not exists public.driver_movements (
+  id                    text primary key,
+  conductor_cedula_rif  text not null references public.drivers(cedula_rif) on update cascade on delete restrict,
+  tipo                  text not null check (tipo in ('ganancia','comision','producto','pago','pago_producto')),
+  concepto              text not null,
+  monto_usd             numeric(14,2) not null,
+  fecha                 date not null default current_date,
+  referencia            text,
+  created_at            timestamptz not null default timezone('utc', now())
+);
+comment on table public.driver_movements is 'Historial de wallet del conductor: ganancias, comisiones, compras y liquidaciones.';
+
+-- ============================================================================
 --  14. ÍNDICES
 -- ============================================================================
 create index if not exists idx_clients_estatus          on public.clients(estatus);
@@ -409,6 +517,15 @@ create index if not exists idx_lines_entry              on public.accounting_ent
 create index if not exists idx_lines_cuenta             on public.accounting_entry_lines(cuenta);
 create index if not exists idx_wallet_cliente           on public.wallet_movements(cliente_cedula_rif);
 create index if not exists idx_wallet_fecha             on public.wallet_movements(fecha);
+create index if not exists idx_partners_estatus         on public.partners(estatus);
+create index if not exists idx_partner_movements_rif     on public.partner_movements(partner_rif);
+create index if not exists idx_partner_movements_fecha   on public.partner_movements(fecha);
+create index if not exists idx_products_activo          on public.products(activo);
+create index if not exists idx_products_stock           on public.products(stock, stock_min);
+create index if not exists idx_driver_charges_driver    on public.driver_charges(conductor_cedula_rif);
+create index if not exists idx_driver_charges_estatus   on public.driver_charges(estatus);
+create index if not exists idx_driver_movements_driver  on public.driver_movements(conductor_cedula_rif);
+create index if not exists idx_driver_movements_fecha   on public.driver_movements(fecha);
 
 -- ============================================================================
 --  15. TRIGGERS updated_at
@@ -426,6 +543,21 @@ create trigger trg_drivers_updated_at
 drop trigger if exists trg_suppliers_updated_at on public.suppliers;
 create trigger trg_suppliers_updated_at
   before update on public.suppliers
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists trg_partners_updated_at on public.partners;
+create trigger trg_partners_updated_at
+  before update on public.partners
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists trg_products_updated_at on public.products;
+create trigger trg_products_updated_at
+  before update on public.products
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists trg_driver_charges_updated_at on public.driver_charges;
+create trigger trg_driver_charges_updated_at
+  before update on public.driver_charges
   for each row execute function public.set_updated_at();
 
 drop trigger if exists trg_accounts_updated_at on public.chart_of_accounts;
@@ -538,6 +670,11 @@ alter table public.erp_roles               enable row level security;
 alter table public.erp_users               enable row level security;
 alter table public.tax_parameters          enable row level security;
 alter table public.wallet_movements        enable row level security;
+alter table public.partners                enable row level security;
+alter table public.partner_movements       enable row level security;
+alter table public.products                enable row level security;
+alter table public.driver_charges          enable row level security;
+alter table public.driver_movements        enable row level security;
 
 -- Políticas demo: anon + authenticated con acceso completo.
 -- PRODUCCIÓN: reemplazar por políticas basadas en auth.uid(), rol y propietario.
@@ -549,7 +686,8 @@ begin
     'clients','drivers','suppliers','chart_of_accounts','services_orders',
     'accounts_payable','withholding_vouchers','accounting_rules',
     'accounting_entries','accounting_entry_lines','erp_roles','erp_users',
-    'tax_parameters','wallet_movements'
+    'tax_parameters','wallet_movements','partners','partner_movements',
+    'products','driver_charges','driver_movements'
   ]
   loop
     execute format('drop policy if exists envia_demo_all on public.%I', t);

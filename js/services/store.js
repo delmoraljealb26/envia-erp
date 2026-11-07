@@ -79,6 +79,9 @@
     documentos: 'Gestionar documentos',
     liquidar: 'Registrar liquidaciones',
     pagar: 'Registrar pagos',
+    cobrar: 'Registrar cobros',
+    movimientos: 'Registrar movimientos',
+    asignar: 'Asignar productos / financiar',
     roles: 'Administrar roles y permisos'
   };
 
@@ -98,6 +101,14 @@
     drivers: {
       label: 'Conductores y Flota', group: 'Maestros', icon: 'car',
       tabs: [], actions: ['ver', 'crear', 'editar', 'eliminar', 'documentos', 'liquidar', 'exportar', 'imprimir', 'reportes']
+    },
+    partners: {
+      label: 'Negocios Asociados', group: 'Operación', icon: 'building',
+      tabs: [], actions: ['ver', 'crear', 'editar', 'eliminar', 'movimientos', 'cobrar', 'pagar', 'exportar', 'imprimir', 'reportes']
+    },
+    inventory: {
+      label: 'Tienda & Inventario', group: 'Operación', icon: 'package',
+      tabs: [], actions: ['ver', 'crear', 'editar', 'eliminar', 'asignar', 'cobrar', 'exportar', 'imprimir', 'reportes']
     },
     accounting: {
       label: 'Contabilidad', group: 'Finanzas', icon: 'book',
@@ -176,23 +187,23 @@
         id: 'role_contador', nombre: 'Contador / Fiscal', icono: 'book', admin: false, sistema: true,
         descripcion: 'Contabilidad, tributos, libros SENIAT, cuentas por pagar y maestros.',
         permisos: permissionsForModules(
-          ['dashboard', 'services', 'clients', 'drivers', 'accounting', 'taxes', 'payables'],
-          ['ver', 'crear', 'editar', 'eliminar', 'exportar', 'imprimir', 'reportes', 'documentos', 'liquidar', 'pagar', 'billetera']
+          ['dashboard', 'services', 'clients', 'drivers', 'partners', 'inventory', 'accounting', 'taxes', 'payables'],
+          ['ver', 'crear', 'editar', 'eliminar', 'exportar', 'imprimir', 'reportes', 'documentos', 'liquidar', 'pagar', 'cobrar', 'movimientos', 'asignar', 'billetera']
         )
       },
       {
         id: 'role_tesorero', nombre: 'Tesorero / Cuentas por Pagar', icono: 'wallet', admin: false, sistema: true,
         descripcion: 'Pagos, proveedores, liquidaciones, maestros y consulta tributaria.',
         permisos: permissionsForModules(
-          ['dashboard', 'services', 'clients', 'drivers', 'payables', 'taxes'],
-          ['ver', 'crear', 'editar', 'eliminar', 'exportar', 'imprimir', 'reportes', 'documentos', 'liquidar', 'pagar', 'billetera']
+          ['dashboard', 'services', 'clients', 'drivers', 'partners', 'inventory', 'payables', 'taxes'],
+          ['ver', 'crear', 'editar', 'eliminar', 'exportar', 'imprimir', 'reportes', 'documentos', 'liquidar', 'pagar', 'cobrar', 'movimientos', 'asignar', 'billetera']
         )
       },
       {
         id: 'role_auditor', nombre: 'Auditor / Operaciones', icono: 'eye', admin: false, sistema: true,
         descripcion: 'Consulta de todos los módulos financieros y operativos en modo solo lectura.',
         permisos: permissionsForModules(
-          ['dashboard', 'services', 'clients', 'drivers', 'accounting', 'taxes', 'payables'],
+          ['dashboard', 'services', 'clients', 'drivers', 'partners', 'inventory', 'accounting', 'taxes', 'payables'],
           ['ver', 'exportar', 'imprimir', 'reportes']
         )
       }
@@ -201,9 +212,19 @@
 
   const PAYMENT_METHODS = ['Pago Móvil', 'Efectivo USD', 'Zelle', 'Tarjeta', 'Wallet'];
   const VEHICLE_TYPES = ['Moto Delivery', 'Moto Taxi', 'Vehículo Sedán', 'Camioneta Carga'];
-  const DRIVER_LEVELS = ['Plata', 'Oro', 'Platium'];
+  /* Niveles comerciales de la flota: Zafiro (entrada), Esmeralda (intermedio), Diamante (alto desempeño). */
+  const DRIVER_LEVELS = ['Zafiro', 'Esmeralda', 'Diamante'];
   const CLIENT_STATUS = ['Activo', 'Corporativo', 'Suspendido', 'Pendiente de Verificación'];
-  const DRIVER_STATUS = ['Activo / Disponible', 'En Servicio', 'En Revisión Documental', 'Suspendido'];
+  const DRIVER_STATUS = ['Activo / Disponible', 'En Servicio', 'En Revisión Documental', 'Inactivo por Documentos Vencidos', 'Suspendido'];
+  const PARTNER_TYPES = ['Restaurante', 'Farmacia', 'Comercio', 'Delivery', 'Servicio', 'Otro'];
+  const PRODUCT_CATEGORIES = ['Uniforme', 'Equipamiento', 'Seguridad', 'Accesorio'];
+  const PARTNER_MOVEMENT_TYPES = {
+    comision: { label: 'Comisión por cobrar', sign: 1 },
+    cobro: { label: 'Cobro recibido', sign: -1 },
+    recaudacion: { label: 'Recaudación por pagar', sign: 1 },
+    pago: { label: 'Pago al negocio', sign: -1 },
+    ajuste: { label: 'Ajuste', sign: 0 }
+  };
 
   const ACCOUNT_LEVELS = ['Grupo', 'Subgrupo', 'Rubro', 'Cuenta de Movimiento'];
 
@@ -294,6 +315,66 @@
       cuenta_igtf: '',
       activo: true,
       descripcion: 'Cancelación de cuentas por pagar'
+    },
+    {
+      evento: 'comision_asociado',
+      nombre: 'Comisión por cobrar a negocio asociado',
+      cuenta_debe: '1.1.2.03',
+      cuenta_haber: '4.2.1.02',
+      cuenta_iva: '',
+      cuenta_igtf: '',
+      activo: true,
+      descripcion: 'Ingreso por comisión de pedidos gestionados para un negocio asociado'
+    },
+    {
+      evento: 'cobro_asociado',
+      nombre: 'Cobro de comisión a negocio asociado',
+      cuenta_debe: '1.1.1.02',
+      cuenta_haber: '1.1.2.03',
+      cuenta_iva: '',
+      cuenta_igtf: '',
+      activo: true,
+      descripcion: 'Cobro recibido del negocio asociado, reduce la cuenta por cobrar'
+    },
+    {
+      evento: 'recaudacion_asociado',
+      nombre: 'Recaudación recibida por cuenta de negocio asociado',
+      cuenta_debe: '1.1.1.01',
+      cuenta_haber: '2.1.1.03',
+      cuenta_iva: '',
+      cuenta_igtf: '',
+      activo: true,
+      descripcion: 'Efectivo cobrado al cliente final que pertenece al negocio asociado'
+    },
+    {
+      evento: 'pago_asociado',
+      nombre: 'Pago a negocio asociado',
+      cuenta_debe: '2.1.1.03',
+      cuenta_haber: '1.1.1.02',
+      cuenta_iva: '',
+      cuenta_igtf: '',
+      activo: true,
+      descripcion: 'Entrega de recaudaciones al negocio asociado'
+    },
+    {
+      evento: 'venta_tienda_conductor',
+      nombre: 'Venta financiada de artículo a conductor',
+      cuenta_debe: '1.1.2.02',
+      cuenta_haber: '4.2.1.03',
+      cuenta_iva: '',
+      cuenta_igtf: '',
+      activo: true,
+      descripcion: 'Cuenta por cobrar al conductor por uniforme o equipamiento financiado'
+    },
+    {
+      evento: 'costo_tienda_conductor',
+      nombre: 'Costo del artículo entregado al conductor',
+      cuenta_debe: '5.2.2.01',
+      cuenta_haber: '1.1.6.01',
+      cuenta_iva: '',
+      cuenta_igtf: '',
+      activo: true,
+      descripcion: 'Descarga del inventario por la entrega física del artículo'
     }
   ];
 
@@ -360,7 +441,16 @@
     { codigo: '6.1.2.03', nombre: 'Publicidad y Marketing', nivel: 'Cuenta de Movimiento', naturaleza: 'Deudora', moneda: 'VES' },
     { codigo: '6.1.2.04', nombre: 'Honorarios Profesionales', nivel: 'Cuenta de Movimiento', naturaleza: 'Deudora', moneda: 'VES' },
     { codigo: '6.1.2.05', nombre: 'Gastos Bancarios', nivel: 'Cuenta de Movimiento', naturaleza: 'Deudora', moneda: 'VES' },
-    { codigo: '6.1.2.06', nombre: 'Repuestos, Lubricantes y Mantenimiento', nivel: 'Cuenta de Movimiento', naturaleza: 'Deudora', moneda: 'VES' }
+    { codigo: '6.1.2.06', nombre: 'Repuestos, Lubricantes y Mantenimiento', nivel: 'Cuenta de Movimiento', naturaleza: 'Deudora', moneda: 'VES' },
+    /* --- Negocios asociados, tienda del conductor e inventario --- */
+    { codigo: '1.1.2.03', nombre: 'Cuentas por Cobrar Negocios Asociados', nivel: 'Cuenta de Movimiento', naturaleza: 'Deudora', moneda: 'VES' },
+    { codigo: '1.1.6', nombre: 'Inventario de Artículos', nivel: 'Rubro', naturaleza: 'Deudora', moneda: 'VES' },
+    { codigo: '1.1.6.01', nombre: 'Inventario de Artículos y Uniformes', nivel: 'Cuenta de Movimiento', naturaleza: 'Deudora', moneda: 'VES' },
+    { codigo: '2.1.1.03', nombre: 'Cuentas por Pagar Negocios Asociados', nivel: 'Cuenta de Movimiento', naturaleza: 'Acreedora', moneda: 'VES' },
+    { codigo: '4.2.1.02', nombre: 'Ingresos por Negocios Asociados (Comisiones)', nivel: 'Cuenta de Movimiento', naturaleza: 'Acreedora', moneda: 'VES' },
+    { codigo: '4.2.1.03', nombre: 'Ingresos por Tienda del Conductor', nivel: 'Cuenta de Movimiento', naturaleza: 'Acreedora', moneda: 'VES' },
+    { codigo: '5.2.2', nombre: 'Costo de Artículos y Uniformes', nivel: 'Subgrupo', naturaleza: 'Deudora', moneda: 'VES' },
+    { codigo: '5.2.2.01', nombre: 'Costo de Artículos y Uniformes', nivel: 'Cuenta de Movimiento', naturaleza: 'Deudora', moneda: 'VES' }
   ].map((a) => ({
     ...a,
     id: 'cta_' + a.codigo.replace(/\./g, '_'),
@@ -593,16 +683,41 @@
       }
     ].map((d) => {
       const niveles = {
-        'V-16874321': 'Platium',
-        'V-19234567': 'Oro',
-        'V-20345678': 'Plata',
-        'V-22109876': 'Oro',
-        'V-18765432': 'Platium',
-        'V-17456789': 'Plata',
-        'V-19876543': 'Plata',
-        'V-20987654': 'Oro'
+        'V-16874321': 'Diamante',
+        'V-19234567': 'Esmeralda',
+        'V-20345678': 'Zafiro',
+        'V-22109876': 'Esmeralda',
+        'V-18765432': 'Diamante',
+        'V-17456789': 'Zafiro',
+        'V-19876543': 'Zafiro',
+        'V-20987654': 'Esmeralda'
       };
-      return { ...d, nivel: niveles[d.cedula_rif] || 'Plata', created_at: stamp(), updated_at: stamp() };
+      const hoy = new Date();
+      const addYear = (base, years) => {
+        const d2 = new Date(base.getTime());
+        d2.setFullYear(d2.getFullYear() + years);
+        return d2.toISOString().slice(0, 10);
+      };
+      const emision = iso(300);
+      return {
+        ...d,
+        nivel: niveles[d.cedula_rif] || 'Zafiro',
+        url_seguro_rcv: d.url_seguro_rcv || ('demo://conductor/' + d.cedula_rif + '/rcv'),
+        docs_estado: { ...(d.docs_estado || {}), rcv: (d.docs_estado && d.docs_estado.rcv) || 'Aprobado' },
+        docs_meta: d.docs_meta || {
+          cedula: { emision, vencimiento: addYear(new Date(emision + 'T12:00:00'), 10), origen: 'manual' },
+          rif: { emision, vencimiento: addYear(new Date(emision + 'T12:00:00'), 2), origen: 'manual' },
+          licencia: { emision, vencimiento: addYear(new Date(emision + 'T12:00:00'), 3), origen: 'manual' },
+          circulacion: d.cedula_rif === 'V-20345678'
+            ? { emision: iso(355), vencimiento: iso(-12), origen: 'manual' }
+            : { emision, vencimiento: addYear(new Date(emision + 'T12:00:00'), 1), origen: 'manual' },
+          rcv: d.cedula_rif === 'V-20987654'
+            ? { emision: iso(370), vencimiento: iso(5), origen: 'manual' }
+            : { emision, vencimiento: addYear(new Date(emision + 'T12:00:00'), 1), origen: 'manual' }
+        },
+        created_at: stamp(),
+        updated_at: stamp()
+      };
     });
   }
 
@@ -642,6 +757,91 @@
         actividad: 'Publicidad digital y vallas', estatus: 'Activo'
       }
     ].map((s) => ({ ...s, created_at: stamp(), updated_at: stamp() }));
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  SEED · NEGOCIOS ASOCIADOS (comercios aliados)
+   * ------------------------------------------------------------------ */
+  function seedPartners() {
+    return [
+      { rif: 'J-401112223', razon_social: 'Panadería La Espiga C.A.', tipo: 'Restaurante', contacto: 'María Pérez', telefono: '0212-555-7788', correo: 'pedidos@laespiga.com.ve', direccion: 'Av. Francisco de Miranda, Local 4, Los Palos Grandes, Caracas', comision_pct: 12, saldo_por_cobrar_usd: 86.4, saldo_por_pagar_usd: 0, estatus: 'Activo', notas: 'Pedidos de desayuno y panadería con delivery ENVIA.' },
+      { rif: 'J-402223334', razon_social: 'Farmacia Salud Total C.A.', tipo: 'Farmacia', contacto: 'Carlos Rivas', telefono: '0212-555-9900', correo: 'delivery@saludtotal.com.ve', direccion: 'Av. Libertador, Torre Exterior, Chacao, Caracas', comision_pct: 10, saldo_por_cobrar_usd: 0, saldo_por_pagar_usd: 240.5, estatus: 'Activo', notas: 'Recaudación de medicamentos cobrados en efectivo.' },
+      { rif: 'J-403334445', razon_social: 'Market Express 24 C.A.', tipo: 'Comercio', contacto: 'Ana Gómez', telefono: '0414-555-2200', correo: 'operaciones@marketexpress.com', direccion: 'Av. Casanova, Local 12, Sabana Grande, Caracas', comision_pct: 15, saldo_por_cobrar_usd: 132.8, saldo_por_pagar_usd: 0, estatus: 'Activo', notas: 'Compras de última milla en horario nocturno.' },
+      { rif: 'J-404445556', razon_social: 'Pizzería Don Nino C.A.', tipo: 'Restaurante', contacto: 'Giuseppe Nino', telefono: '0212-555-3311', correo: 'pedidos@donnino.com.ve', direccion: 'Calle Madrid, Quinta Don Nino, Las Mercedes, Caracas', comision_pct: 14, saldo_por_cobrar_usd: 48.0, saldo_por_pagar_usd: 0, estatus: 'Activo', notas: 'Convenio de delivery con comisión por pedido.' },
+      { rif: 'J-405556667', razon_social: 'Servicios Eléctricos Voltios C.A.', tipo: 'Servicio', contacto: 'Pedro Salas', telefono: '0424-555-6677', correo: 'contacto@voltios.com.ve', direccion: 'Av. Sucre, Galpón 8, Catia, Caracas', comision_pct: 8, saldo_por_cobrar_usd: 0, saldo_por_pagar_usd: 0, estatus: 'Inactivo', notas: 'Convenio pausado hasta renovación de contrato.' }
+    ].map((p) => ({ ...p, created_at: stamp(), updated_at: stamp() }));
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  SEED · TIENDA DEL CONDUCTOR (inventario)
+   * ------------------------------------------------------------------ */
+  function seedProducts() {
+    return [
+      { sku: 'BOL-DEL-001', nombre: 'Bolso Delivery', categoria: 'Equipamiento', precio_usd: 80, costo_usd: 52, stock: 38, stock_min: 6, activo: true, descripcion: 'Bolso térmico impermeable con capacidad de 40 L.' },
+      { sku: 'FRA-ML-001', nombre: 'Franela manga larga tipo chemis', categoria: 'Uniforme', precio_usd: 25, costo_usd: 14, stock: 120, stock_min: 20, activo: true, descripcion: 'Franela institucional manga larga, tela de secado rápido.' },
+      { sku: 'CAS-PER-001', nombre: 'Casco personalizado', categoria: 'Seguridad', precio_usd: 50, costo_usd: 31, stock: 24, stock_min: 8, activo: true, descripcion: 'Casco certificado con identidad visual ENVIA.' },
+      { sku: 'SEG-RCV-001', nombre: 'Seguro RCV', categoria: 'Seguridad', precio_usd: 25, costo_usd: 18, stock: 200, stock_min: 25, activo: true, descripcion: 'Cobertura de responsabilidad civil de vehículos (RCV) por período.' },
+      { sku: 'CHA-COR-001', nombre: 'Chaqueta cortaviento', categoria: 'Uniforme', precio_usd: 50, costo_usd: 29, stock: 32, stock_min: 10, activo: true, descripcion: 'Chaqueta cortaviento con logos reflectivos.' },
+      { sku: 'POR-CEL-001', nombre: 'Portacelular', categoria: 'Accesorio', precio_usd: 25, costo_usd: 11, stock: 60, stock_min: 12, activo: true, descripcion: 'Soporte de manubrio para celular, resistente al agua.' }
+    ].map((p) => ({ ...p, id: 'prd_' + p.sku.toLowerCase(), created_at: stamp(), updated_at: stamp() }));
+  }
+
+  function seedPartnerMovements() {
+    const hoy = today();
+    return [
+      { id: uid('pmv'), partner_rif: 'J-401112223', tipo: 'comision', concepto: 'Comisión de 14 pedidos de la semana', monto_usd: 86.4, fecha: iso(6), referencia: 'ASOC-ESPIGA-01', created_at: stamp() },
+      { id: uid('pmv'), partner_rif: 'J-403334445', tipo: 'comision', concepto: 'Comisión de 22 pedidos nocturnos', monto_usd: 132.8, fecha: iso(4), referencia: 'ASOC-MARKET-01', created_at: stamp() },
+      { id: uid('pmv'), partner_rif: 'J-404445556', tipo: 'comision', concepto: 'Comisión de 8 pedidos fin de semana', monto_usd: 48.0, fecha: iso(2), referencia: 'ASOC-NINO-01', created_at: stamp() },
+      { id: uid('pmv'), partner_rif: 'J-402223334', tipo: 'recaudacion', concepto: 'Efectivo recaudado por medicamentos a domicilio', monto_usd: 240.5, fecha: iso(3), referencia: 'ASOC-SALUD-01', created_at: stamp() },
+      { id: uid('pmv'), partner_rif: 'J-403334445', tipo: 'cobro', concepto: 'Cobro parcial de comisión', monto_usd: 0, fecha: hoy, referencia: 'ASOC-MARKET-02', created_at: stamp() }
+    ];
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  SEED · CARTERA DEL CONDUCTOR (financiamientos de tienda)
+   * ------------------------------------------------------------------ */
+  function seedDriverCharges() {
+    const mk = (cedula, sku, cantidad, cuotas, fecha) => {
+      const product = seedProducts().find((p) => p.sku === sku);
+      const total = round(product.precio_usd * cantidad);
+      return {
+        id: uid('dchg'), conductor_cedula_rif: cedula, producto_sku: sku, producto_nombre: product.nombre,
+        cantidad, precio_unit_usd: product.precio_usd, total_usd: total, cuotas,
+        cuota_usd: round(total / cuotas), saldo_usd: total, pagado_usd: 0,
+        fecha, estatus: 'Vigente', created_at: stamp(), updated_at: stamp()
+      };
+    };
+    return [
+      mk('V-16874321', 'BOL-DEL-001', 1, 4, iso(25)),
+      mk('V-16874321', 'CAS-PER-001', 1, 2, iso(18)),
+      mk('V-20345678', 'CHA-COR-001', 1, 4, iso(12)),
+      mk('V-19234567', 'FRA-ML-001', 2, 1, iso(9))
+    ];
+  }
+
+  function seedDriverMovements(services, charges) {
+    const out = [];
+    (services || []).forEach((s) => {
+      out.push({
+        id: uid('dmv'), conductor_cedula_rif: s.conductor_cedula_rif, tipo: 'ganancia',
+        concepto: 'Ganancia por ' + (s.tipo === 'carrera' ? 'carrera' : 'encomienda') + ' ' + s.id,
+        monto_usd: round(s.base_usd), fecha: s.fecha, referencia: s.id, created_at: stamp()
+      });
+      out.push({
+        id: uid('dmv'), conductor_cedula_rif: s.conductor_cedula_rif, tipo: 'comision',
+        concepto: 'Comisión ENVIA (' + s.comision_pct + '%) · ' + s.id,
+        monto_usd: -round(s.comision_usd), fecha: s.fecha, referencia: s.id, created_at: stamp()
+      });
+    });
+    (charges || []).forEach((c) => {
+      out.push({
+        id: uid('dmv'), conductor_cedula_rif: c.conductor_cedula_rif, tipo: 'producto',
+        concepto: 'Financiamiento ' + c.producto_nombre + ' · ' + c.cuotas + ' cuota(s)',
+        monto_usd: -round(c.total_usd), fecha: c.fecha, referencia: c.id, created_at: stamp()
+      });
+    });
+    out.sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
+    return out;
   }
 
   /* ------------------------------------------------------------------ *
@@ -790,7 +990,7 @@
   const seeded = buildSeed();
   const loaded = loadDb();
   current = loaded || seeded;
-  if (loaded) ensureCatalogs(current);
+  ensureCatalogs(current);
 
   function buildSeed() {
     const db = {
@@ -802,6 +1002,11 @@
       payables: [],
       withholdings: [],
       walletMovements: [],
+      partners: seedPartners(),
+      partnerMovements: [],
+      products: seedProducts(),
+      driverCharges: [],
+      driverMovements: [],
       accounts: clone(ACCOUNTS),
       accountingRules: clone(DEFAULT_RULES).map((r) => ({ ...r, id: 'rule_' + r.evento, updated_at: stamp() })),
       entries: [],
@@ -826,6 +1031,9 @@
     // Cuentas por pagar (necesitan el motor ya inicializado con current)
     current = db;
     db.payables = seedPayables();
+    db.partnerMovements = seedPartnerMovements();
+    db.driverCharges = seedDriverCharges();
+    db.driverMovements = seedDriverMovements(db.services, db.driverCharges);
     db.meta.entrySeq = 0;
     db.meta.voucherSeq = 0;
 
@@ -931,6 +1139,79 @@
           { cuenta: e.metodo, debe: 0, haber: amount }
         ]
       });
+    });
+
+    /* ------------------------------------------------------------------ *
+     *  Inventario inicial, financiamientos de tienda y negocios asociados
+     *  (asientos demo para que los libros reflejen las nuevas carteras)
+     * ------------------------------------------------------------------ */
+    const costoEntregado = db.driverCharges.reduce((sum, c) => {
+      const p = db.products.find((x) => x.sku === c.producto_sku);
+      return sum + round((p ? p.costo_usd : 0) * c.cantidad);
+    }, 0);
+    const valorInventario = round(db.products.reduce((sum, p) => sum + p.stock * p.costo_usd, 0) + costoEntregado);
+    postEntryInternal(db, {
+      fecha: iso(400),
+      descripcion: 'Inventario inicial de uniformes y equipamiento · ENVIA ERP',
+      referencia: 'APERTURA-INVENTARIO',
+      origen: 'apertura',
+      lines: [
+        { cuenta: '1.1.6.01', debe: valorInventario, haber: 0 },
+        { cuenta: '3.1.1.01', debe: 0, haber: valorInventario }
+      ]
+    });
+    db.driverCharges.forEach((c) => {
+      const p = db.products.find((x) => x.sku === c.producto_sku);
+      postEntryInternal(db, {
+        fecha: c.fecha,
+        descripcion: 'Venta financiada ' + c.producto_nombre + ' · ' + c.conductor_cedula_rif,
+        referencia: c.id,
+        origen: 'tienda',
+        lines: [
+          { cuenta: '1.1.2.02', debe: c.total_usd, haber: 0 },
+          { cuenta: '4.2.1.03', debe: 0, haber: c.total_usd }
+        ]
+      });
+      const costo = round((p ? p.costo_usd : 0) * c.cantidad);
+      if (costo > 0) {
+        postEntryInternal(db, {
+          fecha: c.fecha,
+          descripcion: 'Costo de artículo entregado · ' + c.producto_nombre,
+          referencia: c.id,
+          origen: 'tienda',
+          lines: [
+            { cuenta: '5.2.2.01', debe: costo, haber: 0 },
+            { cuenta: '1.1.6.01', debe: 0, haber: costo }
+          ]
+        });
+      }
+    });
+    db.partnerMovements.forEach((m) => {
+      const partner = db.partners.find((p) => p.rif === m.partner_rif);
+      if (!partner || !m.monto_usd) return;
+      const entrada = { fecha: m.fecha, descripcion: m.concepto, referencia: m.id, origen: 'asociados', lines: [] };
+      if (m.tipo === 'comision') {
+        entrada.lines = [
+          { cuenta: '1.1.2.03', debe: m.monto_usd, haber: 0 },
+          { cuenta: '4.2.1.02', debe: 0, haber: m.monto_usd }
+        ];
+      } else if (m.tipo === 'cobro') {
+        entrada.lines = [
+          { cuenta: '1.1.1.02', debe: m.monto_usd, haber: 0 },
+          { cuenta: '1.1.2.03', debe: 0, haber: m.monto_usd }
+        ];
+      } else if (m.tipo === 'recaudacion') {
+        entrada.lines = [
+          { cuenta: '1.1.1.01', debe: m.monto_usd, haber: 0 },
+          { cuenta: '2.1.1.03', debe: 0, haber: m.monto_usd }
+        ];
+      } else if (m.tipo === 'pago') {
+        entrada.lines = [
+          { cuenta: '2.1.1.03', debe: m.monto_usd, haber: 0 },
+          { cuenta: '1.1.1.02', debe: 0, haber: m.monto_usd }
+        ];
+      }
+      if (entrada.lines.length) postEntryInternal(db, entrada);
     });
 
     return db;
@@ -1171,6 +1452,16 @@
       }
     });
     if (!Array.isArray(db.walletMovements)) { db.walletMovements = []; changed = true; }
+    if (!Array.isArray(db.partners)) { db.partners = seedPartners(); changed = true; }
+    if (!Array.isArray(db.partnerMovements)) { db.partnerMovements = []; changed = true; }
+    if (!Array.isArray(db.products)) { db.products = seedProducts(); changed = true; }
+    if (!Array.isArray(db.driverCharges)) { db.driverCharges = []; changed = true; }
+    if (!Array.isArray(db.driverMovements)) { db.driverMovements = []; changed = true; }
+    // Backfill del historial de wallet del conductor para bases creadas antes de esta versión.
+    if (!db.driverMovements.length && Array.isArray(db.services) && db.services.length) {
+      db.driverMovements = seedDriverMovements(db.services, db.driverCharges);
+      changed = true;
+    }
     if (!db.taxParams || !db.taxParams.islrTariffs) {
       db.taxParams = { ...DEFAULT_TAX, ...(db.taxParams || {}), islrTariffs: clone(ISLR_TARIFFS) };
       changed = true;
@@ -1194,7 +1485,36 @@
     if (!Array.isArray(db.auditLog)) { db.auditLog = []; changed = true; }
 
     db.drivers.forEach((d) => {
-      if (!DRIVER_LEVELS.includes(d.nivel)) { d.nivel = 'Plata'; changed = true; }
+      const legacyLevels = { Plata: 'Zafiro', Oro: 'Esmeralda', Platium: 'Diamante' };
+      if (legacyLevels[d.nivel]) {
+        d.nivel = legacyLevels[d.nivel];
+        changed = true;
+      }
+      if (!DRIVER_LEVELS.includes(d.nivel)) { d.nivel = 'Zafiro'; changed = true; }
+      if (!d.docs_meta || typeof d.docs_meta !== 'object') {
+        d.docs_meta = {};
+        changed = true;
+      }
+      ['cedula', 'rif', 'licencia', 'circulacion', 'rcv'].forEach((k) => {
+        if (!d.docs_meta[k]) {
+          d.docs_meta[k] = { emision: '', vencimiento: '', origen: 'manual' };
+          changed = true;
+        }
+      });
+      if (!('url_seguro_rcv' in d)) { d.url_seguro_rcv = ''; changed = true; }
+      const vencido = ['cedula', 'rif', 'licencia', 'circulacion', 'rcv'].some((k) => {
+        const v = d.docs_meta[k] && d.docs_meta[k].vencimiento;
+        return v && v < today();
+      });
+      if (vencido && d.estatus_conductor !== 'Suspendido' && d.estatus_conductor !== 'Inactivo por Documentos Vencidos') {
+        d.estatus_conductor = 'Inactivo por Documentos Vencidos';
+        d.inactivado_por_documentos = true;
+        changed = true;
+      } else if (!vencido && d.inactivado_por_documentos && d.estatus_conductor === 'Inactivo por Documentos Vencidos') {
+        d.estatus_conductor = 'Activo / Disponible';
+        d.inactivado_por_documentos = false;
+        changed = true;
+      }
     });
 
     // Migración demo: reemplaza el cliente "María Fernanda" por "Jesús Alberto"
@@ -1304,6 +1624,7 @@
     /* catálogos */
     get ROLES() { return (current.roles || []).map((r) => r.nombre); },
     PAYMENT_METHODS, VEHICLE_TYPES, DRIVER_LEVELS, CLIENT_STATUS, DRIVER_STATUS,
+    PARTNER_TYPES, PRODUCT_CATEGORIES, PARTNER_MOVEMENT_TYPES,
     ACCOUNT_LEVELS, ISLR_TARIFFS, PERMISSION_CATALOG, ACTION_LABELS,
 
     save: persist,
@@ -1507,12 +1828,14 @@
         marca: required(data.marca, 'Marca'),
         modelo: required(data.modelo, 'Modelo'),
         color: required(data.color, 'Color'),
-        nivel: DRIVER_LEVELS.includes(data.nivel) ? data.nivel : (existing && DRIVER_LEVELS.includes(existing.nivel) ? existing.nivel : 'Plata'),
+        nivel: DRIVER_LEVELS.includes(data.nivel) ? data.nivel : (existing && DRIVER_LEVELS.includes(existing.nivel) ? existing.nivel : 'Zafiro'),
         porcentaje_comision: comPct,
         saldo_por_liquidar_usd: round(data.saldo_por_liquidar_usd),
         anio,
         urls_fotos_vehiculo: Array.isArray(data.urls_fotos_vehiculo) ? data.urls_fotos_vehiculo : [],
         docs_estado: data.docs_estado || (existing ? existing.docs_estado : {}),
+        docs_meta: data.docs_meta || (existing ? existing.docs_meta : {}),
+        url_seguro_rcv: data.url_seguro_rcv || (existing ? existing.url_seguro_rcv : ''),
         updated_at: stamp(),
         created_at: existing ? existing.created_at : stamp()
       };
@@ -1582,6 +1905,326 @@
       current.suppliers = current.suppliers.filter((s) => s.rif !== rif);
       api.addAuditLog('eliminar', 'proveedores', `Proveedor ${rif}`, rif);
       persist();
+    },
+
+    /* negocios asociados (comercios aliados) */
+    partner(rif) {
+      const p = current.partners.find((x) => x.rif === rif);
+      return p ? clone(p) : null;
+    },
+    upsertPartner(data) {
+      const rifErr = idError(data.rif);
+      if (rifErr) throw new Error(rifErr);
+      const rif = normId(data.rif);
+      const existing = current.partners.find((p) => p.rif === rif);
+      if (!existing && current.partners.some((p) => p.rif === rif)) {
+        throw new Error('Ya existe un negocio asociado con ese RIF.');
+      }
+      const comPct = Number(data.comision_pct ?? 10);
+      if (!isFinite(comPct) || comPct < 0 || comPct > 100) throw new Error('El % de comisión debe estar entre 0 y 100.');
+      const mailErr = emailError(data.correo);
+      if (mailErr) throw new Error(mailErr);
+      const telErr = phoneError(data.telefono);
+      if (telErr) throw new Error(telErr);
+      if (data.tipo && !PARTNER_TYPES.includes(data.tipo)) throw new Error('Selecciona un tipo de negocio válido.');
+      const rec = {
+        ...(existing || {}),
+        ...data,
+        rif,
+        razon_social: required(data.razon_social, 'Razón social'),
+        tipo: data.tipo || 'Comercio',
+        contacto: data.contacto || '',
+        telefono: required(data.telefono, 'Teléfono'),
+        correo: data.correo || '',
+        direccion: required(data.direccion, 'Dirección'),
+        comision_pct: comPct,
+        estatus: data.estatus || 'Activo',
+        notas: data.notas || '',
+        saldo_por_cobrar_usd: existing ? existing.saldo_por_cobrar_usd : 0,
+        saldo_por_pagar_usd: existing ? existing.saldo_por_pagar_usd : 0,
+        updated_at: stamp(),
+        created_at: existing ? existing.created_at : stamp()
+      };
+      if (existing) Object.assign(existing, rec);
+      else current.partners.unshift(rec);
+      api.addAuditLog(existing ? 'actualizar' : 'crear', 'negocios_asociados', `Negocio ${rif} · ${rec.razon_social}`, rif);
+      persist();
+      return rec;
+    },
+    deletePartner(rif) {
+      const used = current.partnerMovements.some((m) => m.partner_rif === rif && m.monto_usd);
+      if (used) throw new Error('No se puede eliminar: el negocio tiene movimientos registrados.');
+      current.partners = current.partners.filter((p) => p.rif !== rif);
+      api.addAuditLog('eliminar', 'negocios_asociados', `Negocio ${rif}`, rif);
+      persist();
+    },
+    addPartnerMovement(rif, data) {
+      const partner = current.partners.find((p) => p.rif === rif);
+      if (!partner) throw new Error('Negocio asociado no encontrado.');
+      const tipo = data.tipo || 'comision';
+      if (!PARTNER_MOVEMENT_TYPES[tipo]) throw new Error('Tipo de movimiento no válido.');
+      const monto = moneyPositive(data.monto_usd, 'Monto');
+      required(data.concepto, 'Concepto');
+      if (tipo === 'cobro' && monto > partner.saldo_por_cobrar_usd + 0.01) {
+        throw new Error('El cobro excede el saldo por cobrar (' + partner.saldo_por_cobrar_usd.toFixed(2) + ' USD).');
+      }
+      if (tipo === 'pago' && monto > partner.saldo_por_pagar_usd + 0.01) {
+        throw new Error('El pago excede el saldo por pagar (' + partner.saldo_por_pagar_usd.toFixed(2) + ' USD).');
+      }
+      const mov = {
+        id: uid('pmv'), partner_rif: rif, tipo, concepto: data.concepto,
+        monto_usd: monto, fecha: data.fecha || today(), referencia: data.referencia || '',
+        created_at: stamp()
+      };
+      if (tipo === 'comision') partner.saldo_por_cobrar_usd = round(partner.saldo_por_cobrar_usd + monto);
+      else if (tipo === 'cobro') partner.saldo_por_cobrar_usd = round(partner.saldo_por_cobrar_usd - monto);
+      else if (tipo === 'recaudacion') partner.saldo_por_pagar_usd = round(partner.saldo_por_pagar_usd + monto);
+      else if (tipo === 'pago') partner.saldo_por_pagar_usd = round(partner.saldo_por_pagar_usd - monto);
+      const rule = current.accountingRules.find((r) => r.evento === {
+        comision: 'comision_asociado', cobro: 'cobro_asociado', recaudacion: 'recaudacion_asociado', pago: 'pago_asociado'
+      }[tipo]);
+      if (rule) {
+        api.postEntry({
+          fecha: mov.fecha,
+          descripcion: PARTNER_MOVEMENT_TYPES[tipo].label + ' · ' + partner.razon_social,
+          referencia: mov.id,
+          origen: 'asociados',
+          lines: [
+            { cuenta: rule.cuenta_debe, debe: monto, haber: 0 },
+            { cuenta: rule.cuenta_haber, debe: 0, haber: monto }
+          ]
+        });
+      }
+      current.partnerMovements.unshift(mov);
+      partner.updated_at = stamp();
+      api.addAuditLog('movimiento', 'negocios_asociados', `${PARTNER_MOVEMENT_TYPES[tipo].label} · ${partner.razon_social} · $${monto}`, rif);
+      persist();
+      return mov;
+    },
+    partnerMovements(rif) {
+      return current.partnerMovements.filter((m) => m.partner_rif === rif);
+    },
+
+    /* tienda del conductor e inventario */
+    product(sku) {
+      const p = current.products.find((x) => x.sku === sku);
+      return p ? clone(p) : null;
+    },
+    upsertProduct(data) {
+      const sku = norm(data.sku).toUpperCase();
+      if (!sku) throw new Error('El SKU es obligatorio.');
+      if (!/^[A-Z0-9\-]{3,24}$/.test(sku)) throw new Error('El SKU debe tener entre 3 y 24 caracteres (A-Z, 0-9 y guiones).');
+      const existing = current.products.find((p) => p.sku === sku);
+      if (!existing && current.products.some((p) => p.sku === sku)) throw new Error('Ya existe un producto con ese SKU.');
+      const precio = moneyPositive(data.precio_usd, 'Precio de venta');
+      const costo = money(data.costo_usd, 'Costo');
+      const stock = Number(data.stock);
+      if (!isFinite(stock) || stock < 0 || Math.floor(stock) !== stock) throw new Error('El stock debe ser un entero mayor o igual a cero.');
+      const stockMin = Number(data.stock_min ?? 0);
+      if (!isFinite(stockMin) || stockMin < 0) throw new Error('El stock mínimo debe ser mayor o igual a cero.');
+      if (data.categoria && !PRODUCT_CATEGORIES.includes(data.categoria)) throw new Error('Categoría de producto no válida.');
+      const rec = {
+        ...(existing || {}),
+        ...data,
+        sku,
+        id: existing ? existing.id : 'prd_' + sku.toLowerCase(),
+        nombre: required(data.nombre, 'Nombre del producto'),
+        categoria: data.categoria || 'Equipamiento',
+        precio_usd: precio,
+        costo_usd: costo,
+        stock,
+        stock_min: stockMin,
+        activo: data.activo !== false,
+        descripcion: data.descripcion || '',
+        updated_at: stamp(),
+        created_at: existing ? existing.created_at : stamp()
+      };
+      if (existing) Object.assign(existing, rec);
+      else current.products.unshift(rec);
+      api.addAuditLog(existing ? 'actualizar' : 'crear', 'inventario', `Producto ${sku} · ${rec.nombre}`, sku);
+      persist();
+      return rec;
+    },
+    adjustStock(sku, delta, motivo) {
+      const p = current.products.find((x) => x.sku === sku);
+      if (!p) throw new Error('Producto no encontrado.');
+      const d = Number(delta);
+      if (!isFinite(d) || d === 0) throw new Error('El ajuste de stock debe ser un número distinto de cero.');
+      const nuevo = p.stock + d;
+      if (nuevo < 0) throw new Error('El stock no puede quedar negativo.');
+      p.stock = nuevo;
+      p.updated_at = stamp();
+      api.addAuditLog('ajuste_stock', 'inventario', `${p.nombre}: ${d > 0 ? '+' : ''}${d} unidades${motivo ? ' · ' + motivo : ''}`, sku);
+      persist();
+      return p;
+    },
+    deleteProduct(sku) {
+      const used = current.driverCharges.some((c) => c.producto_sku === sku && c.saldo_usd > 0.01);
+      if (used) throw new Error('No se puede eliminar: el producto tiene financiamientos vigentes.');
+      current.products = current.products.filter((p) => p.sku !== sku);
+      api.addAuditLog('eliminar', 'inventario', `Producto ${sku}`, sku);
+      persist();
+    },
+    assignProduct(cedula, data) {
+      const driver = current.drivers.find((d) => d.cedula_rif === cedula);
+      if (!driver) throw new Error('Conductor no encontrado.');
+      const product = current.products.find((p) => p.sku === data.sku);
+      if (!product) throw new Error('Selecciona un producto válido.');
+      if (!product.activo) throw new Error('El producto está inactivo.');
+      const cantidad = Number(data.cantidad || 1);
+      if (!isFinite(cantidad) || cantidad < 1 || Math.floor(cantidad) !== cantidad) throw new Error('La cantidad debe ser un entero mayor o igual a 1.');
+      if (cantidad > product.stock) throw new Error('Stock insuficiente: disponibles ' + product.stock + ' unidades.');
+      const cuotas = Number(data.cuotas || 1);
+      if (!isFinite(cuotas) || cuotas < 1 || Math.floor(cuotas) !== cuotas || cuotas > 52) throw new Error('Las cuotas deben ser un entero entre 1 y 52.');
+      const total = round(product.precio_usd * cantidad);
+      const charge = {
+        id: uid('dchg'), conductor_cedula_rif: cedula, producto_sku: product.sku,
+        producto_nombre: product.nombre, cantidad, precio_unit_usd: product.precio_usd,
+        total_usd: total, cuotas, cuota_usd: round(total / cuotas), saldo_usd: total, pagado_usd: 0,
+        fecha: data.fecha || today(), estatus: 'Vigente', created_at: stamp(), updated_at: stamp()
+      };
+      product.stock -= cantidad;
+      product.updated_at = stamp();
+      current.driverCharges.unshift(charge);
+      current.driverMovements.unshift({
+        id: uid('dmv'), conductor_cedula_rif: cedula, tipo: 'producto',
+        concepto: 'Financiamiento ' + product.nombre + ' · ' + cuotas + ' cuota(s)',
+        monto_usd: -total, fecha: charge.fecha, referencia: charge.id, created_at: stamp()
+      });
+      const sale = current.accountingRules.find((r) => r.evento === 'venta_tienda_conductor');
+      const cost = current.accountingRules.find((r) => r.evento === 'costo_tienda_conductor');
+      if (sale) {
+        api.postEntry({
+          fecha: charge.fecha, descripcion: 'Venta financiada ' + product.nombre + ' · ' + driver.nombres + ' ' + driver.apellidos,
+          referencia: charge.id, origen: 'tienda',
+          lines: [
+            { cuenta: sale.cuenta_debe, debe: total, haber: 0 },
+            { cuenta: sale.cuenta_haber, debe: 0, haber: total }
+          ]
+        });
+      }
+      if (cost) {
+        const costo = round(product.costo_usd * cantidad);
+        if (costo > 0) {
+          api.postEntry({
+            fecha: charge.fecha, descripcion: 'Costo de artículo entregado · ' + product.nombre,
+            referencia: charge.id, origen: 'tienda',
+            lines: [
+              { cuenta: cost.cuenta_debe, debe: costo, haber: 0 },
+              { cuenta: cost.cuenta_haber, debe: 0, haber: costo }
+            ]
+          });
+        }
+      }
+      api.addAuditLog('asignar', 'inventario', `${product.nombre} x${cantidad} a ${driver.nombres} ${driver.apellidos} · $${total} · ${cuotas} cuota(s)`, cedula);
+      persist();
+      return { charge, driver, product };
+    },
+    payDriverCharge(chargeId, montoUsd, data) {
+      const charge = current.driverCharges.find((c) => c.id === chargeId);
+      if (!charge) throw new Error('Financiamiento no encontrado.');
+      const monto = moneyPositive(montoUsd, 'Monto de la cuota');
+      if (monto > charge.saldo_usd + 0.01) throw new Error('El monto excede el saldo del financiamiento (' + charge.saldo_usd.toFixed(2) + ' USD).');
+      charge.pagado_usd = round(charge.pagado_usd + monto);
+      charge.saldo_usd = round(charge.saldo_usd - monto);
+      charge.estatus = charge.saldo_usd <= 0.01 ? 'Pagado' : 'Vigente';
+      charge.updated_at = stamp();
+      const d = current.drivers.find((x) => x.cedula_rif === charge.conductor_cedula_rif);
+      api.postEntry({
+        fecha: (data && data.fecha) || today(),
+        descripcion: 'Abono de financiamiento · ' + charge.producto_nombre + ' · ' + (d ? d.nombres + ' ' + d.apellidos : charge.conductor_cedula_rif),
+        referencia: charge.id, origen: 'tienda',
+        lines: [
+          { cuenta: '1.1.1.02', debe: monto, haber: 0 },
+          { cuenta: '1.1.2.02', debe: 0, haber: monto }
+        ]
+      });
+      api.addAuditLog('cobrar', 'inventario', `Abono financiamiento ${charge.producto_nombre} · $${monto}`, charge.conductor_cedula_rif);
+      persist();
+      return charge;
+    },
+    driverCharges(cedula) {
+      return current.driverCharges.filter((c) => c.conductor_cedula_rif === cedula);
+    },
+    driverMovements(cedula) {
+      return current.driverMovements.filter((m) => m.conductor_cedula_rif === cedula);
+    },
+    driverWallet(cedula) {
+      const movs = current.driverMovements.filter((m) => m.conductor_cedula_rif === cedula);
+      const sum = (tipo) => round(movs.filter((m) => m.tipo === tipo).reduce((s, m) => s + m.monto_usd, 0));
+      const ganancias = sum('ganancia');
+      const comisiones = Math.abs(sum('comision'));
+      const productos = Math.abs(sum('producto'));
+      const pagos = Math.abs(sum('pago')) + Math.abs(sum('pago_producto'));
+      const saldo = round(movs.reduce((s, m) => s + m.monto_usd, 0));
+      const deuda = round(current.driverCharges.filter((c) => c.conductor_cedula_rif === cedula && c.saldo_usd > 0).reduce((s, c) => s + c.saldo_usd, 0));
+      return { movimientos: movs, ganancias, comisiones, productos, pagos, saldo, deuda };
+    },
+
+    /* alertas documentales (vencimientos) */
+    docAlerts(driver) {
+      if (!driver) return [];
+      const meta = driver.docs_meta || {};
+      const keys = ['cedula', 'rif', 'licencia', 'circulacion', 'rcv'];
+      const labels = { cedula: 'Cédula de Identidad', rif: 'RIF Personal', licencia: 'Licencia de Conducir', circulacion: 'Carnet de Circulación', rcv: 'Seguro RCV' };
+      const hoy = today();
+      return keys.map((k) => {
+        const m = meta[k] || {};
+        const vence = m.vencimiento || '';
+        let dias = null;
+        if (vence) dias = Math.round((new Date(vence + 'T12:00:00') - new Date(hoy + 'T12:00:00')) / 86400000);
+        return {
+          key: k, label: labels[k], emision: m.emision || '', vencimiento: vence, origen: m.origen || 'manual',
+          dias, vencido: dias != null && dias < 0,
+          porVencer: dias != null && dias >= 0 && dias <= 30,
+          sinFecha: !vence
+        };
+      });
+    },
+    documentAlerts() {
+      const out = [];
+      current.drivers.forEach((d) => {
+        this.docAlerts(d).forEach((a) => {
+          if (a.vencido || a.porVencer) out.push({ driver: d, alert: a });
+        });
+      });
+      return out.sort((a, b) => (a.alert.dias ?? 9999) - (b.alert.dias ?? 9999));
+    },
+    setDocMeta(cedula, key, meta) {
+      const d = current.drivers.find((x) => x.cedula_rif === cedula);
+      if (!d) throw new Error('Conductor no encontrado.');
+      const vencimiento = meta && meta.vencimiento ? String(meta.vencimiento) : '';
+      const emision = meta && meta.emision ? String(meta.emision) : '';
+      if (vencimiento && !/^\d{4}-\d{2}-\d{2}$/.test(vencimiento)) throw new Error('La fecha de vencimiento no es válida.');
+      if (emision && !/^\d{4}-\d{2}-\d{2}$/.test(emision)) throw new Error('La fecha de emisión no es válida.');
+      if (emision && vencimiento && vencimiento < emision) throw new Error('El vencimiento no puede ser anterior a la emisión.');
+      d.docs_meta = { ...(d.docs_meta || {}), [key]: { emision, vencimiento, origen: (meta && meta.origen) || 'manual' } };
+      d.updated_at = stamp();
+      api.addAuditLog('actualizar_documento', 'conductores', `Fechas ${key} → ${emision || '—'} / ${vencimiento || '—'} para ${cedula}`, cedula);
+      api.revalidateDriverStatus(cedula);
+      persist();
+      return d.docs_meta[key];
+    },
+    revalidateDriverStatus(cedula) {
+      const d = current.drivers.find((x) => x.cedula_rif === cedula);
+      if (!d) return;
+      const alerts = api.docAlerts(d);
+      const vencido = alerts.some((a) => a.vencido);
+      if (vencido) {
+        if (d.estatus_conductor !== 'Suspendido') {
+          d.estatus_conductor = 'Inactivo por Documentos Vencidos';
+          d.inactivado_por_documentos = true;
+          d.updated_at = stamp();
+          persist();
+        }
+        return;
+      }
+      if (d.inactivado_por_documentos && d.estatus_conductor === 'Inactivo por Documentos Vencidos') {
+        d.estatus_conductor = 'Activo / Disponible';
+        d.inactivado_por_documentos = false;
+        d.updated_at = stamp();
+        persist();
+      }
     },
 
     /* cuentas por pagar */
@@ -1736,6 +2379,9 @@
       const driver = current.drivers.find((d) => d.cedula_rif === data.conductor_cedula_rif);
       if (!client) throw new Error('El cliente no existe en el maestro.');
       if (!driver) throw new Error('El conductor no existe en el maestro.');
+      if (driver.estatus_conductor === 'Inactivo por Documentos Vencidos') {
+        throw new Error('El conductor está inactivo por documentos vencidos. Actualiza su expediente antes de asignarle servicios.');
+      }
       const base = moneyPositive(data.base_usd, 'Tarifa base');
       const ivaPct = Number(data.iva_pct || 0);
       if (!isFinite(ivaPct) || ivaPct < 0 || ivaPct > 100) throw new Error('El % de IVA debe estar entre 0 y 100.');
@@ -1773,6 +2419,17 @@
       if (svc.tipo === 'carrera') client.total_carreras = (client.total_carreras || 0) + 1;
       else client.total_encomiendas = (client.total_encomiendas || 0) + 1;
       driver.saldo_por_liquidar_usd = round(driver.saldo_por_liquidar_usd + svc.pago_conductor_usd);
+      // Historial de wallet del conductor (ganancia bruta, comisión y neto).
+      current.driverMovements.unshift({
+        id: uid('dmv'), conductor_cedula_rif: driver.cedula_rif, tipo: 'ganancia',
+        concepto: 'Ganancia por ' + (svc.tipo === 'carrera' ? 'carrera' : 'encomienda') + ' ' + svc.id,
+        monto_usd: base, fecha: svc.fecha, referencia: svc.id, created_at: stamp()
+      });
+      current.driverMovements.unshift({
+        id: uid('dmv'), conductor_cedula_rif: driver.cedula_rif, tipo: 'comision',
+        concepto: 'Comisión ENVIA (' + comPct + '%) · ' + svc.id,
+        monto_usd: -comision, fecha: svc.fecha, referencia: svc.id, created_at: stamp()
+      });
       if (svc.metodo_pago === 'Wallet') {
         const pay = svc.total_usd;
         if (client.saldo_wallet_usd >= pay) client.saldo_wallet_usd = round(client.saldo_wallet_usd - pay);
@@ -1810,6 +2467,11 @@
       });
       driver.saldo_por_liquidar_usd = round(driver.saldo_por_liquidar_usd - monto);
       driver.updated_at = stamp();
+      current.driverMovements.unshift({
+        id: uid('dmv'), conductor_cedula_rif: cedula, tipo: 'pago',
+        concepto: 'Liquidación pagada · ' + ((data && data.metodo) || 'Pago Móvil'),
+        monto_usd: -monto, fecha: (data && data.fecha) || today(), referencia: (data && data.referencia) || 'LIQ-' + cedula, created_at: stamp()
+      });
       api.addAuditLog('liquidar', 'conductores', `Liquidación a ${driver.nombres} ${driver.apellidos} · $${monto}`, cedula);
       persist();
       return driver;
@@ -1930,7 +2592,15 @@
         igtf: round(sum(services, 'igtf_usd')),
         ticketAvg: services.length ? round((sum(rides, 'base_usd') + sum(deliveries, 'base_usd')) / services.length) : 0,
         clients: current.clients.length,
-        corporateClients: current.clients.filter((c) => c.estatus === 'Corporativo').length
+        corporateClients: current.clients.filter((c) => c.estatus === 'Corporativo').length,
+        partners: current.partners.length,
+        activePartners: current.partners.filter((p) => p.estatus === 'Activo').length,
+        partnersReceivable: round(current.partners.reduce((s, p) => s + Number(p.saldo_por_cobrar_usd || 0), 0)),
+        partnersPayable: round(current.partners.reduce((s, p) => s + Number(p.saldo_por_pagar_usd || 0), 0)),
+        inventoryValue: round(current.products.reduce((s, p) => s + Number(p.stock || 0) * Number(p.costo_usd || 0), 0)),
+        lowStock: current.products.filter((p) => p.activo && p.stock <= p.stock_min).length,
+        driverDebt: round(current.driverCharges.filter((c) => c.saldo_usd > 0).reduce((s, c) => s + Number(c.saldo_usd || 0), 0)),
+        docAlerts: api.documentAlerts().length
       };
     },
 

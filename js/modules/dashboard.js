@@ -66,6 +66,11 @@
     const todayServices = db.services.filter((s) => s.fecha === todayKey);
     const todayGross = sumBy(todayServices, 'base_usd');
 
+    /* Alertas operativas: documentos por vencer, stock bajo y cartera de asociados. */
+    const docAlerts = store.documentAlerts().slice(0, 4);
+    const lowStock = db.products.filter((p) => p.activo && p.stock <= p.stock_min).slice(0, 4);
+    const topPartners = db.partners.filter((p) => p.saldo_por_cobrar_usd > 0).sort((a, b) => b.saldo_por_cobrar_usd - a.saldo_por_cobrar_usd).slice(0, 4);
+
     const startLabel = new Date(periodStart + 'T12:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: 'short' });
     const endLabel = new Date(todayKey + 'T12:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
 
@@ -171,6 +176,36 @@
           <span><b>${pendingAll.length}</b> facturas pendientes por <b>${ui.usd(m.pending)}</b></span>
           <span>IVA + IGTF del período <b>${ui.usd(pTax)}</b></span>
           <span class="ops-rate">Tasa BCV <b>${ui.num(rate, 2)}</b></span>
+        </div>
+      </section>
+
+      <section class="panel ops-alerts">
+        <div class="panel-head">
+          <div><h3>Alertas operativas</h3><p>Documentos, inventario y cartera de negocios asociados</p></div>
+          <a class="link" href="#/drivers">Conductores ${ui.icon('arrowRight', 13)}</a>
+        </div>
+        <div class="dash-alert-grid">
+          <div class="dash-alert-col">
+            <div class="dash-alert-title">${ui.icon('alert', 15)} Documentos por vencer o vencidos <span>${docAlerts.length}</span></div>
+            ${docAlerts.length ? docAlerts.map(({ driver, alert }) => `<button class="dash-alert-row" data-alert-driver="${ui.esc(driver.cedula_rif)}">
+              <span class="dash-alert-main"><strong>${ui.esc(driver.nombres + ' ' + driver.apellidos)}</strong><small>${ui.esc(alert.label)} · ${alert.vencimiento ? ui.date(alert.vencimiento) : 'sin fecha'}</small></span>
+              ${alert.vencido ? ui.badge('Vencido', 'danger') : ui.badge(alert.dias + ' d', 'warning')}
+            </button>`).join('') : `<p class="muted small">Sin documentos críticos. Todos los expedientes están al día.</p>`}
+          </div>
+          <div class="dash-alert-col">
+            <div class="dash-alert-title">${ui.icon('package', 15)} Inventario bajo mínimo <span>${m.lowStock}</span></div>
+            ${lowStock.length ? lowStock.map((p) => `<a class="dash-alert-row" href="#/inventory">
+              <span class="dash-alert-main"><strong>${ui.esc(p.nombre)}</strong><small>${ui.esc(p.sku)} · mínimo ${p.stock_min}</small></span>
+              ${ui.badge(p.stock + ' disp.', 'warning')}
+            </a>`).join('') : `<p class="muted small">Inventario saludable. No hay productos bajo el mínimo.</p>`}
+          </div>
+          <div class="dash-alert-col">
+            <div class="dash-alert-title">${ui.icon('building', 15)} Comisiones de asociados <span>${ui.usd(m.partnersReceivable)}</span></div>
+            ${topPartners.length ? topPartners.map((p) => `<a class="dash-alert-row" href="#/partners">
+              <span class="dash-alert-main"><strong>${ui.esc(p.razon_social)}</strong><small>${p.comision_pct}% · ${ui.esc(p.tipo)}</small></span>
+              <strong class="text-orange">${ui.usd(p.saldo_por_cobrar_usd)}</strong>
+            </a>`).join('') : `<p class="muted small">Sin comisiones pendientes de cobro.</p>`}
+          </div>
         </div>
       </section>
 
@@ -280,6 +315,7 @@
     view.querySelectorAll('[data-payable]').forEach((b) => b.addEventListener('click', () => NS.modules.payables.openDetail(b.dataset.payable)));
     view.querySelectorAll('[data-client]').forEach((b) => b.addEventListener('click', () => NS.modules.clients.openDetail(b.dataset.client)));
     view.querySelectorAll('[data-driver]').forEach((b) => b.addEventListener('click', () => NS.modules.drivers.openDetail(b.dataset.driver)));
+    view.querySelectorAll('[data-alert-driver]').forEach((b) => b.addEventListener('click', () => NS.modules.drivers.openDetail(b.dataset.alertDriver)));
   }
 
   NS.modules.dashboard = { render };
