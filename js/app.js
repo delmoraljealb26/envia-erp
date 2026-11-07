@@ -17,6 +17,12 @@
       NS.login.showLogin();
       return;
     }
+    // Si el usuario debe cambiar su clave en el próximo ingreso, se muestra el
+    // formulario de cambio antes de entrar al dashboard.
+    if (s.must_change_password) {
+      NS.login.showPasswordChange(s);
+      return;
+    }
     document.body.classList.remove('on-login');
     $('#login-screen').classList.add('hidden');
     $('#app-shell').classList.remove('hidden');

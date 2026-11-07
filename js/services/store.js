@@ -2619,6 +2619,7 @@
         rol: data.rol,
         permisos: data.permisos && typeof data.permisos === 'object' ? clone(data.permisos) : null,
         activo: data.activo !== false,
+        must_change_password: existing ? rec.must_change_password : true,
         updated_at: stamp(),
         created_at: existing ? existing.created_at : stamp()
       };

@@ -377,5 +377,5 @@
     });
   }
 
-  NS.modules.users = { render };
+  NS.modules.users = { render, openForm };
 })();

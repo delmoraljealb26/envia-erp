@@ -69,6 +69,11 @@
         try {
           const user = NS.session.authenticate(usuario, password);
           attempts = 0;
+          if (user.must_change_password) {
+            NS.session.saveSession(user);
+            showPasswordChange(user);
+            return;
+          }
           NS.session.saveSession(user);
           NS.app.startApp();
           NS.ui.toast(`Bienvenido, ${user.nombre}. Sesión ${user.rol}.`, 'success');
@@ -97,6 +102,61 @@
     err.classList.add('shake');
   }
 
+  function showPasswordChange(user) {
+    const ui = NS.ui;
+    const overlay = ui.modal({
+      title: 'Cambiar clave de acceso',
+      eyebrow: 'Primer ingreso · debes actualizar tu clave',
+      size: 'sm',
+      body: `<form id="pwd-change-form" class="form-grid" autocomplete="off">
+        <label class="field field-full"><span>Usuario</span><input name="usuario" value="${ui.esc(user.usuario)}" readonly></label>
+        <label class="field field-full"><span>Clave actual *</span><input name="current_password" type="password" minlength="6" placeholder="Clave asignada por el administrador" required></label>
+        <label class="field field-full"><span>Nueva clave *</span><input name="new_password" type="password" minlength="6" placeholder="Mínimo 6 caracteres" required></label>
+        <label class="field field-full"><span>Confirmar nueva clave *</span><input name="confirm_password" type="password" minlength="6" placeholder="Repite la nueva clave" required></label>
+        <p class="form-note field-full">${ui.icon('alert', 14)} Es obligatorio cambiar la clave antes de acceder al sistema.</p>
+      </form>`,
+      footer: `<button class="btn btn-primary" id="pwd-change-save">${ui.icon('check', 15)} Cambiar clave y entrar</button>`
+    });
+    overlay.querySelector('#pwd-change-save').addEventListener('click', () => {
+      const form = overlay.querySelector('#pwd-change-form');
+      if (!form.reportValidity()) return;
+      const current = form.elements.current_password.value;
+      const nuevo = form.elements.new_password.value;
+      const confirm = form.elements.confirm_password.value;
+      if (current !== user.password) {
+        ui.toast('La clave actual no es correcta.', 'error');
+        return;
+      }
+      if (nuevo !== confirm) {
+        ui.toast('La nueva clave y su confirmación no coinciden.', 'error');
+        return;
+      }
+      if (nuevo === current) {
+        ui.toast('La nueva clave debe ser diferente a la actual.', 'error');
+        return;
+      }
+      try {
+        NS.store.upsertUser({
+          id: user.id,
+          usuario: user.usuario,
+          password: nuevo,
+          rol: user.rol,
+          nombre: user.nombre,
+          correo: user.correo,
+          activo: user.activo !== false,
+          permisos: user.permisos,
+          must_change_password: false
+        });
+        user.password = nuevo;
+        user.must_change_password = false;
+        NS.session.saveSession(user);
+        ui.closeModal(overlay);
+        ui.toast('Clave actualizada correctamente. Bienvenido al sistema.', 'success');
+        NS.app.startApp();
+      } catch (e) { ui.toast(e.message, 'error'); }
+    });
+  }
+
   function logoutRequest() {
     NS.ui.confirm({
       title: 'Cerrar sesión',
@@ -117,6 +177,7 @@
     bindLogin,
     updateLoginClock,
     showLoginError,
-    logoutRequest
+    logoutRequest,
+    showPasswordChange
   };
 })();

@@ -40,6 +40,7 @@
     const ui = NS.ui;
     const store = NS.store;
     const db = store.db;
+    if (!Array.isArray(db.systemParams)) db.systemParams = [];
     const cfg = NS.supabase.getConfig();
     const configured = NS.supabase.isConfigured();
     const canWrite = NS.app.canAction('settings', 'editar');
@@ -288,59 +289,59 @@
     if (paramsEmptyNew) paramsEmptyNew.addEventListener('click', () => openParamForm());
     view.querySelectorAll('[data-edit-param]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); openParamForm(b.dataset.editParam); }));
     view.querySelectorAll('[data-del-param]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); askDeleteParam(b.dataset.delParam); }));
+  }
 
-    function openParamForm(key) {
-      const p = key ? NS.store.systemParam(key) : null;
-      const overlay = ui.modal({
-        title: p ? 'Editar parámetro' : 'Nuevo parámetro',
-        eyebrow: 'Parámetros de mantenimiento',
-        subtitle: p ? `Clave: ${ui.esc(p.key)}` : 'Define un parámetro configurable para el sistema.',
-        size: 'sm',
-        body: `<form id="param-form" class="form-grid" autocomplete="off">
-          <label class="field"><span>Clave *</span><input name="key" value="${ui.esc(p ? p.key : '')}" placeholder="tarifa_plana_semanal_usd" ${p ? 'disabled' : ''} required></label>
-          <label class="field"><span>Etiqueta *</span><input name="label" value="${ui.esc(p ? p.label : '')}" placeholder="Tarifa plana semanal" required></label>
-          <label class="field"><span>Módulo</span><input name="module" value="${ui.esc(p ? p.module : 'sistema')}" placeholder="drivers"></label>
-          <label class="field"><span>Tipo *</span><select name="tipo">${['texto', 'monto', 'porcentaje', 'booleano', 'fecha'].map((t) => `<option value="${t}" ${(p && p.tipo) === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
-          <label class="field"><span>Valor *</span><input name="value" value="${ui.esc(p ? p.value : '')}" placeholder="10"></label>
-          <label class="field field-full"><span>Descripción</span><textarea name="descripcion" rows="2" placeholder="Qué controla este parámetro...">${ui.esc(p ? p.descripcion : '')}</textarea></label>
-        </form>`,
-        footer: `<button class="btn btn-ghost" data-cancel>Cancelar</button><button class="btn btn-primary" id="param-save">${ui.icon('check', 15)} ${p ? 'Guardar' : 'Crear'}</button>`
-      });
-      overlay.querySelector('[data-cancel]').addEventListener('click', () => ui.closeModal(overlay));
-      overlay.querySelector('#param-save').addEventListener('click', () => {
-        const form = overlay.querySelector('#param-form');
-        if (!form.reportValidity()) return;
-        try {
-          NS.store.upsertSystemParam({
-            key: form.elements.key.value,
-            label: form.elements.label.value,
-            module: form.elements.module.value || 'sistema',
-            tipo: form.elements.tipo.value,
-            value: form.elements.value.value,
-            descripcion: form.elements.descripcion.value
-          });
-          ui.closeModal(overlay);
-          ui.toast(p ? 'Parámetro actualizado.' : 'Parámetro creado.', 'success');
-          NS.app.refresh(true);
-        } catch (e) { ui.toast(e.message, 'error'); }
-      });
-    }
+  function openParamForm(key) {
+    const p = key ? NS.store.systemParam(key) : null;
+    const overlay = ui.modal({
+      title: p ? 'Editar parámetro' : 'Nuevo parámetro',
+      eyebrow: 'Parámetros de mantenimiento',
+      subtitle: p ? `Clave: ${ui.esc(p.key)}` : 'Define un parámetro configurable para el sistema.',
+      size: 'sm',
+      body: `<form id="param-form" class="form-grid" autocomplete="off">
+        <label class="field"><span>Clave *</span><input name="key" value="${ui.esc(p ? p.key : '')}" placeholder="tarifa_plana_semanal_usd" ${p ? 'disabled' : ''} required></label>
+        <label class="field"><span>Etiqueta *</span><input name="label" value="${ui.esc(p ? p.label : '')}" placeholder="Tarifa plana semanal" required></label>
+        <label class="field"><span>Módulo</span><input name="module" value="${ui.esc(p ? p.module : 'sistema')}" placeholder="drivers"></label>
+        <label class="field"><span>Tipo *</span><select name="tipo">${['texto', 'monto', 'porcentaje', 'booleano', 'fecha'].map((t) => `<option value="${t}" ${(p && p.tipo) === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+        <label class="field"><span>Valor *</span><input name="value" value="${ui.esc(p ? p.value : '')}" placeholder="10"></label>
+        <label class="field field-full"><span>Descripción</span><textarea name="descripcion" rows="2" placeholder="Qué controla este parámetro...">${ui.esc(p ? p.descripcion : '')}</textarea></label>
+      </form>`,
+      footer: `<button class="btn btn-ghost" data-cancel>Cancelar</button><button class="btn btn-primary" id="param-save">${ui.icon('check', 15)} ${p ? 'Guardar' : 'Crear'}</button>`
+    });
+    overlay.querySelector('[data-cancel]').addEventListener('click', () => ui.closeModal(overlay));
+    overlay.querySelector('#param-save').addEventListener('click', () => {
+      const form = overlay.querySelector('#param-form');
+      if (!form.reportValidity()) return;
+      try {
+        NS.store.upsertSystemParam({
+          key: form.elements.key.value,
+          label: form.elements.label.value,
+          module: form.elements.module.value || 'sistema',
+          tipo: form.elements.tipo.value,
+          value: form.elements.value.value,
+          descripcion: form.elements.descripcion.value
+        });
+        ui.closeModal(overlay);
+        ui.toast(p ? 'Parámetro actualizado.' : 'Parámetro creado.', 'success');
+        NS.app.refresh(true);
+      } catch (e) { ui.toast(e.message, 'error'); }
+    });
+  }
 
-    function askDeleteParam(key) {
-      const p = NS.store.systemParam(key);
-      ui.confirm({
-        title: 'Eliminar parámetro',
-        message: `¿Eliminar el parámetro "${ui.esc(p ? p.label : key)}" (${ui.esc(key)})?`,
-        confirmText: 'Eliminar', danger: true
-      }).then((ok) => {
-        if (!ok) return;
-        try {
-          NS.store.deleteSystemParam(key);
-          ui.toast('Parámetro eliminado.', 'success');
-          NS.app.refresh(true);
-        } catch (e) { ui.toast(e.message, 'error'); }
-      });
-    }
+  function askDeleteParam(key) {
+    const p = NS.store.systemParam(key);
+    ui.confirm({
+      title: 'Eliminar parámetro',
+      message: `¿Eliminar el parámetro "${ui.esc(p ? p.label : key)}" (${ui.esc(key)})?`,
+      confirmText: 'Eliminar', danger: true
+    }).then((ok) => {
+      if (!ok) return;
+      try {
+        NS.store.deleteSystemParam(key);
+        ui.toast('Parámetro eliminado.', 'success');
+        NS.app.refresh(true);
+      } catch (e) { ui.toast(e.message, 'error'); }
+    });
   }
 
   NS.modules.settings = { render, openParamForm };
