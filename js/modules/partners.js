@@ -278,15 +278,25 @@
   function askDelete(rif) {
     const ui = NS.ui;
     const p = NS.store.db.partners.find((x) => x.rif === rif);
+    if (!p) return;
+    const movCount = NS.store.db.partnerMovements.filter((m) => m.partner_rif === rif).length;
+    const tieneMovimientos = movCount > 0;
     ui.confirm({
-      title: 'Eliminar negocio asociado',
-      message: `¿Eliminar a ${p ? p.razon_social : rif} (${rif})? Solo es posible si no tiene movimientos.`,
-      confirmText: 'Eliminar', danger: true
+      title: tieneMovimientos ? 'Inactivar negocio asociado' : 'Eliminar negocio asociado',
+      message: tieneMovimientos
+        ? `No se puede eliminar a ${p.razon_social} (${rif}) porque tiene ${movCount} movimiento(s) de cartera registrada(s). Se inactivará en su lugar.`
+        : `¿Eliminar a ${p.razon_social} (${rif})? No tiene movimientos registrados.`,
+      confirmText: tieneMovimientos ? 'Inactivar' : 'Eliminar', danger: true
     }).then((ok) => {
       if (!ok) return;
       try {
-        NS.store.deletePartner(rif);
-        ui.toast('Negocio eliminado.', 'success');
+        if (tieneMovimientos) {
+          NS.store.upsertPartner({ ...p, estatus: 'Inactivo' });
+          ui.toast('Negocio inactivado. No se eliminó porque tiene movimientos de cartera.', 'info');
+        } else {
+          NS.store.deletePartner(rif);
+          ui.toast('Negocio eliminado.', 'success');
+        }
         NS.app.refresh(true);
       } catch (e) { ui.toast(e.message, 'error'); }
     });

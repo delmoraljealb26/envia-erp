@@ -104,25 +104,23 @@
         <div class="table-wrap">
           <table class="data-table">
             <thead><tr>
-              <th>Conductor</th><th>Cédula / RIF</th><th>Nivel</th><th>Vehículo</th><th>Contacto</th>
-              <th class="num">Comisión</th><th class="num">Por liquidar</th><th>Expediente</th><th>Estatus</th><th class="actions-col">Acciones</th>
+              <th>Conductor</th><th>Cédula / RIF</th><th>Nivel</th><th>Vehículo</th><th>Contacto</th><th class="num">Km / semana</th><th>Estatus</th><th class="actions-col">Acciones</th>
             </tr></thead>
             <tbody>
               ${list.length ? list.map((d) => {
                 const info = docsInfo(d);
+                const nivelPct = NS.store.systemParam('comision_nivel_' + (d.nivel || 'Zafiro').toLowerCase() + '_pct');
+                const pctLabel = nivelPct ? `${nivelPct.value}%` : `${d.porcentaje_comision}%`;
                 return `<tr>
                   <td><button class="cell-link cell-user" data-driver="${ui.esc(d.cedula_rif)}">
                     ${ui.avatar(d.nombres + ' ' + d.apellidos, 34)}
                     <span><strong>${ui.esc(d.nombres + ' ' + d.apellidos)}</strong><small class="block muted">${ui.esc(d.correo || 'Sin correo')}</small></span>
                   </button></td>
-                  <td><span class="mono strong">${ui.esc(d.cedula_rif)}</span><small class="block muted">${ui.esc(d.banco || '—')}</small></td>
-                  <td>${levelBadge(d.nivel)}</td>
-                  <td><span class="vehicle-cell"><b>${ui.esc(d.marca)} ${ui.esc(d.modelo)}</b><em>${ui.esc(d.placa)}</em></span><small class="block muted">${ui.esc(d.tipo_servicio)} · ${d.anio} · ${ui.esc(d.color)}</small></td>
+                  <td><span class="mono strong">${ui.esc(d.cedula_rif)}</span></td>
+                  <td>${levelBadge(d.nivel)}<small class="block muted">${d.porcentaje_comision}% base · ${pctLabel} nivel</small></td>
+                  <td><span class="vehicle-cell"><b>${ui.esc(d.marca)} ${ui.esc(d.modelo)}</b><em>${ui.esc(d.placa)}</em></span><small class="block muted">${ui.esc(d.tipo_servicio)} · ${d.anio}</small></td>
                   <td><span>${ui.esc(d.telefono)}</span><small class="block muted">Pago móvil ${ui.esc(d.telefono_pago_movil || '—')}</small></td>
-                  <td class="num"><strong>${d.porcentaje_comision}%</strong><small class="block muted">ENVIA</small></td>
-                  <td class="num"><strong class="${d.saldo_por_liquidar_usd > 0 ? 'text-orange' : ''}">${ui.usd(d.saldo_por_liquidar_usd)}</strong><small class="block muted">${ui.bs(ui.toBs(d.saldo_por_liquidar_usd))}</small></td>
-                  <td><div class="doc-progress"><span class="doc-progress-bar"><b style="width:${(info.approved / info.total) * 100}%"></b></span><small>${info.approved}/${info.total} aprobados</small></div>
-                    ${d.estatus_conductor === 'Inactivo por Documentos Vencidos' ? `<small class="text-danger block">${ui.icon('alert', 12)} Documento vencido</small>` : ''}</td>
+                  <td class="num">-</td>
                   <td>${ui.badge(d.estatus_conductor)}</td>
                   <td class="actions-col">
                     <button class="icon-btn" data-driver="${ui.esc(d.cedula_rif)}" title="Ver expediente">${ui.icon('eye', 16)}</button>
@@ -130,7 +128,7 @@
                     ${canDelete ? `<button class="icon-btn danger" data-del-driver="${ui.esc(d.cedula_rif)}" title="Eliminar">${ui.icon('trash', 16)}</button>` : ''}
                   </td>
                 </tr>`;
-              }).join('') : `<tr><td colspan="10">${ui.empty('car', 'No hay conductores que coincidan', 'Ajusta los filtros o registra un nuevo aliado operativo.', canCreate ? '<button class="btn btn-primary" id="drivers-empty-new">Nuevo conductor</button>' : '')}</td></tr>`}
+              }).join('') : `<tr><td colspan="8">${ui.empty('car', 'No hay conductores que coincidan', 'Ajusta los filtros o registra un nuevo aliado operativo.', canCreate ? '<button class="btn btn-primary" id="drivers-empty-new">Nuevo conductor</button>' : '')}</td></tr>`}
             </tbody>
           </table>
         </div>
@@ -728,15 +726,27 @@
   function askDelete(cedula) {
     const ui = NS.ui;
     const d = NS.store.db.drivers.find((x) => x.cedula_rif === cedula);
+    if (!d) return;
+    const svcCount = NS.store.db.services.filter((s) => s.conductor_cedula_rif === cedula).length;
+    const movCount = NS.store.db.driverMovements.filter((m) => m.conductor_cedula_rif === cedula).length;
+    const chgCount = NS.store.db.driverCharges.filter((c) => c.conductor_cedula_rif === cedula && c.saldo_usd > 0).length;
+    const tieneMovimientos = svcCount > 0 || movCount > 0 || chgCount > 0;
     ui.confirm({
-      title: 'Eliminar conductor',
-      message: `¿Eliminar a ${d ? d.nombres + ' ' + d.apellidos : cedula} (${cedula})? Solo es posible si no tiene servicios asociados.`,
-      confirmText: 'Eliminar', danger: true
+      title: tieneMovimientos ? 'Inactivar conductor' : 'Eliminar conductor',
+      message: tieneMovimientos
+        ? `No se puede eliminar a ${d.nombres + ' ' + d.apellidos} (${cedula}) porque tiene ${svcCount} servicio(s), ${movCount} movimiento(s) de wallet y ${chgCount} financiamiento(s) vigente(s). Se inactivará en su lugar.`
+        : `¿Eliminar a ${d.nombres + ' ' + d.apellidos} (${cedula})? No tiene movimientos registrados.`,
+      confirmText: tieneMovimientos ? 'Inactivar' : 'Eliminar', danger: true
     }).then((ok) => {
       if (!ok) return;
       try {
-        NS.store.deleteDriver(cedula);
-        ui.toast('Conductor eliminado.', 'success');
+        if (tieneMovimientos) {
+          NS.store.upsertDriver({ ...d, estatus_conductor: 'Inactivo por Documentos Vencidos', inactivado_por_documentos: true });
+          ui.toast('Conductor inactivado. No se eliminó porque tiene movimientos registrados.', 'info');
+        } else {
+          NS.store.deleteDriver(cedula);
+          ui.toast('Conductor eliminado.', 'success');
+        }
         NS.app.refresh(true);
       } catch (e) { ui.toast(e.message, 'error'); }
     });

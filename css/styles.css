@@ -306,7 +306,7 @@ svg { flex-shrink: 0; }
 }
 .sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 20px 22px 8px; }
 .sidebar-brand img { width: 152px; height: auto; border-radius: 8px; }
-.brand-tag { font-size: 9px; letter-spacing: 2px; font-weight: 700; color: var(--orange-2); border: 1px solid rgba(255,153,0,.36); padding: 4px 6px; border-radius: 5px; }
+.brand-tag { font-size: 9px; letter-spacing: .6px; font-weight: 700; color: var(--orange-2); background: rgba(255,255,255,.06); border: 1px solid rgba(255,153,0,.30); padding: 3px 7px; border-radius: 4px; white-space: nowrap; }
 .sidebar-caption { padding: 0 24px 14px; font-size: 9.5px; letter-spacing: 1.5px; text-transform: uppercase; color: #6880A0; font-weight: 600; }
 .sidebar-nav { flex: 1; overflow-y: auto; padding: 2px 14px 12px; }
 .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.16); border-color: transparent; }
@@ -1505,7 +1505,7 @@ button.topbar-user:hover { border-color: #C9D8EC; background: #F8FBFF; }
   .card-head { flex-direction: column; align-items: flex-start; }
 }
 
-/* Ajuste rápido de stock en tabla de inventario */
+/* Ajuste rï¿½pido de stock en tabla de inventario */
 .quick-stock { display: flex; align-items: center; gap: 5px; }
 .quick-stock input[type=number] { width: 60px; font-size: 11px; padding: 4px 7px; }
 

@@ -63,45 +63,66 @@
         </div>
       </div>
 
-      <div class="dash-grid">
-        <section class="card card-span-2">
-          <div class="card-head"><div><h3>Credenciales del proyecto</h3><p>SUPABASE_URL y SUPABASE_ANON_KEY · se guardan solo en este navegador</p></div>${configured ? ui.badge('Configurado', 'success') : ui.badge('Pendiente', 'warning')}</div>
-          <form id="supabase-form" class="form-grid" autocomplete="off">
-            <label class="field field-full"><span>SUPABASE_URL *</span><input name="url" value="${ui.esc(cfg.url || '')}" placeholder="https://tu-proyecto.supabase.co" ${canWrite ? '' : 'disabled'}></label>
-            <label class="field field-full"><span>SUPABASE_ANON_KEY *</span>
-              <div class="secret-input"><input name="anonKey" id="anon-key" type="password" value="${ui.esc(cfg.anonKey || '')}" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..." ${canWrite ? '' : 'disabled'}><button type="button" class="icon-btn" id="toggle-key" title="Mostrar u ocultar">${ui.icon('eye', 17)}</button></div>
-              <small>Usa la clave <strong>anon public</strong>. Nunca ingreses la service_role en el frontend.</small>
-            </label>
-            <div class="field-full form-actions">
-              ${canWrite ? `<button type="button" class="btn btn-ghost" id="test-connection">${ui.icon('link', 15)} Probar conexión</button><button type="button" class="btn btn-primary" id="save-config">${ui.icon('check', 15)} Guardar configuración</button>` : `<span class="readonly-chip">${ui.icon('eye', 13)} Solo lectura</span>`}
-              <a class="btn btn-ghost" href="sql/supabase_schema.sql" target="_blank" rel="noopener">${ui.icon('file', 15)} Ver script SQL</a>
-            </div>
-          </form>
-          ${testResult ? `<div class="test-result ${testResult.ok ? 'ok' : 'warn'}">${ui.icon(testResult.ok ? 'check' : 'alert', 17)}<div><strong>${testResult.ok ? 'Conexión verificada' : 'Conexión con observaciones'}</strong><span>${ui.esc(testResult.message)}</span></div></div>` : ''}
-          <div class="steps">
-            <div class="step"><span>1</span><div><strong>Crea el proyecto</strong><p>Abre supabase.com y crea un proyecto PostgreSQL.</p></div></div>
-            <div class="step"><span>2</span><div><strong>Ejecuta el esquema</strong><p>Copia <code>sql/supabase_schema.sql</code> en el SQL Editor. Crea tablas, índices, triggers, buckets y políticas RLS.</p></div></div>
-            <div class="step"><span>3</span><div><strong>Conecta y sincroniza</strong><p>Pega URL y anon key, prueba la conexión y pulsa “Sincronizar ahora”.</p></div></div>
-          </div>
-        </section>
+      <section class="card card-span-2">
+        <div class="card-head"><div><h3>Parámetros de mantenimiento del sistema</h3><p>Tarifas, comisiones por nivel, planes, descuentos y beneficios parametrizables por módulo.</p></div>${NS.app.canAction('settings', 'parametros') ? `<button class="btn btn-primary btn-sm" id="params-new">${ui.icon('plus', 14)} Nuevo parámetro</button>` : ''}</div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Clave</th><th>Etiqueta</th><th>Módulo</th><th>Tipo</th><th class="num">Valor</th><th>Descripción</th><th class="actions-col">Acciones</th></tr></thead>
+            <tbody>
+              ${db.systemParams.length ? db.systemParams.map((p) => `<tr>
+                <td><span class="mono strong">${ui.esc(p.key)}</span></td>
+                <td>${ui.esc(p.label)}</td>
+                <td>${ui.badge(p.module, 'info')}</td>
+                <td>${ui.badge(p.tipo, 'info')}</td>
+                <td class="num"><strong>${p.tipo === 'porcentaje' ? p.value + '%' : p.tipo === 'monto' ? '$' + p.value : p.value}</strong></td>
+                <td>${ui.esc(p.descripcion || '—')}</td>
+                <td class="actions-col">
+                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn" data-edit-param="${ui.esc(p.key)}" title="Editar">${ui.icon('edit', 16)}</button>` : ''}
+                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn danger" data-del-param="${ui.esc(p.key)}" title="Eliminar">${ui.icon('trash', 16)}</button>` : ''}
+                </td>
+              </tr>`).join('') : `<tr><td colspan="7">${ui.empty('settings', 'Sin parámetros', 'Crea el primer parámetro de mantenimiento del sistema.', NS.app.canAction('settings', 'parametros') ? '<button class="btn btn-primary" id="params-empty-new">Nuevo parámetro</button>' : '')}</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
-        <section class="card">
-          <div class="card-head"><div><h3>Estado de la conexión</h3><p>Diagnóstico del proyecto</p></div></div>
-          <div class="status-list">
-            <div class="status-row"><span>API REST</span><strong class="${configured ? 'text-success' : 'muted'}">${configured ? 'Configurada' : 'No configurada'}</strong></div>
-            <div class="status-row"><span>Storage</span><strong class="${configured ? 'text-success' : 'muted'}">${configured ? 'Disponible' : 'Fallback local'}</strong></div>
-            <div class="status-row"><span>Última prueba</span><strong>${cfg.lastTest ? ui.dateTime(cfg.lastTest) : '—'}</strong></div>
-            <div class="status-row"><span>Última sincronización</span><strong>${cfg.lastSync ? ui.dateTime(cfg.lastSync) : '—'}</strong></div>
-            <div class="status-row"><span>Tablas del esquema</span><strong>${TABLES.length + 2} definidas</strong></div>
-            <div class="status-row"><span>Buckets</span><strong>3 configurados</strong></div>
+      <section class="card card-span-2">
+        <div class="card-head"><div><h3>Credenciales del proyecto Supabase</h3><p>SUPABASE_URL y SUPABASE_ANON_KEY · se guardan solo en este navegador</p></div>${configured ? ui.badge('Configurado', 'success') : ui.badge('Pendiente', 'warning')}</div>
+        <form id="supabase-form" class="form-grid" autocomplete="off">
+          <label class="field field-full"><span>SUPABASE_URL *</span><input name="url" value="${ui.esc(cfg.url || '')}" placeholder="https://tu-proyecto.supabase.co" ${canWrite ? '' : 'disabled'}></label>
+          <label class="field field-full"><span>SUPABASE_ANON_KEY *</span>
+            <div class="secret-input"><input name="anonKey" id="anon-key" type="password" value="${ui.esc(cfg.anonKey || '')}" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..." ${canWrite ? '' : 'disabled'}><button type="button" class="icon-btn" id="toggle-key" title="Mostrar u ocultar">${ui.icon('eye', 17)}</button></div>
+            <small>Usa la clave <strong>anon public</strong>. Nunca ingreses la service_role en el frontend.</small>
+          </label>
+          <div class="field-full form-actions">
+            ${canWrite ? `<button type="button" class="btn btn-ghost" id="test-connection">${ui.icon('link', 15)} Probar conexión</button><button type="button" class="btn btn-primary" id="save-config">${ui.icon('check', 15)} Guardar configuración</button>` : `<span class="readonly-chip">${ui.icon('eye', 13)} Solo lectura</span>`}
+            <a class="btn btn-ghost" href="sql/supabase_schema.sql" target="_blank" rel="noopener">${ui.icon('file', 15)} Ver script SQL</a>
           </div>
-          <div class="bucket-list">
-            <div class="bucket"><span class="bucket-ico">${ui.icon('image', 15)}</span><div><strong>documentos-clientes</strong><small>Cédulas y RIF de clientes</small></div></div>
-            <div class="bucket"><span class="bucket-ico">${ui.icon('file', 15)}</span><div><strong>documentos-conductores</strong><small>Licencias, RIF y circulación</small></div></div>
-            <div class="bucket"><span class="bucket-ico">${ui.icon('camera', 15)}</span><div><strong>fotos-vehiculos</strong><small>Frontal, lateral y placa</small></div></div>
-          </div>
-        </section>
-      </div>
+        </form>
+        ${testResult ? `<div class="test-result ${testResult.ok ? 'ok' : 'warn'}">${ui.icon(testResult.ok ? 'check' : 'alert', 17)}<div><strong>${testResult.ok ? 'Conexión verificada' : 'Conexión con observaciones'}</strong><span>${ui.esc(testResult.message)}</span></div></div>` : ''}
+        <div class="steps">
+          <div class="step"><span>1</span><div><strong>Crea el proyecto</strong><p>Abre supabase.com y crea un proyecto PostgreSQL.</p></div></div>
+          <div class="step"><span>2</span><div><strong>Ejecuta el esquema</strong><p>Copia <code>sql/supabase_schema.sql</code> en el SQL Editor. Crea tablas, índices, triggers, buckets y políticas RLS.</p></div></div>
+          <div class="step"><span>3</span><div><strong>Conecta y sincroniza</strong><p>Pega URL y anon key, prueba la conexión y pulsa “Sincronizar ahora”.</p></div></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><div><h3>Estado de la conexión</h3><p>Diagnóstico del proyecto</p></div></div>
+        <div class="status-list">
+          <div class="status-row"><span>API REST</span><strong class="${configured ? 'text-success' : 'muted'}">${configured ? 'Configurada' : 'No configurada'}</strong></div>
+          <div class="status-row"><span>Storage</span><strong class="${configured ? 'text-success' : 'muted'}">${configured ? 'Disponible' : 'Fallback local'}</strong></div>
+          <div class="status-row"><span>Última prueba</span><strong>${cfg.lastTest ? ui.dateTime(cfg.lastTest) : '—'}</strong></div>
+          <div class="status-row"><span>Última sincronización</span><strong>${cfg.lastSync ? ui.dateTime(cfg.lastSync) : '—'}</strong></div>
+          <div class="status-row"><span>Tablas del esquema</span><strong>${TABLES.length + 2} definidas</strong></div>
+          <div class="status-row"><span>Buckets</span><strong>3 configurados</strong></div>
+        </div>
+        <div class="bucket-list">
+          <div class="bucket"><span class="bucket-ico">${ui.icon('image', 15)}</span><div><strong>documentos-clientes</strong><small>Cédulas y RIF de clientes</small></div></div>
+          <div class="bucket"><span class="bucket-ico">${ui.icon('file', 15)}</span><div><strong>documentos-conductores</strong><small>Licencias, RIF y circulación</small></div></div>
+          <div class="bucket"><span class="bucket-ico">${ui.icon('camera', 15)}</span><div><strong>fotos-vehiculos</strong><small>Frontal, lateral y placa</small></div></div>
+        </div>
+      </section>
 
       <section class="card">
         <div class="card-head"><div><h3>Mapa de sincronización</h3><p>Filas locales listas para upsert en PostgreSQL</p></div><span class="chip chip-navy">${ui.icon('database', 13)} ${db.entries.length} asientos</span></div>
@@ -127,23 +148,23 @@
       </section>
 
       <section class="card">
-        <div class="card-head"><div><h3>Parámetros de mantenimiento del sistema</h3><p>Tarifas, comisiones por nivel, descuentos y beneficios parametrizables por módulo.</p></div>${NS.app.canAction('settings', 'parametros') ? `<button class="btn btn-primary btn-sm" id="params-new">${ui.icon('plus', 14)} Nuevo parámetro</button>` : ''}</div>
+        <div class="card-head"><div><h3>Integración con APIs externas</h3><p>Servicios externos sincronizados (tasa de cambio, tributos, etc.) y mantenibles desde este panel.</p></div>${NS.app.canAction('settings', 'parametros') ? `<button class="btn btn-primary btn-sm" id="api-new">${ui.icon('plus', 14)} Nueva API</button>` : ''}</div>
         <div class="table-wrap">
           <table class="data-table">
-            <thead><tr><th>Clave</th><th>Etiqueta</th><th>Módulo</th><th>Tipo</th><th class="num">Valor</th><th>Descripción</th><th class="actions-col">Acciones</th></tr></thead>
+            <thead><tr><th>Clave</th><th>Nombre</th><th>Endpoint</th><th>Activa</th><th>Sincronizada</th><th>Última sinc.</th><th class="actions-col">Acciones</th></tr></thead>
             <tbody>
-              ${db.systemParams.length ? db.systemParams.map((p) => `<tr>
-                <td><span class="mono strong">${ui.esc(p.key)}</span></td>
-                <td>${ui.esc(p.label)}</td>
-                <td>${ui.badge(p.module, 'info')}</td>
-                <td>${ui.badge(p.tipo, 'info')}</td>
-                <td class="num"><strong>${p.tipo === 'porcentaje' ? p.value + '%' : p.tipo === 'monto' ? '$' + p.value : p.value}</strong></td>
-                <td>${ui.esc(p.descripcion || '—')}</td>
+              ${db.apiIntegrations.length ? db.apiIntegrations.map((a) => `<tr>
+                <td><span class="mono strong">${ui.esc(a.key)}</span></td>
+                <td>${ui.esc(a.nombre)}</td>
+                <td>${ui.esc(a.endpoint || '—')}</td>
+                <td>${ui.badge(a.activo ? 'Activa' : 'Inactiva', a.activo ? 'success' : 'danger')}</td>
+                <td>${ui.badge(a.sincronizado ? 'OK' : 'Pendiente', a.sincronizado ? 'success' : 'warning')}</td>
+                <td>${a.ultima_sincronizacion || '—'}</td>
                 <td class="actions-col">
-                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn" data-edit-param="${ui.esc(p.key)}" title="Editar">${ui.icon('edit', 16)}</button>` : ''}
-                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn danger" data-del-param="${ui.esc(p.key)}" title="Eliminar">${ui.icon('trash', 16)}</button>` : ''}
+                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn" data-edit-api="${ui.esc(a.key)}" title="Editar">${ui.icon('edit', 16)}</button>` : ''}
+                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn danger" data-del-api="${ui.esc(a.key)}" title="Eliminar">${ui.icon('trash', 16)}</button>` : ''}
                 </td>
-              </tr>`).join('') : `<tr><td colspan="7">${ui.empty('settings', 'Sin parámetros', 'Crea el primer parámetro de mantenimiento del sistema.', NS.app.canAction('settings', 'parametros') ? '<button class="btn btn-primary" id="params-empty-new">Nuevo parámetro</button>' : '')}</td></tr>`}
+              </tr>`).join('') : `<tr><td colspan="7">${ui.empty('api', 'Sin APIs configuradas', 'Registra la primera integración externa.', NS.app.canAction('settings', 'parametros') ? '<button class="btn btn-primary" id="api-empty-new">Nueva API</button>' : '')}</td></tr>`}
             </tbody>
           </table>
         </div>
@@ -289,26 +310,34 @@
     if (paramsEmptyNew) paramsEmptyNew.addEventListener('click', () => openParamForm());
     view.querySelectorAll('[data-edit-param]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); openParamForm(b.dataset.editParam); }));
     view.querySelectorAll('[data-del-param]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); askDeleteParam(b.dataset.delParam); }));
+
+    /* Integraciones con APIs */
+    const apiNew = $('#api-new');
+    if (apiNew) apiNew.addEventListener('click', () => openApiForm());
+    const apiEmptyNew = $('#api-empty-new');
+    if (apiEmptyNew) apiEmptyNew.addEventListener('click', () => openApiForm());
+    view.querySelectorAll('[data-edit-api]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); openApiForm(b.dataset.editApi); }));
+    view.querySelectorAll('[data-del-api]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); askDeleteApi(b.dataset.delApi); }));
   }
 
   function openParamForm(key) {
     const p = key ? NS.store.systemParam(key) : null;
-    const overlay = ui.modal({
+    const overlay = NS.ui.modal({
       title: p ? 'Editar parámetro' : 'Nuevo parámetro',
       eyebrow: 'Parámetros de mantenimiento',
-      subtitle: p ? `Clave: ${ui.esc(p.key)}` : 'Define un parámetro configurable para el sistema.',
+      subtitle: p ? `Clave: ${NS.ui.esc(p.key)}` : 'Define un parámetro configurable para el sistema.',
       size: 'sm',
       body: `<form id="param-form" class="form-grid" autocomplete="off">
-        <label class="field"><span>Clave *</span><input name="key" value="${ui.esc(p ? p.key : '')}" placeholder="tarifa_plana_semanal_usd" ${p ? 'disabled' : ''} required></label>
-        <label class="field"><span>Etiqueta *</span><input name="label" value="${ui.esc(p ? p.label : '')}" placeholder="Tarifa plana semanal" required></label>
-        <label class="field"><span>Módulo</span><input name="module" value="${ui.esc(p ? p.module : 'sistema')}" placeholder="drivers"></label>
+        <label class="field"><span>Clave *</span><input name="key" value="${NS.ui.esc(p ? p.key : '')}" placeholder="tarifa_plana_semanal_usd" ${p ? 'disabled' : ''} required></label>
+        <label class="field"><span>Etiqueta *</span><input name="label" value="${NS.ui.esc(p ? p.label : '')}" placeholder="Tarifa plana semanal" required></label>
+        <label class="field"><span>Módulo</span><input name="module" value="${NS.ui.esc(p ? p.module : 'sistema')}" placeholder="drivers"></label>
         <label class="field"><span>Tipo *</span><select name="tipo">${['texto', 'monto', 'porcentaje', 'booleano', 'fecha'].map((t) => `<option value="${t}" ${(p && p.tipo) === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
-        <label class="field"><span>Valor *</span><input name="value" value="${ui.esc(p ? p.value : '')}" placeholder="10"></label>
-        <label class="field field-full"><span>Descripción</span><textarea name="descripcion" rows="2" placeholder="Qué controla este parámetro...">${ui.esc(p ? p.descripcion : '')}</textarea></label>
+        <label class="field"><span>Valor *</span><input name="value" value="${NS.ui.esc(p ? p.value : '')}" placeholder="10"></label>
+        <label class="field field-full"><span>Descripción</span><textarea name="descripcion" rows="2" placeholder="Qué controla este parámetro...">${NS.ui.esc(p ? p.descripcion : '')}</textarea></label>
       </form>`,
-      footer: `<button class="btn btn-ghost" data-cancel>Cancelar</button><button class="btn btn-primary" id="param-save">${ui.icon('check', 15)} ${p ? 'Guardar' : 'Crear'}</button>`
+      footer: `<button class="btn btn-ghost" data-cancel>Cancelar</button><button class="btn btn-primary" id="param-save">${NS.ui.icon('check', 15)} ${p ? 'Guardar' : 'Crear'}</button>`
     });
-    overlay.querySelector('[data-cancel]').addEventListener('click', () => ui.closeModal(overlay));
+    overlay.querySelector('[data-cancel]').addEventListener('click', () => NS.ui.closeModal(overlay));
     overlay.querySelector('#param-save').addEventListener('click', () => {
       const form = overlay.querySelector('#param-form');
       if (!form.reportValidity()) return;
@@ -321,28 +350,83 @@
           value: form.elements.value.value,
           descripcion: form.elements.descripcion.value
         });
-        ui.closeModal(overlay);
-        ui.toast(p ? 'Parámetro actualizado.' : 'Parámetro creado.', 'success');
+        NS.ui.closeModal(overlay);
+        NS.ui.toast(p ? 'Parámetro actualizado.' : 'Parámetro creado.', 'success');
         NS.app.refresh(true);
-      } catch (e) { ui.toast(e.message, 'error'); }
+      } catch (e) { NS.ui.toast(e.message, 'error'); }
     });
   }
 
   function askDeleteParam(key) {
     const p = NS.store.systemParam(key);
-    ui.confirm({
+    NS.ui.confirm({
       title: 'Eliminar parámetro',
-      message: `¿Eliminar el parámetro "${ui.esc(p ? p.label : key)}" (${ui.esc(key)})?`,
+      message: `¿Eliminar el parámetro "${NS.ui.esc(p ? p.label : key)}" (${NS.ui.esc(key)})?`,
       confirmText: 'Eliminar', danger: true
     }).then((ok) => {
       if (!ok) return;
       try {
         NS.store.deleteSystemParam(key);
-        ui.toast('Parámetro eliminado.', 'success');
+        NS.ui.toast('Parámetro eliminado.', 'success');
         NS.app.refresh(true);
-      } catch (e) { ui.toast(e.message, 'error'); }
+      } catch (e) { NS.ui.toast(e.message, 'error'); }
     });
   }
 
-  NS.modules.settings = { render, openParamForm };
+  function openApiForm(key) {
+    const a = key ? NS.store.apiIntegrations().find((x) => x.key === key) : null;
+    const overlay = NS.ui.modal({
+      title: a ? 'Editar integración API' : 'Nueva integración API',
+      eyebrow: 'Integración con APIs externas',
+      subtitle: a ? `Clave: ${NS.ui.esc(a.key)}` : 'Define una integración con un servicio externo.',
+      size: 'sm',
+      body: `<form id="api-form" class="form-grid" autocomplete="off">
+        <label class="field"><span>Clave *</span><input name="key" value="${NS.ui.esc(a ? a.key : '')}" placeholder="bcv_tasa_dolar" ${a ? 'disabled' : ''} required></label>
+        <label class="field"><span>Nombre *</span><input name="nombre" value="${NS.ui.esc(a ? a.nombre : '')}" placeholder="Tasa BCV Dólar" required></label>
+        <label class="field"><span>Endpoint</span><input name="endpoint" value="${NS.ui.esc(a ? a.endpoint : '')}" placeholder="https://api.ejemplo.com"></label>
+        <label class="field check-inline"><input type="checkbox" name="activo" ${a ? (a.activo ? 'checked' : '') : 'checked'}> API activa</label>
+        <label class="field check-inline"><input type="checkbox" name="sincronizado" ${a ? (a.sincronizado ? 'checked' : '') : ''}> Sincronizada correctamente</label>
+        <label class="field"><span>Última sincronización</span><input name="ultima_sincronizacion" type="date" value="${NS.ui.esc(a ? a.ultima_sincronizacion : '')}"></label>
+        <label class="field field-full"><span>Descripción</span><textarea name="descripcion" rows="2" placeholder="Qué hace esta integración...">${NS.ui.esc(a ? a.descripcion : '')}</textarea></label>
+      </form>`,
+      footer: `<button class="btn btn-ghost" data-cancel>Cancelar</button><button class="btn btn-primary" id="api-save">${NS.ui.icon('check', 15)} ${a ? 'Guardar' : 'Crear'}</button>`
+    });
+    overlay.querySelector('[data-cancel]').addEventListener('click', () => NS.ui.closeModal(overlay));
+    overlay.querySelector('#api-save').addEventListener('click', () => {
+      const form = overlay.querySelector('#api-form');
+      if (!form.reportValidity()) return;
+      try {
+        NS.store.upsertApiIntegration({
+          key: form.elements.key.value,
+          nombre: form.elements.nombre.value,
+          endpoint: form.elements.endpoint.value,
+          activo: form.elements.activo.checked,
+          sincronizado: form.elements.sincronizado.checked,
+          ultima_sincronizacion: form.elements.ultima_sincronizacion.value,
+          descripcion: form.elements.descripcion.value
+        });
+        NS.ui.closeModal(overlay);
+        NS.ui.toast(a ? 'API actualizada.' : 'API creada.', 'success');
+        NS.app.refresh(true);
+      } catch (e) { NS.ui.toast(e.message, 'error'); }
+    });
+  }
+
+  function askDeleteApi(key) {
+    const a = NS.store.apiIntegrations().find((x) => x.key === key);
+    NS.ui.confirm({
+      title: 'Eliminar integración API',
+      message: `¿Eliminar la API "${NS.ui.esc(a ? a.nombre : key)}" (${NS.ui.esc(key)})?`,
+      confirmText: 'Eliminar', danger: true
+    }).then((ok) => {
+      if (!ok) return;
+      try {
+        NS.store.deleteApiIntegration(key);
+        NS.ui.toast('API eliminada.', 'success');
+        NS.app.refresh(true);
+      } catch (e) { NS.ui.toast(e.message, 'error'); }
+    });
+  }
+
+  NS.modules.settings = { render, openParamForm, openApiForm };
 })();

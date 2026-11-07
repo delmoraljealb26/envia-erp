@@ -1008,6 +1008,7 @@
       driverCharges: [],
       driverMovements: [],
       systemParams: [],
+      apiIntegrations: [],
       accounts: clone(ACCOUNTS),
       accountingRules: clone(DEFAULT_RULES).map((r) => ({ ...r, id: 'rule_' + r.evento, updated_at: stamp() })),
       entries: [],
@@ -1590,6 +1591,19 @@
           migrated = true;
         }
       });
+      // APIs externas por defecto
+      if (!Array.isArray(db.apiIntegrations)) { db.apiIntegrations = []; migrated = true; }
+      const defaultApis = [
+        { key: 'bcv_tasa_dolar', nombre: 'Tasa BCV Dólar', endpoint: 'https://bcv.org.ve', activo: true, sincronizado: true, ultima_sincronizacion: new Date().toISOString().slice(0, 10), descripcion: 'Tasa oficial del Banco Central de Venezuela para conversión USD/VES.' },
+        { key: 'seniat_islr', nombre: 'SENIAT ISLR', endpoint: 'https://seniat.gob.ve', activo: false, sincronizado: false, ultima_sincronizacion: '', descripcion: 'Retenciones de ISLR según Decreto 1.808.' },
+        { key: 'seniat_iva', nombre: 'SENIAT IVA', endpoint: 'https://seniat.gob.ve', activo: false, sincronizado: false, ultima_sincronizacion: '', descripcion: 'Control de alícuotas de IVA.' }
+      ];
+      defaultApis.forEach((api) => {
+        if (!db.apiIntegrations.some((a) => a.key === api.key)) {
+          db.apiIntegrations.push({ ...api, created_at: stamp(), updated_at: stamp() });
+          migrated = true;
+        }
+      });
       if (migrated) {
         db.meta.schemaVersion = targetVersion;
         persist();
@@ -2106,6 +2120,41 @@
     },
     systemParamsByModule(module) {
       return current.systemParams.filter((p) => p.module === module);
+    },
+
+    /* integraciones con APIs externas */
+    apiIntegrations() {
+      return current.apiIntegrations.slice();
+    },
+    upsertApiIntegration(data) {
+      const key = norm(data.key);
+      if (!key) throw new Error('La clave de la API es obligatoria.');
+      if (!/^[a-z0-9_]{3,40}$/.test(key)) throw new Error('La clave debe tener entre 3 y 40 caracteres (minúsculas, números y guion bajo).');
+      const existing = current.apiIntegrations.find((x) => x.key === key);
+      if (!existing && current.apiIntegrations.some((x) => x.key === key)) throw new Error('Ya existe una API con esa clave.');
+      const rec = {
+        ...(existing || {}),
+        ...data,
+        key,
+        nombre: required(data.nombre, 'Nombre'),
+        endpoint: data.endpoint || '',
+        activo: data.activo !== false,
+        sincronizado: data.sincronizado || false,
+        ultima_sincronizacion: data.ultima_sincronizacion || '',
+        descripcion: data.descripcion || '',
+        updated_at: stamp(),
+        created_at: existing ? existing.created_at : stamp()
+      };
+      if (existing) Object.assign(existing, rec);
+      else current.apiIntegrations.unshift(rec);
+      api.addAuditLog('actualizar', 'api_integrations', `API ${key}`, key);
+      persist();
+      return rec;
+    },
+    deleteApiIntegration(key) {
+      current.apiIntegrations = current.apiIntegrations.filter((a) => a.key !== key);
+      api.addAuditLog('eliminar', 'api_integrations', `API ${key}`, key);
+      persist();
     },
 
     /* tienda del conductor e inventario */
