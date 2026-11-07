@@ -803,7 +803,7 @@
       NS.store.addAuditLog('reporte', module, `${action === 'print' ? 'Impresión' : 'Exportación Excel'} · ${built.title}`, report.id);
       NS.ui.toast(action === 'print' ? 'Ventana de impresión abierta.' : 'Reporte Excel generado.', 'success');
     } catch (e) {
-      console.error('ENVIA reporte', module, report.id, e);
+      NS.errors.fail(e, 'Reporte ' + report.id);
       NS.ui.toast('No se pudo generar el reporte: ' + e.message, 'error');
     }
   }

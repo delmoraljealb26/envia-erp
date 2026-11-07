@@ -267,8 +267,11 @@
   <script src="js/services/store.js"></script>
   <script src="js/services/supabaseService.js"></script>
   <script src="js/services/exchangeRateService.js"></script>
-  <!-- Interfaz y módulos -->
+  <!-- Interfaz, errores y sesión -->
   <script src="js/modules/ui.js"></script>
+  <script src="js/services/errorService.js"></script>
+  <script src="js/services/sessionService.js"></script>
+  <!-- Módulos de vista -->
   <script src="js/modules/dashboard.js"></script>
   <script src="js/modules/clients.js"></script>
   <script src="js/modules/drivers.js"></script>
@@ -280,7 +283,9 @@
   <script src="js/modules/audit.js"></script>
   <script src="js/modules/users.js"></script>
   <script src="js/modules/settings.js"></script>
-  <!-- Arranque y RBAC -->
+  <script src="js/modules/login.js"></script>
+  <!-- Ruteador y arranque -->
+  <script src="js/services/routerService.js"></script>
   <script src="js/app.js"></script>
   <script>document.getElementById('login-year').textContent = new Date().getFullYear();</script>
 </body>

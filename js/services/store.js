@@ -30,6 +30,41 @@
   const clone = (o) => JSON.parse(JSON.stringify(o));
 
   /* ------------------------------------------------------------------ *
+   *  VALIDACIONES DE ENTRADA (usadas antes de guardar cualquier registro)
+   *  ------------------------------------------------------------------ */
+  const ID_RE = /^[VEJ]-[0-9]{7,9}$/;
+  function normId(v) {
+    let s = String(v || '').toUpperCase().replace(/\s+/g, '').replace(/[^VEJ0-9-]/g, '');
+    if (!s.includes('-') && /^[VEJ]/.test(s)) s = s[0] + '-' + s.slice(1);
+    return s;
+  }
+  function validId(v) { return ID_RE.test(normId(v)); }
+  function idError(v) {
+    if (!v) return 'La Cédula / RIF es obligatoria.';
+    if (!validId(v)) return 'Formato de Cédula / RIF inválido. Use V-12345678, E-12345678 o J-123456789.';
+    return '';
+  }
+  function validEmail(v) { return !v || /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(v)); }
+  function emailError(v) { return v && !validEmail(v) ? 'El correo electrónico no es válido.' : ''; }
+  function validPhone(v) { const d = String(v || '').replace(/\D/g, ''); return d.length >= 10 && d.length <= 13; }
+  function phoneError(v) { return v && !validPhone(v) ? 'El teléfono debe tener entre 10 y 13 dígitos.' : ''; }
+  function money(n, campo) {
+    const x = Number(n);
+    if (!isFinite(x) || x < 0) throw new Error((campo || 'El monto') + ' debe ser un número válido igual o mayor a cero.');
+    return round(x);
+  }
+  function moneyPositive(n, campo) {
+    const x = money(n, campo);
+    if (x <= 0) throw new Error((campo || 'El monto') + ' debe ser mayor a cero.');
+    return x;
+  }
+  function required(v, campo) {
+    if (v == null || String(v).trim() === '') throw new Error((campo || 'El campo') + ' es obligatorio.');
+    return String(v).trim();
+  }
+  function accountCodeValid(codigo) { return /^[0-9]+(\.[0-9]+)*$/.test(String(codigo || '')); }
+
+  /* ------------------------------------------------------------------ *
    *  CATÁLOGOS BASE
    * ------------------------------------------------------------------ */
   const ACTION_LABELS = {
@@ -902,11 +937,14 @@
   }
 
   function postEntryInternal(db, data) {
-    const lines = (data.lines || []).filter((l) => Number(l.debe) || Number(l.haber)).map((l) => ({
-      cuenta: l.cuenta,
-      debe: round(l.debe),
-      haber: round(l.haber)
-    }));
+    if (!Array.isArray(data.lines) || data.lines.length < 2) throw new Error('El asiento debe contener al menos dos líneas.');
+    const lines = data.lines.map((l) => {
+      required(l.cuenta, 'Cuenta contable');
+      const debe = money(l.debe, 'DEBE de ' + l.cuenta);
+      const haber = money(l.haber, 'HABER de ' + l.cuenta);
+      return { cuenta: l.cuenta, debe, haber };
+    }).filter((l) => l.debe > 0 || l.haber > 0);
+    if (lines.length < 2) throw new Error('El asiento debe contener al menos dos líneas con movimiento.');
     const d = round(lines.reduce((s, l) => s + l.debe, 0));
     const h = round(lines.reduce((s, l) => s + l.haber, 0));
     if (Math.abs(d - h) > 0.011) throw new Error('Partida doble: el asiento no cuadra (DEBE ' + d + ' / HABER ' + h + ').');
@@ -1350,13 +1388,32 @@
 
     /* clientes */
     upsertClient(data) {
-      const cedula = norm(data.cedula_rif).toUpperCase();
+      const cedErr = idError(data.cedula_rif);
+      if (cedErr) throw new Error(cedErr);
+      const cedula = normId(data.cedula_rif);
       if (!cedula) throw new Error('La Cédula / RIF es obligatoria.');
+      const mailErr = emailError(data.correo);
+      if (mailErr) throw new Error(mailErr);
+      const telErr = phoneError(data.telefono);
+      if (telErr) throw new Error(telErr);
+      money(data.saldo_wallet_usd, 'Saldo Wallet USD');
+      money(data.saldo_wallet_ves, 'Saldo Wallet VES');
+      money(Number(data.total_carreras) || 0, 'Total carreras');
+      money(Number(data.total_encomiendas) || 0, 'Total encomiendas');
       const existing = current.clients.find((c) => c.cedula_rif === cedula);
+      if (!existing && current.clients.some((c) => c.cedula_rif === cedula)) {
+        throw new Error('Ya existe un cliente con esa cédula / RIF.');
+      }
       const rec = {
         ...(existing || {}),
         ...data,
         cedula_rif: cedula,
+        nombres: required(data.nombres, 'Nombres'),
+        apellidos: required(data.apellidos, 'Apellidos'),
+        telefono: required(data.telefono, 'Teléfono móvil'),
+        correo: required(data.correo, 'Correo electrónico'),
+        direccion: required(data.direccion, 'Dirección completa'),
+        estatus: data.estatus || 'Activo',
         saldo_wallet_usd: round(data.saldo_wallet_usd),
         saldo_wallet_ves: round(data.saldo_wallet_ves),
         total_carreras: Number(data.total_carreras) || 0,
@@ -1413,17 +1470,47 @@
 
     /* conductores */
     upsertDriver(data) {
-      const cedula = norm(data.cedula_rif).toUpperCase();
+      const cedErr = idError(data.cedula_rif);
+      if (cedErr) throw new Error(cedErr);
+      const cedula = normId(data.cedula_rif);
       if (!cedula) throw new Error('La Cédula / RIF es obligatoria.');
+      const mailErr = emailError(data.correo);
+      if (mailErr) throw new Error(mailErr);
+      const telErr = phoneError(data.telefono);
+      if (telErr) throw new Error(telErr);
+      const telPagoErr = phoneError(data.telefono_pago_movil);
+      if (telPagoErr) throw new Error(telPagoErr);
+      const cedPagoErr = idError(data.cedula_pago_movil);
+      if (cedPagoErr) throw new Error(cedPagoErr);
+      const comPct = Number(data.porcentaje_comision);
+      if (!isFinite(comPct) || comPct < 0 || comPct > 100) throw new Error('El % de comisión debe estar entre 0 y 100.');
+      money(data.saldo_por_liquidar_usd, 'Saldo por liquidar');
+      const anio = Number(data.anio) || new Date().getFullYear();
+      if (anio < 1990 || anio > 2030) throw new Error('El año del vehículo debe estar entre 1990 y 2030.');
       const existing = current.drivers.find((d) => d.cedula_rif === cedula);
+      if (!existing && current.drivers.some((d) => d.cedula_rif === cedula)) {
+        throw new Error('Ya existe un conductor con esa cédula / RIF.');
+      }
       const rec = {
         ...(existing || {}),
         ...data,
         cedula_rif: cedula,
+        nombres: required(data.nombres, 'Nombres'),
+        apellidos: required(data.apellidos, 'Apellidos'),
+        telefono: required(data.telefono, 'Teléfono móvil'),
+        correo: required(data.correo, 'Correo electrónico'),
+        direccion: required(data.direccion, 'Dirección completa'),
+        telefono_pago_movil: required(data.telefono_pago_movil, 'Teléfono pago móvil'),
+        cedula_pago_movil: required(data.cedula_pago_movil, 'Cédula pago móvil'),
+        tipo_servicio: required(data.tipo_servicio, 'Tipo de servicio'),
+        placa: required(data.placa, 'Placa'),
+        marca: required(data.marca, 'Marca'),
+        modelo: required(data.modelo, 'Modelo'),
+        color: required(data.color, 'Color'),
         nivel: DRIVER_LEVELS.includes(data.nivel) ? data.nivel : (existing && DRIVER_LEVELS.includes(existing.nivel) ? existing.nivel : 'Plata'),
-        porcentaje_comision: Number(data.porcentaje_comision) || 0,
+        porcentaje_comision: comPct,
         saldo_por_liquidar_usd: round(data.saldo_por_liquidar_usd),
-        anio: Number(data.anio) || new Date().getFullYear(),
+        anio,
         urls_fotos_vehiculo: Array.isArray(data.urls_fotos_vehiculo) ? data.urls_fotos_vehiculo : [],
         docs_estado: data.docs_estado || (existing ? existing.docs_estado : {}),
         updated_at: stamp(),
@@ -1457,10 +1544,32 @@
 
     /* proveedores */
     upsertSupplier(data) {
-      const rif = norm(data.rif).toUpperCase();
+      const rifErr = idError(data.rif);
+      if (rifErr) throw new Error(rifErr);
+      const rif = normId(data.rif);
       if (!rif) throw new Error('El RIF es obligatorio.');
+      if (data.retencion_iva_pct != null && ![0, 75, 100].includes(Number(data.retencion_iva_pct))) {
+        throw new Error('La retención de IVA debe ser 0 %, 75 % o 100 %.');
+      }
       const existing = current.suppliers.find((s) => s.rif === rif);
-      const rec = { ...(existing || {}), ...data, rif, retencion_iva_pct: Number(data.retencion_iva_pct) || 75, updated_at: stamp(), created_at: existing ? existing.created_at : stamp() };
+      if (!existing && current.suppliers.some((s) => s.rif === rif)) {
+        throw new Error('Ya existe un proveedor con ese RIF.');
+      }
+      const mailErr = emailError(data.correo);
+      if (mailErr) throw new Error(mailErr);
+      const telErr = phoneError(data.telefono);
+      if (telErr) throw new Error(telErr);
+      const rec = { ...(existing || {}), ...data, rif,
+        razon_social: required(data.razon_social, 'Razón social'),
+        telefono: required(data.telefono, 'Teléfono'),
+        direccion: required(data.direccion, 'Dirección fiscal'),
+        correo: data.correo || '',
+        actividad: data.actividad || '',
+        estatus: data.estatus || 'Activo',
+        tipo_persona: data.tipo_persona || 'PJ_DOM',
+        retencion_iva_pct: Number(data.retencion_iva_pct) || 75,
+        updated_at: stamp(),
+        created_at: existing ? existing.created_at : stamp() };
       if (existing) Object.assign(existing, rec);
       else current.suppliers.unshift(rec);
       api.addAuditLog(existing ? 'actualizar' : 'crear', 'proveedores', `Proveedor ${rif} · ${data.razon_social || ''}`, rif);
@@ -1477,9 +1586,25 @@
 
     /* cuentas por pagar */
     addPayable(data) {
+      const rifErr = idError(data.proveedor_rif);
+      if (rifErr) throw new Error(rifErr);
       const supplier = current.suppliers.find((s) => s.rif === data.proveedor_rif);
       if (!supplier) throw new Error('Selecciona un proveedor válido.');
-      const comp = computePayable({ ...data, tipo_persona: supplier.tipo_persona });
+      required(data.numero_factura, 'N° Factura');
+      required(data.concepto, 'Concepto');
+      money(data.base_usd, 'Base imponible');
+      money(data.exento_usd, 'Monto exento');
+      const ivaPct = Number(data.iva_pct ?? 16);
+      if (!isFinite(ivaPct) || ivaPct < 0 || ivaPct > 100) throw new Error('El % de IVA debe estar entre 0 y 100.');
+      const igtfPct = Number(data.igtf_pct ?? 3);
+      if (!isFinite(igtfPct) || igtfPct < 0 || igtfPct > 100) throw new Error('El % de IGTF debe estar entre 0 y 100.');
+      const retIvaPct = Number(data.ret_iva_pct ?? 75);
+      if (![0, 75, 100].includes(retIvaPct)) throw new Error('La retención de IVA debe ser 0 %, 75 % o 100 %.');
+      const tasa = Number(data.tasa_bcv || current.taxParams.bcvRate);
+      if (!tasa || tasa <= 0) throw new Error('La tasa BCV debe ser mayor a cero.');
+      required(data.fecha_emision, 'Fecha emisión');
+      required(data.fecha_vencimiento, 'Fecha vencimiento');
+      const comp = computePayable({ ...data, tipo_persona: supplier.tipo_persona, iva_pct: ivaPct, igtf_pct: igtfPct, ret_iva_pct: retIvaPct, tasa_bcv: tasa });
       const prefix = 'CXP-' + new Date().getFullYear() + '-';
       let max = 299;
       current.payables.forEach((p) => {
@@ -1565,6 +1690,8 @@
     upsertAccount(data) {
       const codigo = norm(data.codigo);
       if (!codigo) throw new Error('El código contable es obligatorio.');
+      if (!accountCodeValid(codigo)) throw new Error('El código contable tiene un formato inválido (ejemplo: 6.1.2.01).');
+      required(data.nombre, 'Nombre de la cuenta');
       const existing = current.accounts.find((a) => a.codigo === codigo);
       const rec = {
         ...(existing || {}),
@@ -1601,18 +1728,28 @@
 
     /* servicios */
     addService(data) {
+      required(data.cliente_cedula_rif, 'Cliente');
+      required(data.conductor_cedula_rif, 'Conductor');
+      required(data.origen, 'Origen');
+      required(data.destino, 'Destino');
       const client = current.clients.find((c) => c.cedula_rif === data.cliente_cedula_rif);
       const driver = current.drivers.find((d) => d.cedula_rif === data.conductor_cedula_rif);
       if (!client) throw new Error('El cliente no existe en el maestro.');
       if (!driver) throw new Error('El conductor no existe en el maestro.');
-      const base = round(data.base_usd);
+      const base = moneyPositive(data.base_usd, 'Tarifa base');
       const ivaPct = Number(data.iva_pct || 0);
+      if (!isFinite(ivaPct) || ivaPct < 0 || ivaPct > 100) throw new Error('El % de IVA debe estar entre 0 y 100.');
       const iva = round(base * ivaPct / 100);
       const igtfPct = Number(data.igtf_pct || 0);
+      if (!isFinite(igtfPct) || igtfPct < 0 || igtfPct > 100) throw new Error('El % de IGTF debe estar entre 0 y 100.');
       const igtf = round((base + iva) * igtfPct / 100);
       const total = round(base + iva + igtf);
       const comPct = Number(data.comision_pct ?? driver.porcentaje_comision);
+      if (!isFinite(comPct) || comPct < 0 || comPct > 100) throw new Error('El % de comisión debe estar entre 0 y 100.');
       const comision = round(base * comPct / 100);
+      const distancia = Number(data.distancia_km) || 0;
+      const duracion = Number(data.duracion_min) || 0;
+      if (distancia < 0 || duracion < 0) throw new Error('La distancia y la duración deben ser mayores o iguales a cero.');
       const svc = {
         id: nextServiceId(),
         tipo: data.tipo,

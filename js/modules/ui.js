@@ -394,7 +394,7 @@
         iframe.contentWindow.focus();
         iframe.contentWindow.print();
       } catch (e) {
-        console.error(e);
+        NS.ui.toast('No se pudo enviar el documento a la impresora.', 'warning');
       }
       setTimeout(() => iframe.remove(), 2500);
     }, 450);
