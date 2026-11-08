@@ -46,7 +46,12 @@ roles y permisos granulares.
 - **Usuarios del sistema**: roles base y personalizados con permisos por módulo,
   pestaña y acción; permisos personalizados por usuario.
 - **Reportes**: botón en cada módulo con impresión y descarga Excel.
-- **Configuración Supabase**: conexión, prueba, sincronización y respaldos.
+- **Configuración del Sistema**: parámetros de mantenimiento con módulo, nivel y
+  tipo de plan; planes y eventos de conductores; integración de APIs; Supabase;
+  estado de conexión; mapa de sincronización y respaldos.
+- **Navegación por submenús**: el sidebar despliega las opciones de cada módulo y
+  **Reportes** siempre queda al final; al elegir una opción se muestra su
+  contenido sin repetir el encabezado de estadísticas del módulo.
 
 ## Contabilidad y fiscalidad
 

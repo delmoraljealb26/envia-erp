@@ -139,6 +139,7 @@ Los conductores son las personas que realizan las carreras y entregas. Reciben u
    - Cédula / RIF (único, no se repite).
    - Nombres y apellidos.
    - **Nivel del conductor:** Zafiro, Esmeralda o Diamante.
+   - **Tarifa del conductor:** fija (monto semanal) o porcentual (% de lo generado). Define cuál de los planes configurados para su nivel se descuenta al aplicar el plan semanal.
    - Teléfono y correo.
    - Dirección.
 4. Llena los datos del vehículo:
@@ -473,29 +474,69 @@ Las acciones disponibles incluyen ver, crear, editar, eliminar, exportar, imprim
 
 ## 10. Configuración del Sistema
 
-Aquí se gestionan los parámetros del sistema, la conexión con Supabase y las integraciones con APIs externas.
+Aquí se gestionan los parámetros del sistema, los planes y eventos de conductores, las integraciones con APIs externas, la conexión con Supabase y los respaldos.
+
+El menú lateral de este módulo respeta el mismo orden que las secciones de la pantalla:
+
+1. Parámetros de mantenimiento
+2. Planes de conductores
+3. Eventos de conductores
+4. Integración de APIs
+5. Credenciales Supabase
+6. Estado de conexión
+7. Mapa de sincronización
+8. Respaldo y restauración
+9. Reportes
+
+Al elegir cualquiera de estas opciones, la pantalla se desplaza directamente a la sección correspondiente, dejándola visible debajo de la barra superior (sin quedar tapada).
 
 ### Parámetros de mantenimiento
 1. Ve al menú lateral → **Configuración del Sistema** → **Parámetros de mantenimiento**.
-2. Verás una tabla con los parámetros existentes (clave, etiqueta, módulo, tipo, valor y descripción).
+2. Verás una tabla con los parámetros existentes (clave, etiqueta, módulo, aplicación, tipo, valor y descripción).
 3. Para crear uno nuevo, haz clic en **Nuevo parámetro** y llena:
-   - **Clave:** identificador único en minúsculas, números y guion bajo (ej: `tarifa_plana_semanal_usd`).
+   - **Clave:** identificador único en minúsculas, números y guion bajo (ej: `param_porcentaje_evento1`).
    - **Etiqueta:** nombre descriptivo que se mostrará en la tabla.
    - **Módulo:** selecciona de la lista desplegable el módulo al que pertenece (Conductores, Clientes, Servicios, etc.).
    - **Tipo:** texto, monto, porcentaje, booleano o fecha.
+   - **Nivel (opcional):** Zafiro, Esmeralda o Diamante si el parámetro aplica a un nivel específico.
+   - **Tipo de plan (opcional):** tarifa fija o porcentual, si el parámetro se vincula al esquema de descuento del conductor.
    - **Valor:** el valor del parámetro.
-   - **Descripción:** explica qué controla este parámetro.
+   - **Descripción:** explica qué controla este parámetro. Es informativa: la lógica la definen la clave, el tipo, el valor y el módulo.
 4. Para editar o eliminar, usa los iconos de lápiz o basura en cada fila.
+
+### Planes de conductores
+1. Ve al menú lateral → **Configuración del Sistema** → **Planes de conductores**.
+2. Cada plan define el descuento semanal de un nivel y su tipo: **tarifa fija** (monto en USD) o **tarifa porcentual** (% de lo generado en la semana).
+3. Usa **Nuevo plan** para crear un plan, o los iconos de lápiz y basura para editarlo o eliminarlo.
+4. El conductor toma el plan que coincida con su nivel y con la **Tarifa del conductor** elegida en su expediente.
+
+### Eventos de conductores
+1. Ve al menú lateral → **Configuración del Sistema** → **Eventos de conductores**.
+2. Crea premios o descuentos aplicables a **todos** los conductores o a un **nivel** específico, con valor en monto o porcentaje.
+3. Desde el expediente del conductor puedes aplicar los eventos vigentes a su wallet.
+
+### Integración con APIs externas
+1. Ve al menú lateral → **Configuración del Sistema** → **Integración de APIs**.
+2. Aquí ves las APIs configuradas (ej: Tasa BCV Dólar, SENIAT ISLR, SENIAT IVA) con su estado (Activa/Inactiva, Sincronizada/Pendiente).
+3. Para agregar una nueva, haz clic en **Nueva API** y llena clave, nombre, endpoint y descripción.
 
 ### Configuración Supabase
 1. Ve al menú lateral → **Configuración del Sistema** → **Credenciales Supabase**.
 2. Ingresa la URL del proyecto y la anon key.
 3. Prueba la conexión y guarda la configuración.
 
-### Integración con APIs externas
-1. Ve al menú lateral → **Configuración del Sistema** → **Integración con APIs externas**.
-2. Aquí ves las APIs configuradas (ej: Tasa BCV Dólar, SENIAT ISLR, SENIAT IVA) con su estado (Activa/Inactiva, Sincronizada/Pendiente).
-3. Para agregar una nueva, haz clic en **Nueva API** y llena clave, nombre, endpoint y descripción.
+### Estado de conexión
+Muestra si la API REST y el Storage están configurados, la fecha de la última prueba y de la última sincronización, la cantidad de tablas del esquema y los tres buckets de documentos.
+
+### Mapa de sincronización
+Lista cada tabla local con su tabla remota, clave de conflicto, cantidad de registros y estado (Listo o Local). Desde aquí puedes descargar clientes y conductores cuando Supabase está configurado.
+
+### Respaldo y restauración
+1. **Exportar respaldo JSON:** descarga la base local y los archivos en un solo archivo.
+2. **Importar respaldo:** restaura un respaldo exportado previamente.
+3. **Restaurar datos demo:** vuelve a la base de demostración. Úsalo con precaución.
+
+> Los datos se guardan en el navegador. Si trabajas sin Supabase, exporta un respaldo periódicamente.
 
 ---
 

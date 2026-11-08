@@ -49,22 +49,32 @@
     const fileSize = JSON.stringify(files).length;
     const dbSize = JSON.stringify(db).length;
 
-    // Leer sub-ruta del sidebar
+    // Leer sub-ruta del sidebar y desplazar a la sección correspondiente
     const sub = NS.router.getSubroute();
     if (sub && sub.module === 'settings') {
-      if (sub.sub === 'settings-params') {
-        // Hacer scroll a la sección de parámetros después de renderizar
+      const sectionMap = {
+        'settings-params': 'settings-section-params',
+        'settings-plans': 'settings-section-plans',
+        'settings-events': 'settings-section-events',
+        'settings-apis': 'settings-section-apis',
+        'settings-supabase': 'settings-section-supabase',
+        'settings-status': 'settings-section-status',
+        'settings-sync': 'settings-section-sync',
+        'settings-backup': 'settings-section-backup'
+      };
+      const targetId = sectionMap[sub.sub];
+      if (targetId) {
         setTimeout(() => {
-          const el = document.querySelector('h3');
-          if (el && el.textContent.includes('Parámetros de mantenimiento')) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
-        }, 100);
-      } else if (sub.sub === 'settings-supabase') {
-        setTimeout(() => {
-          const el = document.querySelector('.connection-pill');
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
+          const el = document.getElementById(targetId);
+          if (!el) return;
+          const topbar = document.querySelector('.topbar');
+          const offset = (topbar ? topbar.getBoundingClientRect().height : 72) + 18;
+          const y = el.getBoundingClientRect().top + window.scrollY - offset;
+          window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+          document.querySelectorAll('.section-focus').forEach((n) => n.classList.remove('section-focus'));
+          el.classList.add('section-focus');
+          setTimeout(() => el.classList.remove('section-focus'), 1800);
+        }, 120);
       }
     }
 
@@ -82,16 +92,17 @@
         </div>
       </div>
 
-      <section class="card card-span-2">
+      <section class="card card-span-2" id="settings-section-params">
         <div class="card-head"><div><h3>Parámetros de mantenimiento del sistema</h3><p>Tarifas, comisiones por nivel, planes, descuentos y beneficios parametrizables por módulo.</p></div>${NS.app.canAction('settings', 'parametros') ? `<button class="btn btn-primary btn-sm" id="params-new">${ui.icon('plus', 14)} Nuevo parámetro</button>` : ''}</div>
         <div class="table-wrap">
           <table class="data-table">
-            <thead><tr><th>Clave</th><th>Etiqueta</th><th>Módulo</th><th>Tipo</th><th class="num">Valor</th><th>Descripción</th><th class="actions-col">Acciones</th></tr></thead>
+            <thead><tr><th>Clave</th><th>Etiqueta</th><th>Módulo</th><th>Aplicación</th><th>Tipo</th><th class="num">Valor</th><th>Descripción</th><th class="actions-col">Acciones</th></tr></thead>
             <tbody>
               ${db.systemParams.length ? db.systemParams.map((p) => `<tr>
                 <td><span class="mono strong">${ui.esc(p.key)}</span></td>
                 <td>${ui.esc(p.label)}</td>
                 <td>${ui.badge(p.module, 'info')}</td>
+                <td>${p.nivel || p.tipo_plan ? ui.esc([p.nivel, p.tipo_plan === 'fijo' ? 'Tarifa fija' : p.tipo_plan === 'porcentaje' ? 'Tarifa porcentual' : ''].filter(Boolean).join(' · ')) : '—'}</td>
                 <td>${ui.badge(p.tipo, 'info')}</td>
                 <td class="num"><strong>${p.tipo === 'porcentaje' ? p.value + '%' : p.tipo === 'monto' ? '$' + p.value : p.value}</strong></td>
                 <td>${ui.esc(p.descripcion || '—')}</td>
@@ -99,13 +110,13 @@
                   ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn" data-edit-param="${ui.esc(p.key)}" title="Editar">${ui.icon('edit', 16)}</button>` : ''}
                   ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn danger" data-del-param="${ui.esc(p.key)}" title="Eliminar">${ui.icon('trash', 16)}</button>` : ''}
                 </td>
-              </tr>`).join('') : `<tr><td colspan="7">${ui.empty('settings', 'Sin parámetros', 'Crea el primer parámetro de mantenimiento del sistema.', NS.app.canAction('settings', 'parametros') ? '<button class="btn btn-primary" id="params-empty-new">Nuevo parámetro</button>' : '')}</td></tr>`}
+              </tr>`).join('') : `<tr><td colspan="8">${ui.empty('settings', 'Sin parámetros', 'Crea el primer parámetro de mantenimiento del sistema.', NS.app.canAction('settings', 'parametros') ? '<button class="btn btn-primary" id="params-empty-new">Nuevo parámetro</button>' : '')}</td></tr>`}
             </tbody>
           </table>
         </div>
       </section>
 
-      <section class="card card-span-2">
+      <section class="card card-span-2" id="settings-section-plans">
         <div class="card-head"><div><h3>Planes de Conductores por Nivel</h3><p>Define el plan semanal (fijo o porcentaje) que se descontará a cada conductor según su nivel.</p></div>${NS.app.canAction('settings', 'parametros') ? `<button class="btn btn-primary btn-sm" id="plan-new">${ui.icon('plus', 14)} Nuevo plan</button>` : ''}</div>
         <div class="table-wrap">
           <table class="data-table">
@@ -128,7 +139,7 @@
         </div>
       </section>
 
-      <section class="card card-span-2">
+      <section class="card card-span-2" id="settings-section-events">
         <div class="card-head"><div><h3>Eventos de Conductores (Premio / Descuento)</h3><p>Crea eventos aplicables a todos los conductores o a un nivel específico, con valor en monto fijo o porcentaje.</p></div>${NS.app.canAction('settings', 'parametros') ? `<button class="btn btn-primary btn-sm" id="event-new">${ui.icon('plus', 14)} Nuevo evento</button>` : ''}</div>
         <div class="table-wrap">
           <table class="data-table">
@@ -151,7 +162,7 @@
         </div>
       </section>
 
-      <section class="card">
+      <section class="card" id="settings-section-apis">
         <div class="card-head"><div><h3>Integración con APIs externas</h3><p>Servicios externos sincronizados (tasa de cambio, tributos, etc.) y mantenibles desde este panel.</p></div>${NS.app.canAction('settings', 'parametros') ? `<button class="btn btn-primary btn-sm" id="api-new">${ui.icon('plus', 14)} Nueva API</button>` : ''}</div>
         <div class="table-wrap">
           <table class="data-table">
@@ -174,7 +185,7 @@
         </div>
       </section>
 
-      <section class="card card-span-2">
+      <section class="card card-span-2" id="settings-section-supabase">
         <div class="card-head"><div><h3>Credenciales del proyecto Supabase</h3><p>SUPABASE_URL y SUPABASE_ANON_KEY · se guardan solo en este navegador</p></div>${configured ? ui.badge('Configurado', 'success') : ui.badge('Pendiente', 'warning')}</div>
         <form id="supabase-form" class="form-grid" autocomplete="off">
           <label class="field field-full"><span>SUPABASE_URL *</span><input name="url" value="${ui.esc(cfg.url || '')}" placeholder="https://tu-proyecto.supabase.co" ${canWrite ? '' : 'disabled'}></label>
@@ -195,7 +206,7 @@
         </div>
       </section>
 
-      <section class="card">
+      <section class="card" id="settings-section-status">
         <div class="card-head"><div><h3>Estado de la conexión</h3><p>Diagnóstico del proyecto</p></div></div>
         <div class="status-list">
           <div class="status-row"><span>API REST</span><strong class="${configured ? 'text-success' : 'muted'}">${configured ? 'Configurada' : 'No configurada'}</strong></div>
@@ -212,7 +223,7 @@
         </div>
       </section>
 
-      <section class="card">
+      <section class="card" id="settings-section-sync">
         <div class="card-head"><div><h3>Mapa de sincronización</h3><p>Filas locales listas para upsert en PostgreSQL</p></div><span class="chip chip-navy">${ui.icon('database', 13)} ${db.entries.length} asientos</span></div>
         <div class="table-wrap">
           <table class="data-table sync-table">
@@ -236,7 +247,7 @@
       </section>
 
       <div class="dash-grid">
-        <section class="card">
+        <section class="card" id="settings-section-backup">
           <div class="card-head"><div><h3>Respaldo y restauración</h3><p>Exporta toda la base local + archivos</p></div></div>
           <div class="backup-stats">
             <div><span>Base de datos</span><strong>${bytes(dbSize)}</strong></div>
@@ -254,7 +265,7 @@
         <section class="card">
           <div class="card-head"><div><h3>Información del sistema</h3><p>Parámetros y documentación</p></div></div>
           <div class="status-list">
-            <div class="status-row"><span>Versión</span><strong>ENVIA Technology C.A. 1.5.0</strong></div>
+            <div class="status-row"><span>Versión</span><strong>ENVIA Technology C.A. 1.10.0</strong></div>
             <div class="status-row"><span>Moneda funcional</span><strong>VES (Bolívares)</strong></div>
             <div class="status-row"><span>Tasa BCV</span><strong>${ui.bs(db.taxParams.bcvRate)} / USD</strong></div>
             <div class="status-row"><span>Unidad Tributaria</span><strong>${ui.bs(db.taxParams.ut)}</strong></div>
@@ -417,6 +428,15 @@
         </select>
         <small class="block muted">Elige el módulo al que pertenece este parámetro.</small>
         <label class="field"><span>Tipo *</span><select name="tipo">${['texto', 'monto', 'porcentaje', 'booleano', 'fecha'].map((t) => `<option value="${t}" ${(p && p.tipo) === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+        <label class="field"><span>Nivel (opcional)</span><select name="nivel">
+          <option value="">Todos los niveles</option>
+          ${NS.store.DRIVER_LEVELS.map((n) => `<option value="${n}" ${(p && p.nivel) === n ? 'selected' : ''}>${n}</option>`).join('')}
+        </select><small>Úsalo para parámetros que aplican a un nivel específico.</small></label>
+        <label class="field"><span>Tipo de plan (opcional)</span><select name="tipo_plan">
+          <option value="">No aplica</option>
+          <option value="fijo" ${(p && p.tipo_plan) === 'fijo' ? 'selected' : ''}>Tarifa fija</option>
+          <option value="porcentaje" ${(p && p.tipo_plan) === 'porcentaje' ? 'selected' : ''}>Tarifa porcentual</option>
+        </select><small>Vincula el parámetro al esquema de descuento del conductor.</small></label>
         <label class="field"><span>Valor *</span><input name="value" value="${NS.ui.esc(p ? p.value : '')}" placeholder="10"></label>
         <label class="field field-full"><span>Descripción</span><textarea name="descripcion" rows="2" placeholder="Qué controla este parámetro...">${NS.ui.esc(p ? p.descripcion : '')}</textarea></label>
       </form>`,
@@ -432,6 +452,8 @@
           label: form.elements.label.value,
           module: form.elements.module.value || 'sistema',
           tipo: form.elements.tipo.value,
+          nivel: form.elements.nivel.value,
+          tipo_plan: form.elements.tipo_plan.value,
           value: form.elements.value.value,
           descripcion: form.elements.descripcion.value
         });

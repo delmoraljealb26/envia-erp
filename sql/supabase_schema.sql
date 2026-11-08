@@ -79,6 +79,8 @@ create table if not exists public.drivers (
                             check (estatus_conductor in ('Activo / Disponible','En Servicio','En Revisión Documental','Inactivo por Documentos Vencidos','Suspendido')),
   nivel                   text not null default 'Zafiro'
                             check (nivel in ('Zafiro','Esmeralda','Diamante')),
+  tipo_tarifa             text not null default 'fijo'
+                            check (tipo_tarifa in ('fijo','porcentaje')),
   fecha_registro          date not null default current_date,
   url_foto_cedula         text,
   url_foto_rif            text,
@@ -100,6 +102,7 @@ comment on column public.drivers.docs_meta is 'Fechas de emisión/vencimiento po
 alter table public.drivers add column if not exists url_seguro_rcv text;
 alter table public.drivers add column if not exists docs_meta jsonb not null default '{}'::jsonb;
 alter table public.drivers add column if not exists inactivado_por_documentos boolean not null default false;
+alter table public.drivers add column if not exists tipo_tarifa text not null default 'fijo';
 alter table public.drivers alter column nivel set default 'Zafiro';
 alter table public.drivers drop constraint if exists drivers_estatus_conductor_check;
 alter table public.drivers add constraint drivers_estatus_conductor_check
@@ -501,12 +504,20 @@ create table if not exists public.system_params (
   value        text not null default '',
   tipo         text not null default 'texto' check (tipo in ('monto','porcentaje','texto','booleano','fecha')),
   module       text not null default 'sistema',
+  nivel        text check (nivel in ('Zafiro','Esmeralda','Diamante')),
+  tipo_plan    text check (tipo_plan in ('fijo','porcentaje')),
   descripcion  text,
   created_at   timestamptz not null default timezone('utc', now()),
   updated_at   timestamptz not null default timezone('utc', now())
 );
 comment on table public.system_params is 'Parámetros configurables por el administrador (tarifas, comisiones por nivel, descuentos, beneficios). Clave primaria: key.';
 comment on column public.system_params.value is 'Valor guardado como texto; se interpreta según tipo (monto/porcentaje/etc).';
+comment on column public.system_params.nivel is 'Nivel de conductor al que aplica el parámetro (opcional).';
+comment on column public.system_params.tipo_plan is 'Esquema de tarifa asociado: fijo o porcentual (opcional).';
+
+-- Migración idempotente para instalaciones existentes.
+alter table public.system_params add column if not exists nivel text;
+alter table public.system_params add column if not exists tipo_plan text;
 
 -- ============================================================================
 --  13.4 PLANES DE CONDUCTORES POR NIVEL

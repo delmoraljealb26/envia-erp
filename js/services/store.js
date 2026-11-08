@@ -1577,10 +1577,21 @@
    * ---------------------------------------------------------------- */
   function ensureSchema(db) {
     const currentVersion = Number(db.meta && db.meta.schemaVersion) || 0;
-    const targetVersion = 2;
+    const targetVersion = 3;
     let migrated = false;
+
+    // Blindaje permanente: las colecciones nuevas deben existir en cualquier
+    // instalación, incluso si la versión de esquema ya está actualizada.
+    ['systemParams', 'apiIntegrations', 'driverPlans', 'driverEvents'].forEach((key) => {
+      if (!Array.isArray(db[key])) { db[key] = []; migrated = true; }
+    });
+    // Normaliza la tarifa del conductor (fija o porcentual) en bases existentes.
+    (Array.isArray(db.drivers) ? db.drivers : []).forEach((d) => {
+      if (!['fijo', 'porcentaje'].includes(d.tipo_tarifa)) { d.tipo_tarifa = 'fijo'; migrated = true; }
+    });
+
     if (currentVersion < targetVersion) {
-      if (!Array.isArray(db.systemParams)) { db.systemParams = []; migrated = true; }
+      // Parámetros de mantenimiento por defecto
       const defaultParams = [
         { key: 'tarifa_plana_semanal_usd', label: 'Tarifa plana semanal por conductor', value: '10', tipo: 'monto', module: 'drivers', descripcion: 'Monto fijo descontado de la wallet del conductor cada semana.' },
         { key: 'comision_nivel_zafiro_pct', label: 'Comisión nivel Zafiro', value: '5', tipo: 'porcentaje', module: 'drivers', descripcion: 'Porcentaje descontado al conductor Zafiro por cada servicio.' },
@@ -1594,7 +1605,6 @@
         }
       });
       // APIs externas por defecto
-      if (!Array.isArray(db.apiIntegrations)) { db.apiIntegrations = []; migrated = true; }
       const defaultApis = [
         { key: 'bcv_tasa_dolar', nombre: 'Tasa BCV Dólar', endpoint: 'https://bcv.org.ve', activo: true, sincronizado: true, ultima_sincronizacion: new Date().toISOString().slice(0, 10), descripcion: 'Tasa oficial del Banco Central de Venezuela para conversión USD/VES.' },
         { key: 'seniat_islr', nombre: 'SENIAT ISLR', endpoint: 'https://seniat.gob.ve', activo: false, sincronizado: false, ultima_sincronizacion: '', descripcion: 'Retenciones de ISLR según Decreto 1.808.' },
@@ -1607,7 +1617,6 @@
         }
       });
       // Planes de conductores por defecto
-      if (!Array.isArray(db.driverPlans)) { db.driverPlans = []; migrated = true; }
       const defaultPlans = [
         { key: 'plan_fijo_zafiro', nivel: 'Zafiro', tipo_plan: 'fijo', valor: 27, descripcion: 'Plan fijo semanal Zafiro: $27 a descontar cada semana.', modulo: 'drivers', creado_por: 'sistema' },
         { key: 'plan_fijo_esmeralda', nivel: 'Esmeralda', tipo_plan: 'fijo', valor: 25, descripcion: 'Plan fijo semanal Esmeralda: 25% de lo generado en la semana a descontar.', modulo: 'drivers', creado_por: 'sistema' },
@@ -1623,7 +1632,6 @@
         }
       });
       // Eventos de conductores por defecto
-      if (!Array.isArray(db.driverEvents)) { db.driverEvents = []; migrated = true; }
       const defaultEvents = [
         { key: 'evento_premio_semanal_100', nombre: 'Premio Semana 100%', tipo_evento: 'premio', aplicacion: 'todos', nivel_aplicar: '', valor: 100, tipo_valor: 'porcentaje', descripcion: 'Evento semanal: el conductor recibe 100% de lo generado (sin descuentos).', fecha_inicio: new Date().toISOString().slice(0, 10), fecha_fin: '', activo: true, modulo: 'drivers' }
       ];
@@ -1633,11 +1641,14 @@
           migrated = true;
         }
       });
-      if (migrated) {
-        db.meta.schemaVersion = targetVersion;
-        persist();
-      }
     }
+
+    if (!db.meta) db.meta = {};
+    if (currentVersion !== targetVersion) {
+      db.meta.schemaVersion = targetVersion;
+      migrated = true;
+    }
+    if (migrated) persist();
   }
 
   ensureSchema(current);
@@ -1923,6 +1934,7 @@
         modelo: required(data.modelo, 'Modelo'),
         color: required(data.color, 'Color'),
         nivel: DRIVER_LEVELS.includes(data.nivel) ? data.nivel : (existing && DRIVER_LEVELS.includes(existing.nivel) ? existing.nivel : 'Zafiro'),
+        tipo_tarifa: ['fijo', 'porcentaje'].includes(data.tipo_tarifa) ? data.tipo_tarifa : (existing && ['fijo', 'porcentaje'].includes(existing.tipo_tarifa) ? existing.tipo_tarifa : 'fijo'),
         porcentaje_comision: comPct,
         saldo_por_liquidar_usd: round(data.saldo_por_liquidar_usd),
         anio,
@@ -2128,6 +2140,8 @@
         label: required(data.label, 'Etiqueta'),
         value,
         tipo,
+        nivel: DRIVER_LEVELS.includes(data.nivel) ? data.nivel : '',
+        tipo_plan: ['fijo', 'porcentaje'].includes(data.tipo_plan) ? data.tipo_plan : '',
         module: data.module || 'sistema',
         descripcion: data.descripcion || '',
         updated_at: stamp(),
@@ -2283,7 +2297,9 @@
       const driver = current.drivers.find((d) => d.cedula_rif === cedula);
       if (!driver) throw new Error('Conductor no encontrado.');
       const nivel = driver.nivel || 'Zafiro';
-      const plan = current.driverPlans.find((p) => p.nivel === nivel && p.activo !== false);
+      const tipoTarifa = driver.tipo_tarifa === 'porcentaje' ? 'porcentaje' : 'fijo';
+      let plan = current.driverPlans.find((p) => p.nivel === nivel && p.tipo_plan === tipoTarifa && p.activo !== false);
+      if (!plan) plan = current.driverPlans.find((p) => p.nivel === nivel && p.activo !== false);
       if (!plan) throw new Error(`No hay plan activo configurado para el nivel ${nivel}.`);
       const fecha = (data && data.fecha) || today();
       const semanaInicio = new Date(fecha + 'T12:00:00');

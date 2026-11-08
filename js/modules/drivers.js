@@ -126,7 +126,7 @@
                     <span><strong>${ui.esc(d.nombres + ' ' + d.apellidos)}</strong><small class="block muted">${ui.esc(d.correo || 'Sin correo')}</small></span>
                   </button></td>
                   <td><span class="mono strong">${ui.esc(d.cedula_rif)}</span></td>
-                  <td>${levelBadge(d.nivel)}<small class="block muted">${d.porcentaje_comision}% base · ${pctLabel} nivel</small></td>
+                  <td>${levelBadge(d.nivel)}<small class="block muted">${d.porcentaje_comision}% base · ${pctLabel} nivel · plan ${d.tipo_tarifa === 'porcentaje' ? 'porcentual' : 'fijo'}</small></td>
                   <td><span class="vehicle-cell"><b>${ui.esc(d.marca)} ${ui.esc(d.modelo)}</b><em>${ui.esc(d.placa)}</em></span><small class="block muted">${ui.esc(d.tipo_servicio)} · ${d.anio}</small></td>
                   <td><span>${ui.esc(d.telefono)}</span><small class="block muted">Pago móvil ${ui.esc(d.telefono_pago_movil || '—')}</small></td>
                   <td class="num">-</td>
@@ -185,6 +185,10 @@
       <label class="field"><span>Cédula / RIF *</span><input name="cedula_rif" value="${ui.esc(d.cedula_rif || '')}" placeholder="V-16874321" ${isNew ? '' : 'disabled'} required></label>
       <label class="field"><span>Estatus operativo</span><select name="estatus_conductor">${NS.store.DRIVER_STATUS.map((s) => `<option ${d.estatus_conductor === s ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
       <label class="field"><span>Nivel del conductor</span><select name="nivel">${NS.store.DRIVER_LEVELS.map((n) => `<option value="${n}" ${(d.nivel || 'Zafiro') === n ? 'selected' : ''}>${n}</option>`).join('')}</select><small>Zafiro, Esmeralda o Diamante según desempeño y cumplimiento.</small></label>
+      <label class="field"><span>Tarifa del conductor</span><select name="tipo_tarifa">
+        <option value="fijo" ${(d.tipo_tarifa || 'fijo') === 'fijo' ? 'selected' : ''}>Tarifa fija (monto semanal)</option>
+        <option value="porcentaje" ${d.tipo_tarifa === 'porcentaje' ? 'selected' : ''}>Tarifa porcentual (% de lo generado)</option>
+      </select><small>Determina cuál de los planes del nivel se descuenta al conductor.</small></label>
       <label class="field"><span>Nombres *</span><input name="nombres" value="${ui.esc(d.nombres || '')}" placeholder="Carlos Luis" required></label>
       <label class="field"><span>Apellidos *</span><input name="apellidos" value="${ui.esc(d.apellidos || '')}" placeholder="Pérez Marcano" required></label>
       <label class="field"><span>Teléfono móvil *</span><input name="telefono" value="${ui.esc(d.telefono || '')}" placeholder="0412-555-7788" required></label>
@@ -259,7 +263,8 @@
     const info = docsInfo(d);
     const tarifaPlanaParam = NS.store.systemParam('tarifa_plana_semanal_usd');
     const tarifaPlanaMonto = tarifaPlanaParam ? Number(tarifaPlanaParam.value) : 0;
-    const planConductor = NS.store.driverPlans().find((p) => p.nivel === (d.nivel || 'Zafiro') && p.activo !== false);
+    const planConductor = NS.store.driverPlans().find((p) => p.nivel === (d.nivel || 'Zafiro') && p.tipo_plan === (d.tipo_tarifa || 'fijo') && p.activo !== false)
+      || NS.store.driverPlans().find((p) => p.nivel === (d.nivel || 'Zafiro') && p.activo !== false);
     const planConductorLabel = planConductor ? (planConductor.tipo_plan === 'fijo' ? '$' + planConductor.valor + ' fijo' : planConductor.valor + '% porcentaje') : 'Sin plan';
     const st = d.docs_estado || {};
     const services = db.services.filter((s) => s.conductor_cedula_rif === d.cedula_rif).slice(0, 4);
@@ -355,7 +360,7 @@
               <button class="btn btn-primary btn-block btn-sm" id="driver-tarifa-plana">${ui.icon('calendar', 15)} Aplicar esta semana</button>
             </div>` : ''}
             <div class="tarifa-plana-card">
-              <span>Plan semanal del conductor · Nivel ${ui.esc(d.nivel || 'Zafiro')}</span>
+              <span>Plan semanal del conductor · Nivel ${ui.esc(d.nivel || 'Zafiro')} · Tarifa ${d.tipo_tarifa === 'porcentaje' ? 'porcentual' : 'fija'}</span>
               <strong>${planConductorLabel}</strong>
               <small>${planConductor ? planConductor.descripcion : 'No hay plan configurado para este nivel. Ve a Configuración del Sistema → Planes de Conductores.'}</small>
               ${canTarifa ? `<button class="btn btn-primary btn-block btn-sm" id="driver-apply-weekly-plan">${ui.icon('calendar', 15)} Aplicar plan esta semana</button>` : ''}

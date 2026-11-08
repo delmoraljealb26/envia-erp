@@ -5,7 +5,7 @@
 
 **Estado:** Proyecto completo y funcional
 
-**Versión:** 1.5.0
+**Versión:** 1.10.0
 
 ---
 
@@ -306,6 +306,48 @@ EnVia/
 - **Seguro RCV** se maneja como documento del conductor y como producto de tienda de $25; son dos controles distintos: el documento acredita la cobertura y el producto registra la venta/financiamiento.
 - **Tienda:** toda asignación descuenta stock, genera CxC al conductor (1.1.2.02), ingreso por tienda (4.2.1.03) y costo (5.2.2.01). El saldo se muestra en la wallet y puede abonarse.
 - **IA:** la lectura automática es opcional y configurable; si no hay endpoint o falla, se capturan las fechas manualmente. No se hardcodean claves ni se bloquea la carga.
+
+---
+
+## 5.7 Navegación, parámetros, planes y configuración (07/11/2026)
+
+**Objetivo:** convertir el sidebar en acordeón con submenús, hacer que cada
+subitem cambie el contenido real del módulo, ordenar Configuración del Sistema,
+añadir planes/eventos de conductores, integraciones de APIs y tarifa fija o
+porcentual por conductor.
+
+**Cambios principales:**
+
+| Archivo | Cambio |
+|---------|--------|
+| `js/services/routerService.js` | Submenús por módulo con **Reportes** al final; `getSubroute()` y `currentSubquery`; los subitems navegan con `?sub=...`; el sub `*-reports` abre el centro de reportes; oculta el `stat-strip` al entrar por subitem; orden de Configuración sincronizado con la pantalla. |
+| `js/services/store.js` | `systemParams` con `nivel` y `tipo_plan`; `driverPlans` y `driverEvents`; `apiIntegrations`; `tipo_tarifa` en conductores; `applyDriverWeeklyPlan()` elige el plan por nivel + tarifa; migración `schemaVersion` 3 con blindaje de colecciones. |
+| `js/modules/settings.js` | Orden definitivo: parámetros → planes → eventos → APIs → Supabase → estado → sincronización → respaldo; cada subitem se desplaza a su sección con margen para la barra sticky; CRUD de planes, eventos y APIs; formulario de parámetros con módulo, nivel y tipo de plan. |
+| `js/modules/drivers.js` | Selector **Tarifa del conductor** (fija/porcentual), plan semanal acorde al nivel y tarifa, y detalle del plan en la tabla y el expediente. |
+| `js/modules/inventory.js` | Se retiró la banda de estadísticas del encabezado (valor, unidades, financiado y alertas). |
+| `css/styles.css` | `scroll-margin-top` y resaltado de sección para Configuración; ajustes del sidebar acordeón y responsive. |
+| `sql/supabase_schema.sql` | `system_params.nivel`, `system_params.tipo_plan`, `drivers.tipo_tarifa` y migraciones idempotentes. |
+| `docs/manual_usuario.md`, `README.md`, `MEMORY.md` | Manual y documentación alineados con la navegación y la configuración actual. |
+
+**Decisiones:**
+- **Reportes** es siempre el último subitem y abre el modal del módulo, no una
+  pantalla repetida.
+- El encabezado con estadísticas pertenece al módulo principal; los subitems
+  muestran directamente su contenido.
+- **Descripción** de un parámetro es informativa; la lógica se define por
+  `key`, `tipo`, `value`, `module`, `nivel` y `tipo_plan`.
+- **Tarifa del conductor:** `fijo` usa el plan de monto semanal; `porcentaje`
+  usa el plan porcentual del mismo nivel. Si no existe el plan del tipo elegido,
+  se usa el primer plan activo del nivel como respaldo.
+- La migración sube a `schemaVersion = 3` y crea las colecciones faltantes aunque
+  la base ya estuviera en la versión anterior.
+
+**Validación:**
+- `node --check` en todos los JS modificados.
+- CDP en `file://`: reportes del sidebar abren el modal, subitems ocultan el
+  `stat-strip`, inventario sin estadísticas, sin errores de consola.
+- Cambio de subitem en Contabilidad modifica el tab activo (Libro Diario, Libro
+  Mayor, Balance de Comprobación).
 
 ---
 

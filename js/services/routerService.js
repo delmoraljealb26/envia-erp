@@ -63,8 +63,14 @@
       { id: 'users-reports', label: 'Reportes', icon: 'chart', action: 'reportes' }
     ] },
     settings: { label: 'Configuración del Sistema', sub: 'Conexión Supabase, parámetros y sincronización', icon: 'database', group: 'Sistema', module: 'settings', subitems: [
-      { id: 'settings-supabase', label: 'Credenciales Supabase', icon: 'database', action: 'ver' },
       { id: 'settings-params', label: 'Parámetros de mantenimiento', icon: 'settings', action: 'ver' },
+      { id: 'settings-plans', label: 'Planes de conductores', icon: 'car', action: 'ver' },
+      { id: 'settings-events', label: 'Eventos de conductores', icon: 'activity', action: 'ver' },
+      { id: 'settings-apis', label: 'Integración de APIs', icon: 'link', action: 'ver' },
+      { id: 'settings-supabase', label: 'Credenciales Supabase', icon: 'database', action: 'ver' },
+      { id: 'settings-status', label: 'Estado de conexión', icon: 'activity', action: 'ver' },
+      { id: 'settings-sync', label: 'Mapa de sincronización', icon: 'refresh', action: 'ver' },
+      { id: 'settings-backup', label: 'Respaldo y restauración', icon: 'download', action: 'ver' },
       { id: 'settings-reports', label: 'Reportes', icon: 'chart', action: 'reportes' }
     ] }
   };
