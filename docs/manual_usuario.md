@@ -21,6 +21,7 @@
 8.2 [Tienda & Inventario del conductor](#82-tienda--inventario-del-conductor)
 9. [Bitácora de Auditoría](#9-bitacora-de-auditoria)
 10. [Usuarios del sistema](#10-usuarios-del-sistema)
+10.1 [Configuración del Sistema](#101-configuración-del-sistema)
 11. [Reportes en cada módulo](#11-reportes-en-cada-modulo)
 12. [Reglas importantes que debes conocer](#12-reglas-importantes-que-debes-conocer)
 
@@ -46,7 +47,7 @@ Al entrar, verás tu nombre, tu rol y la tasa del dólar (BCV) en la parte super
 
 Cada vez que inicies sesión, el sistema abrirá siempre el **Dashboard**, aunque antes hayas estado trabajando en otro módulo. Así empiezas con la visión general de la operación.
 
-El **menú lateral** muestra todos los módulos a los que tienes acceso y se adapta a la altura de la pantalla: en pantallas de portátil reduce los espacios para que veas todas las opciones sin desplazarte. En **móvil**, toca el icono de menú (☰) para abrir la navegación y usa el botón **Cerrar sesión** al final del menú. En escritorio también puedes cerrar sesión desde el icono de la barra superior o tocando tus iniciales (menú de usuario).
+El **menú lateral** está organizado por grupos (Operación, Maestros, Finanzas, Sistema). Cada módulo es un botón desplegable: al hacer clic se abren sus opciones internas (por ejemplo, en **Conductores y Flota** verás *Maestro de conductores*, *Nuevo conductor* y *Reportes*). **Reportes** siempre aparece como última opción dentro de cada módulo. Los módulos sin subopciones (como **Dashboard** y **Bitácora de Auditoría**) se abren directamente al hacer clic. El menú se adapta a la altura de la pantalla: en pantallas de portátil reduce los espacios para que veas todas las opciones sin desplazarte. En **móvil**, toca el icono de menú (☰) para abrir la navegación y usa el botón **Cerrar sesión** al final del menú. En escritorio también puedes cerrar sesión desde el icono de la barra superior o tocando tus iniciales (menú de usuario).
 
 ![Pantalla de acceso a ENVIA ERP](../imagen/manual/01-login.png)
 
@@ -97,7 +98,7 @@ Tabla con los últimos 8 servicios. Haz clic en el cliente o en el conductor par
 Los clientes son las personas o empresas a las que les prestas servicio de traslado o encomienda.
 
 ### Ver la lista de clientes
-Ve al menú lateral y haz clic en **Clientes**. Verás una tabla con todos los clientes registrados, su cédula/RIF, teléfono, saldo en la billetera y cuántos servicios han tenido.
+Ve al menú lateral → **Clientes** → **Listado de clientes**. Verás una tabla con todos los clientes registrados, su cédula/RIF, teléfono, saldo en la billetera y cuántos servicios han tenido.
 
 ![Listado de clientes](../imagen/manual/03-clientes-lista.png)
 
@@ -130,7 +131,7 @@ Los conductores son las personas que realizan las carreras y entregas. Reciben u
 ![Listado de conductores y flota](../imagen/manual/05-conductores-lista.png)
 
 ### Registrar un conductor
-1. Ve al menú lateral → **Conductores y Flota**.
+1. Ve al menú lateral → **Conductores y Flota** → **Maestro de conductores** (o **Nuevo conductor**).
 2. Haz clic en el botón para agregar conductor nuevo.
 3. Llena los datos personales:
    - Cédula / RIF (único, no se repite).
@@ -206,7 +207,7 @@ Aquí registras cada viaje o entrega que se hace.
 ![Listado de servicios](../imagen/manual/08-servicios-lista.png)
 
 ### Crear un servicio nuevo
-1. Ve al menú lateral → **Servicios**.
+1. Ve al menú lateral → **Servicios** → **Listado de servicios** (o **Nuevo servicio**).
 2. Haz clic en el botón para agregar servicio nuevo.
 3. Selecciona:
    - **Tipo:** Carrera (traslado de persona) o Encomienda (entrega de paquete).
@@ -241,7 +242,7 @@ ENVIA ERP lleva la contabilidad automática en bolívares (VES). Cada servicio, 
 ### Qué puedes ver y imprimir
 ![Contabilidad · Libro Diario](../imagen/manual/10-contabilidad-libro-diario.png)
 
-Desde el menú **Contabilidad** puedes consultar:
+Desde el menú lateral → **Contabilidad** puedes consultar:
 
 | Reporte | Qué muestra |
 |---------|-------------|
@@ -269,7 +270,7 @@ El centro de reportes se explica con detalle en la [sección 11](#11-reportes-en
 
 ## 7. Tributos y Tasa BCV
 
-Desde el menú **Tributos & BCV** ves los parámetros fiscales de la empresa:
+Desde el menú lateral → **Tributos & BCV** ves los parámetros fiscales de la empresa:
 
 | Parámetro | Valor |
 |-----------|-------|
@@ -324,7 +325,7 @@ Aquí gestionas lo que le debes a tus proveedores (repuestos, combustible, servi
 ![Facturas de cuentas por pagar](../imagen/manual/12-cxp-facturas.png)
 
 ### Registrar un proveedor
-1. Ve a **Cuentas por Pagar** → pestaña de proveedores.
+1. Ve al menú lateral → **Cuentas por Pagar** → **Proveedores** (o **Facturas** / **Pagos**).
 2. Haz clic en **Nuevo proveedor**.
 3. Llena:
    - RIF (ejemplo `J-123456789` o `V-12345678`).
@@ -359,7 +360,7 @@ Aquí gestionas lo que le debes a tus proveedores (repuestos, combustible, servi
 **Negocios Asociados** es un módulo independiente para los comercios aliados que generan pedidos de delivery: restaurantes, farmacias, comercios, servicios y otros. Se recomienda mantenerlo separado de **Cuentas por Pagar** porque su naturaleza contable es distinta: un asociado puede deberte comisiones (**cuenta por cobrar**) y, al mismo tiempo, tú puedes deberle recaudaciones en efectivo cobradas al cliente final (**cuenta por pagar**). Mezclarlo con proveedores de compras confundiría la antigüedad de CxP y los reportes fiscales.
 
 ### Registrar un negocio
-1. Ve al menú lateral → **Negocios Asociados**.
+1. Ve al menú lateral → **Negocios Asociados** → **Listado de negocios** (o **Nuevo negocio**).
 2. Pulsa **Nuevo negocio**.
 3. Llena RIF, razón social, tipo, contacto, teléfono, correo, dirección y el **% de comisión** pactado.
 4. Define el estatus (Activo / Inactivo) y guarda.
@@ -383,7 +384,7 @@ La ficha muestra el saldo por cobrar, el saldo por pagar y el historial completo
 La **Tienda del Conductor** permite vender uniformes, equipamiento y seguridad a los conductores y financiar la compra contra su cartera.
 
 ### Catálogo e inventario
-1. Ve al menú lateral → **Tienda & Inventario**.
+1. Ve al menú lateral → **Tienda & Inventario** → **Catálogo e inventario** (o **Nuevo producto** / **Asignar producto**).
 2. En **Nuevo producto** define SKU, nombre, categoría, precio de venta, costo, stock actual y stock mínimo.
 3. Puedes **ajustar stock** con el icono de refresco (compra, devolución, merma) y editar el producto.
 4. El sistema resalta los productos en o bajo el stock mínimo y calcula el valor del inventario al costo.
@@ -440,7 +441,7 @@ ENVIA ERP incluye cuatro roles listos para usar. Además, el administrador puede
 | Auditor / Operaciones | Consultar los módulos asignados, sin crear, editar ni eliminar. |
 
 ### Crear o editar un rol
-1. Ve a **Sistema → Usuarios del sistema**.
+1. Ve al menú lateral → **Usuarios del sistema** → **Usuarios** (o **Roles**).
 2. En la tarjeta del rol, haz clic en el lápiz para editar sus permisos, o en **Nuevo rol** para crear uno.
 3. Escribe el nombre, una descripción y elige un icono.
 4. En la matriz de permisos, activa **Acceso** para cada módulo que verá el rol. Eso habilita el módulo y sus pestañas, con la acción **Ver / consultar**.
@@ -452,7 +453,7 @@ ENVIA ERP incluye cuatro roles listos para usar. Además, el administrador puede
 Las acciones disponibles incluyen ver, crear, editar, eliminar, exportar, imprimir, abrir el centro de reportes, gestionar documentos, liquidar, pagar, cobrar, registrar movimientos de cartera, asignar productos/financiar, administrar la billetera y administrar roles. Los módulos con pestañas internas, como Contabilidad o Cuentas por Pagar, permiten habilitar cada pestaña por separado. Los roles base ya incluyen acceso a **Negocios Asociados** y **Tienda & Inventario**; el administrador puede ajustarlo por rol o por usuario.
 
 ### Crear un usuario nuevo
-1. Ve a **Usuarios del sistema**.
+1. Ve al menú lateral → **Usuarios del sistema** → **Usuarios**.
 2. Haz clic en **Nuevo usuario**.
 3. Llena usuario, clave, nombre, correo y asigna un rol.
 4. Si necesitas un trato especial, activa **Permisos personalizados para este usuario** y ajusta la matriz. Estos permisos reemplazan los del rol solo para esa persona.
@@ -465,6 +466,34 @@ Las acciones disponibles incluyen ver, crear, editar, eliminar, exportar, imprim
 - **SuperAdmin:** conserva acceso total y no puede degradarse desde la interfaz.
 
 > El usuario `ENVIA` es la cuenta maestra: no se puede eliminar ni cambiar de rol. La sesión expira a las 12 horas.
+
+---
+
+## 10. Configuración del Sistema
+
+Aquí se gestionan los parámetros del sistema, la conexión con Supabase y las integraciones con APIs externas.
+
+### Parámetros de mantenimiento
+1. Ve al menú lateral → **Configuración del Sistema** → **Parámetros de mantenimiento**.
+2. Verás una tabla con los parámetros existentes (clave, etiqueta, módulo, tipo, valor y descripción).
+3. Para crear uno nuevo, haz clic en **Nuevo parámetro** y llena:
+   - **Clave:** identificador único en minúsculas, números y guion bajo (ej: `tarifa_plana_semanal_usd`).
+   - **Etiqueta:** nombre descriptivo que se mostrará en la tabla.
+   - **Módulo:** selecciona de la lista desplegable el módulo al que pertenece (Conductores, Clientes, Servicios, etc.).
+   - **Tipo:** texto, monto, porcentaje, booleano o fecha.
+   - **Valor:** el valor del parámetro.
+   - **Descripción:** explica qué controla este parámetro.
+4. Para editar o eliminar, usa los iconos de lápiz o basura en cada fila.
+
+### Configuración Supabase
+1. Ve al menú lateral → **Configuración del Sistema** → **Credenciales Supabase**.
+2. Ingresa la URL del proyecto y la anon key.
+3. Prueba la conexión y guarda la configuración.
+
+### Integración con APIs externas
+1. Ve al menú lateral → **Configuración del Sistema** → **Integración con APIs externas**.
+2. Aquí ves las APIs configuradas (ej: Tasa BCV Dólar, SENIAT ISLR, SENIAT IVA) con su estado (Activa/Inactiva, Sincronizada/Pendiente).
+3. Para agregar una nueva, haz clic en **Nueva API** y llena clave, nombre, endpoint y descripción.
 
 ---
 
