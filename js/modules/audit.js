@@ -134,6 +134,14 @@
     elModule.addEventListener('change', applyFilters);
     elSearch.addEventListener('input', applyFilters);
 
+    // Ver detalle de movimiento al pulsar la fila
+    tbody.addEventListener('click', (e) => {
+      const row = e.target.closest('.audit-row');
+      if (!row) return;
+      const id = row.dataset.auditId;
+      if (id) openAuditDetail(id);
+    });
+
     // Limpiar bitácora
     const btnClear = $('#audit-clear');
     if (btnClear) {
@@ -162,7 +170,7 @@
 
   function renderRows(logs) {
     const ui = NS.ui;
-    return logs.map((l) => `<tr>
+    return logs.map((l) => `<tr class="audit-row" data-audit-id="${ui.esc(l.id)}" style="cursor:pointer;" title="${ui.esc('Ver detalle del movimiento')}">
       <td class="mono">${ui.esc(l.fecha)}</td>
       <td class="mono">${ui.esc(l.hora)}</td>
       <td><strong class="mono">${ui.esc(l.usuario)}</strong><br><small class="text-2">${ui.esc(l.nombre)}</small></td>
@@ -174,5 +182,56 @@
     </tr>`).join('');
   }
 
-  NS.modules.audit = { render };
+  function formatValue(v) {
+    if (v === null) return '<span style="color:#94a3b8">null</span>';
+    if (v === undefined) return '<span style="color:#94a3b8">—</span>';
+    if (typeof v === 'object') return '<pre style="margin:0;font-size:9px;white-space:pre-wrap;background:#f8fafc;border:1px solid #eef2f8;border-radius:6px;padding:6px 8px;max-height:240px;overflow:auto">' + NS.ui.esc(JSON.stringify(v, null, 2)) + '</pre>';
+    return NS.ui.esc(String(v));
+  }
+
+  function openAuditDetail(id) {
+    const ui = NS.ui;
+    const log = (NS.store.getAuditLog() || []).find((l) => l.id === id);
+    if (!log) return;
+    const extras = log.extras || {};
+    const antes = extras.antes || {};
+    const despues = extras.despues || {};
+    const keys = new Set([...Object.keys(antes), ...Object.keys(despues)]);
+    const rows = Array.from(keys).map((k) => {
+      const a = antes[k];
+      const d = despues[k];
+      const changed = a !== d;
+      return `<tr>
+        <td style="font-size:9px;color:var(--text-3);width:34%">${ui.esc(k)}</td>
+        <td style="font-size:10px;color:${changed ? '#b42318' : '#64748b'};width:33%">${formatValue(a)}</td>
+        <td style="font-size:10px;color:${changed ? '#15803d' : '#64748b'};width:33%">${formatValue(d)}</td>
+      </tr>`;
+    }).join('') || `<tr><td colspan="3" style="font-size:9px;color:#94a3b8;padding:16px;text-align:center">Sin cambios de campo registrados.</td></tr>`;
+
+    const overlay = NS.ui.modal({
+      title: 'Detalle del movimiento',
+      eyebrow: 'Bitácora de auditoría',
+      subtitle: 'Cambios campo a campo y registro completo de la entrada.',
+      size: 'lg',
+      body: `<div class="audit-detail">
+        <table class="data-table" style="min-width:unset;margin-bottom:12px">
+          <tbody>
+            <tr><td style="width:34%"><strong>Fecha</strong></td><td>${ui.esc(log.fecha)} ${ui.esc(log.hora)}</td></tr>
+            <tr><td><strong>Usuario</strong></td><td>${ui.esc(log.usuario)} <small class="text-2">${ui.esc(log.nombre)}</small></td></tr>
+            <tr><td><strong>Rol</strong></td><td>${ui.esc(log.rol)}</td></tr>
+            <tr><td><strong>Acción</strong></td><td>${ui.esc(ACCION_LABEL[log.accion] || log.accion)}</td></tr>
+            <tr><td><strong>Módulo</strong></td><td>${ui.esc(MODULO_LABEL[log.modulo] || log.modulo)}</td></tr>
+            <tr><td><strong>Referencia</strong></td><td class="mono small">${ui.esc(log.referencia || '—')}</td></tr>
+            <tr><td><strong>Detalle</strong></td><td>${ui.esc(log.detalle)}</td></tr>
+          </tbody>
+        </table>
+        ${keys.size ? `<div style="margin:8px 0 4px"><strong style="font-size:9px;color:var(--text-3);display:block;margin-bottom:4px">Cambios campo a campo (antes → después)</strong><table class="data-table" style="min-width:unset"><thead><tr><th style="font-size:9px">Campo</th><th style="font-size:9px">Antes</th><th style="font-size:9px">Después</th></tr></thead><tbody>${rows}</tbody></table></div>` : ''}
+        <div style="margin-top:10px"><strong style="font-size:9px;color:var(--text-3);display:block;margin-bottom:4px">Registro completo (JSON)</strong><pre style="margin:0;font-size:9px;white-space:pre-wrap;background:#f8fafc;border:1px solid #eef2f8;border-radius:6px;padding:8px 10px;max-height:300px;overflow:auto">${NS.ui.esc(JSON.stringify(log, null, 2))}</pre></div>
+      </div>`,
+      footer: `<button class="btn btn-ghost" data-cancel>Cerrar</button>`
+    });
+    overlay.querySelector('[data-cancel]').addEventListener('click', () => NS.ui.closeModal(overlay));
+  }
+
+  NS.modules.audit = { render, openAuditDetail };
 })();

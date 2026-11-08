@@ -98,6 +98,17 @@
   }
 
   /* ----------------------------- Shell: sidebar -------------------------- */
+  function setSidebarModuleOpen(nav, module, open) {
+    nav.querySelectorAll('.nav-item-parent').forEach((btn) => {
+      const isTarget = btn.dataset.route === module;
+      const shouldOpen = isTarget && !!open;
+      btn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+      btn.parentElement.classList.toggle('open', shouldOpen);
+      const toggle = btn.parentElement.querySelector('.nav-toggle');
+      if (toggle) toggle.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+    });
+  }
+
   function buildSidebar() {
     const nav = $('#sidebar-nav');
     if (!nav) return;
@@ -111,14 +122,15 @@
           const count = navCount(m.module);
           const hasSub = m.subitems && m.subitems.length > 0;
           const subVisible = m.subitems && m.subitems.some((s) => access.modules.includes('*') || access.modules.includes(m.module));
+          const isOpen = !!subVisible && currentRoute === m.module;
           return `
-            <div class="nav-module ${hasSub ? 'has-sub' : ''} ${subVisible && currentRoute === m.module ? 'open' : ''}">
-              <button type="button" class="nav-item ${hasSub ? 'nav-item-parent' : ''}" data-route="${m.module}" aria-expanded="${hasSub ? 'false' : 'false'}">
+            <div class="nav-module ${hasSub ? 'has-sub' : ''} ${isOpen ? 'open' : ''}">
+              <button type="button" class="nav-item ${hasSub ? 'nav-item-parent' : ''}" data-route="${m.module}" aria-expanded="${isOpen ? 'true' : 'false'}">
                 <span class="nav-ico">${NS.ui.icon(m.icon, 19)}</span>
                 <span class="nav-label">${NS.ui.esc(m.label)}</span>
                 ${count ? `<span class="nav-count">${count}</span>` : ''}
-                ${hasSub ? `<span class="nav-toggle">${NS.ui.icon('chevronDown', 12)}</span>` : ''}
               </button>
+              ${hasSub ? `<button type="button" class="nav-toggle" data-nav-toggle="${m.module}" aria-expanded="${isOpen ? 'true' : 'false'}" aria-label="Mostrar u ocultar opciones de ${NS.ui.esc(m.label)}">${NS.ui.icon('chevronDown', 12)}</button>` : ''}
               ${hasSub ? `<div class="nav-subitems" data-parent="${m.module}">
                 ${m.subitems.filter((s) => access.modules.includes('*') || access.modules.includes(m.module)).map((s) => `
                   <a href="#/${m.module}?sub=${s.id}" class="nav-subitem" data-route="${m.module}" data-sub="${s.id}" data-action="${s.action}">
@@ -167,11 +179,18 @@
         navigate(module, true);
         nav.querySelectorAll('.nav-subitem').forEach((s) => s.classList.remove('active'));
         // Acordeón: abrir el módulo actual y cerrar los demás.
-        nav.querySelectorAll('.nav-item-parent').forEach((b) => {
-          const isCurrent = b.dataset.route === module;
-          b.setAttribute('aria-expanded', isCurrent ? 'true' : 'false');
-          b.parentElement.classList.toggle('open', isCurrent);
-        });
+        setSidebarModuleOpen(nav, module, true);
+      });
+    });
+
+    // La flecha solo expande/recoge el acordeón, sin navegar.
+    nav.querySelectorAll('.nav-toggle').forEach((toggle) => {
+      toggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const module = toggle.dataset.navToggle;
+        const isOpen = toggle.getAttribute('aria-expanded') === 'true';
+        setSidebarModuleOpen(nav, module, !isOpen);
       });
     });
 
@@ -448,11 +467,15 @@
       if (isActive && a.classList.contains('nav-item-parent')) {
         a.setAttribute('aria-expanded', 'true');
         a.parentElement.classList.add('open');
+        const toggle = a.parentElement.querySelector('.nav-toggle');
+        if (toggle) toggle.setAttribute('aria-expanded', 'true');
         const sub = a.parentElement.querySelector('.nav-subitems');
         if (sub) sub.parentElement.classList.add('open');
       } else if (a.classList.contains('nav-item-parent')) {
         a.setAttribute('aria-expanded', 'false');
         a.parentElement.classList.remove('open');
+        const toggle = a.parentElement.querySelector('.nav-toggle');
+        if (toggle) toggle.setAttribute('aria-expanded', 'false');
       }
     });
 

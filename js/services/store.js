@@ -1607,7 +1607,7 @@
       });
       // APIs externas por defecto
       const defaultApis = [
-        { key: 'bcv_tasa_dolar', nombre: 'Tasa BCV Dólar', endpoint: 'https://bcv.org.ve', activo: true, sincronizado: true, ultima_sincronizacion: new Date().toISOString().slice(0, 10), descripcion: 'Tasa oficial del Banco Central de Venezuela para conversión USD/VES.' },
+        { key: 'bcv_tasa_dolar', nombre: 'Tasa BCV Dólar', endpoint: 'https://rates.dolarvzla.com', activo: true, sincronizado: true, ultima_sincronizacion: new Date().toISOString().slice(0, 10), descripcion: 'Tasa oficial del BCV publicada por DolarVZLA (CDN público, sin API key). Usada por el servicio de tipo de cambio.' },
         { key: 'seniat_islr', nombre: 'SENIAT ISLR', endpoint: 'https://seniat.gob.ve', activo: false, sincronizado: false, ultima_sincronizacion: '', descripcion: 'Retenciones de ISLR según Decreto 1.808.' },
         { key: 'seniat_iva', nombre: 'SENIAT IVA', endpoint: 'https://seniat.gob.ve', activo: false, sincronizado: false, ultima_sincronizacion: '', descripcion: 'Control de alícuotas de IVA.' }
       ];
@@ -1850,15 +1850,16 @@
       };
       if (existing) Object.assign(existing, rec);
       else current.clients.unshift(rec);
-      api.addAuditLog(existing ? 'actualizar' : 'crear', 'clientes', `Cliente ${cedula} · ${data.nombres || ''} ${data.apellidos || ''}`, cedula);
+      api.addAuditLog(existing ? 'actualizar' : 'crear', 'clientes', `Cliente ${cedula} · ${data.nombres || ''} ${data.apellidos || ''}`, cedula, { antes: existing, despues: rec });
       persist();
       return rec;
     },
     deleteClient(cedula) {
       const hasSvc = current.services.some((s) => s.cliente_cedula_rif === cedula);
       if (hasSvc) throw new Error('No se puede eliminar: el cliente tiene servicios asociados.');
+      const rec = current.clients.find((c) => c.cedula_rif === cedula);
       current.clients = current.clients.filter((c) => c.cedula_rif !== cedula);
-      api.addAuditLog('eliminar', 'clientes', `Cliente ${cedula}`, cedula);
+      api.addAuditLog('eliminar', 'clientes', `Cliente ${cedula}`, cedula, { antes: rec, despues: null });
       persist();
     },
     addWalletRecharge(cedula, data) {
@@ -1948,27 +1949,29 @@
       };
       if (existing) Object.assign(existing, rec);
       else current.drivers.unshift(rec);
-      api.addAuditLog(existing ? 'actualizar' : 'crear', 'conductores', `Conductor ${cedula} · ${data.nombres || ''} ${data.apellidos || ''}`, cedula);
+      api.addAuditLog(existing ? 'actualizar' : 'crear', 'conductores', `Conductor ${cedula} · ${data.nombres || ''} ${data.apellidos || ''}`, cedula, { antes: existing, despues: rec });
       persist();
       return rec;
     },
     deleteDriver(cedula) {
       const hasSvc = current.services.some((s) => s.conductor_cedula_rif === cedula);
       if (hasSvc) throw new Error('No se puede eliminar: el conductor tiene servicios asociados.');
+      const rec = current.drivers.find((d) => d.cedula_rif === cedula);
       current.drivers = current.drivers.filter((d) => d.cedula_rif !== cedula);
-      api.addAuditLog('eliminar', 'conductores', `Conductor ${cedula}`, cedula);
+      api.addAuditLog('eliminar', 'conductores', `Conductor ${cedula}`, cedula, { antes: rec, despues: null });
       persist();
     },
     setDocStatus(cedula, docKey, status) {
       const d = current.drivers.find((x) => x.cedula_rif === cedula);
       if (!d) return;
+      const prevStatus = (d.docs_estado || {})[docKey];
       d.docs_estado = { ...(d.docs_estado || {}), [docKey]: status };
       if (status === 'Aprobado' && docKey !== 'vehiculo') {
         const all = ['cedula', 'rif', 'licencia', 'circulacion'].every((k) => d.docs_estado[k] === 'Aprobado');
         if (all && d.estatus_conductor === 'En Revisión Documental') d.estatus_conductor = 'Activo / Disponible';
       }
       d.updated_at = stamp();
-      api.addAuditLog('actualizar_documento', 'conductores', `Documento ${docKey} → ${status} para conductor ${cedula}`, cedula);
+      api.addAuditLog('actualizar_documento', 'conductores', `Documento ${docKey} → ${status} para conductor ${cedula}`, cedula, { antes: { [docKey]: prevStatus }, despues: { [docKey]: status } });
       persist();
     },
 
@@ -2002,15 +2005,16 @@
         created_at: existing ? existing.created_at : stamp() };
       if (existing) Object.assign(existing, rec);
       else current.suppliers.unshift(rec);
-      api.addAuditLog(existing ? 'actualizar' : 'crear', 'proveedores', `Proveedor ${rif} · ${data.razon_social || ''}`, rif);
+      api.addAuditLog(existing ? 'actualizar' : 'crear', 'proveedores', `Proveedor ${rif} · ${data.razon_social || ''}`, rif, { antes: existing, despues: rec });
       persist();
       return rec;
     },
     deleteSupplier(rif) {
       const used = current.payables.some((p) => p.proveedor_rif === rif);
       if (used) throw new Error('No se puede eliminar: el proveedor tiene facturas registradas.');
+      const rec = current.suppliers.find((s) => s.rif === rif);
       current.suppliers = current.suppliers.filter((s) => s.rif !== rif);
-      api.addAuditLog('eliminar', 'proveedores', `Proveedor ${rif}`, rif);
+      api.addAuditLog('eliminar', 'proveedores', `Proveedor ${rif}`, rif, { antes: rec, despues: null });
       persist();
     },
 
@@ -2054,15 +2058,16 @@
       };
       if (existing) Object.assign(existing, rec);
       else current.partners.unshift(rec);
-      api.addAuditLog(existing ? 'actualizar' : 'crear', 'negocios_asociados', `Negocio ${rif} · ${rec.razon_social}`, rif);
+      api.addAuditLog(existing ? 'actualizar' : 'crear', 'negocios_asociados', `Negocio ${rif} · ${rec.razon_social}`, rif, { antes: existing, despues: rec });
       persist();
       return rec;
     },
     deletePartner(rif) {
       const used = current.partnerMovements.some((m) => m.partner_rif === rif && m.monto_usd);
       if (used) throw new Error('No se puede eliminar: el negocio tiene movimientos registrados.');
+      const rec = current.partners.find((p) => p.rif === rif);
       current.partners = current.partners.filter((p) => p.rif !== rif);
-      api.addAuditLog('eliminar', 'negocios_asociados', `Negocio ${rif}`, rif);
+      api.addAuditLog('eliminar', 'negocios_asociados', `Negocio ${rif}`, rif, { antes: rec, despues: null });
       persist();
     },
     addPartnerMovement(rif, data) {
@@ -2150,13 +2155,16 @@
       };
       if (existing) Object.assign(existing, rec);
       else current.systemParams.unshift(rec);
-      api.addAuditParam ? api.addAuditParam('actualizar', 'system_params', `Parámetro ${key} = ${value}`, key) : api.addAuditLog('actualizar', 'system_params', `Parámetro ${key} = ${value}`, key);
+      const extras = { antes: existing, despues: rec };
+      if (api.addAuditParam) api.addAuditParam('actualizar', 'system_params', `Parámetro ${key} = ${value}`, key, extras);
+      else api.addAuditLog('actualizar', 'system_params', `Parámetro ${key} = ${value}`, key, extras);
       persist();
       return rec;
     },
     deleteSystemParam(key) {
+      const rec = current.systemParams.find((p) => p.key === key);
       current.systemParams = current.systemParams.filter((p) => p.key !== key);
-      api.addAuditLog('eliminar', 'system_params', `Parámetro ${key}`, key);
+      api.addAuditLog('eliminar', 'system_params', `Parámetro ${key}`, key, { antes: rec, despues: null });
       persist();
     },
     systemParams() {
@@ -2191,13 +2199,14 @@
       };
       if (existing) Object.assign(existing, rec);
       else current.apiIntegrations.unshift(rec);
-      api.addAuditLog('actualizar', 'api_integrations', `API ${key}`, key);
+      api.addAuditLog(existing ? 'actualizar' : 'crear', 'api_integrations', `API ${key}`, key, { antes: existing, despues: rec });
       persist();
       return rec;
     },
     deleteApiIntegration(key) {
+      const rec = current.apiIntegrations.find((a) => a.key === key);
       current.apiIntegrations = current.apiIntegrations.filter((a) => a.key !== key);
-      api.addAuditLog('eliminar', 'api_integrations', `API ${key}`, key);
+      api.addAuditLog('eliminar', 'api_integrations', `API ${key}`, key, { antes: rec, despues: null });
       persist();
     },
 
@@ -2234,13 +2243,14 @@
       };
       if (existing) Object.assign(existing, rec);
       else current.driverPlans.unshift(rec);
-      api.addAuditLog(existing ? 'actualizar' : 'crear', 'driver_plans', `Plan ${key} · ${data.nivel} · ${data.tipo_plan}`, key);
+      api.addAuditLog(existing ? 'actualizar' : 'crear', 'driver_plans', `Plan ${key} · ${data.nivel} · ${data.tipo_plan}`, key, { antes: existing, despues: rec });
       persist();
       return rec;
     },
     deleteDriverPlan(key) {
+      const rec = current.driverPlans.find((p) => p.key === key);
       current.driverPlans = current.driverPlans.filter((p) => p.key !== key);
-      api.addAuditLog('eliminar', 'driver_plans', `Plan ${key}`, key);
+      api.addAuditLog('eliminar', 'driver_plans', `Plan ${key}`, key, { antes: rec, despues: null });
       persist();
     },
 
@@ -2283,13 +2293,14 @@
       };
       if (existing) Object.assign(existing, rec);
       else current.driverEvents.unshift(rec);
-      api.addAuditLog(existing ? 'actualizar' : 'crear', 'driver_events', `Evento ${key} · ${data.nombre}`, key);
+      api.addAuditLog(existing ? 'actualizar' : 'crear', 'driver_events', `Evento ${key} · ${data.nombre}`, key, { antes: existing, despues: rec });
       persist();
       return rec;
     },
     deleteDriverEvent(key) {
+      const rec = current.driverEvents.find((e) => e.key === key);
       current.driverEvents = current.driverEvents.filter((e) => e.key !== key);
-      api.addAuditLog('eliminar', 'driver_events', `Evento ${key}`, key);
+      api.addAuditLog('eliminar', 'driver_events', `Evento ${key}`, key, { antes: rec, despues: null });
       persist();
     },
 
@@ -2975,7 +2986,7 @@
       };
       if (existing) Object.assign(existing, rec);
       else current.users.push(rec);
-      api.addAuditLog(existing ? 'actualizar' : 'crear', 'usuarios', `Usuario ${usuario} · ${data.rol || ''}`, usuario);
+      api.addAuditLog(existing ? 'actualizar' : 'crear', 'usuarios', `Usuario ${usuario} · ${data.rol || ''}`, usuario, { antes: existing, despues: rec });
       persist();
       return rec;
     },
@@ -2984,7 +2995,7 @@
       if (!u) return;
       if (u.usuario === 'ENVIA') throw new Error('No puedes eliminar el usuario maestro ENVIA.');
       current.users = current.users.filter((x) => x.id !== id);
-      api.addAuditLog('eliminar', 'usuarios', `Usuario ${u.usuario}`, id);
+      api.addAuditLog('eliminar', 'usuarios', `Usuario ${u.usuario}`, id, { antes: u, despues: null });
       persist();
     },
     authenticate(usuario, password) {
@@ -3126,7 +3137,7 @@
         return s && s.usuario ? { usuario: s.usuario, nombre: s.nombre, rol: s.rol } : null;
       } catch (e) { return null; }
     },
-    addAuditLog(accion, modulo, detalle, referencia) {
+    addAuditLog(accion, modulo, detalle, referencia, extras) {
       const user = api.getCurrentUser();
       const ahora = new Date();
       const entrada = {
@@ -3138,6 +3149,7 @@
         rol: user ? user.rol : '—',
         accion, modulo, detalle: detalle || '', referencia: referencia || ''
       };
+      if (extras) entrada.extras = extras;
       current.auditLog.unshift(entrada);
       if (current.auditLog.length > 5000) current.auditLog.length = 5000;
       persist();
