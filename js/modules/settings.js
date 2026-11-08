@@ -106,6 +106,75 @@
       </section>
 
       <section class="card card-span-2">
+        <div class="card-head"><div><h3>Planes de Conductores por Nivel</h3><p>Define el plan semanal (fijo o porcentaje) que se descontará a cada conductor según su nivel.</p></div>${NS.app.canAction('settings', 'parametros') ? `<button class="btn btn-primary btn-sm" id="plan-new">${ui.icon('plus', 14)} Nuevo plan</button>` : ''}</div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Clave</th><th>Nivel</th><th>Tipo</th><th class="num">Valor</th><th>Descripción</th><th>Activo</th><th class="actions-col">Acciones</th></tr></thead>
+            <tbody>
+              ${db.driverPlans.length ? db.driverPlans.map((p) => `<tr>
+                <td><span class="mono strong">${ui.esc(p.key)}</span></td>
+                <td>${ui.badge(p.nivel, 'info')}</td>
+                <td>${ui.badge(p.tipo_plan, p.tipo_plan === 'fijo' ? 'success' : 'warning')}</td>
+                <td class="num"><strong>${p.tipo_plan === 'fijo' ? '$' + p.valor : p.valor + '%'}</strong></td>
+                <td>${ui.esc(p.descripcion || '—')}</td>
+                <td>${ui.badge(p.activo ? 'Activo' : 'Inactivo', p.activo ? 'success' : 'danger')}</td>
+                <td class="actions-col">
+                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn" data-edit-plan="${ui.esc(p.key)}" title="Editar">${ui.icon('edit', 16)}</button>` : ''}
+                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn danger" data-del-plan="${ui.esc(p.key)}" title="Eliminar">${ui.icon('trash', 16)}</button>` : ''}
+                </td>
+              </tr>`).join('') : `<tr><td colspan="7">${ui.empty('plan', 'Sin planes configurados', 'Crea el primer plan semanal por nivel.', NS.app.canAction('settings', 'parametros') ? '<button class="btn btn-primary" id="plan-empty-new">Nuevo plan</button>' : '')}</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card card-span-2">
+        <div class="card-head"><div><h3>Eventos de Conductores (Premio / Descuento)</h3><p>Crea eventos aplicables a todos los conductores o a un nivel específico, con valor en monto fijo o porcentaje.</p></div>${NS.app.canAction('settings', 'parametros') ? `<button class="btn btn-primary btn-sm" id="event-new">${ui.icon('plus', 14)} Nuevo evento</button>` : ''}</div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Clave</th><th>Nombre</th><th>Tipo evento</th><th>Aplicación</th><th class="num">Valor</th><th>Activo</th><th class="actions-col">Acciones</th></tr></thead>
+            <tbody>
+              ${db.driverEvents.length ? db.driverEvents.map((e) => `<tr>
+                <td><span class="mono strong">${ui.esc(e.key)}</span></td>
+                <td>${ui.esc(e.nombre)}</td>
+                <td>${ui.badge(e.tipo_evento, e.tipo_evento === 'premio' ? 'success' : 'danger')}</td>
+                <td>${e.aplicacion === 'todos' ? 'Todos' : 'Nivel: ' + e.nivel_aplicar}</td>
+                <td class="num"><strong>${e.tipo_valor === 'porcentaje' ? e.valor + '%' : '$' + e.valor}</strong></td>
+                <td>${ui.badge(e.activo ? 'Activo' : 'Inactivo', e.activo ? 'success' : 'danger')}</td>
+                <td class="actions-col">
+                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn" data-edit-event="${ui.esc(e.key)}" title="Editar">${ui.icon('edit', 16)}</button>` : ''}
+                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn danger" data-del-event="${ui.esc(e.key)}" title="Eliminar">${ui.icon('trash', 16)}</button>` : ''}
+                </td>
+              </tr>`).join('') : `<tr><td colspan="7">${ui.empty('event', 'Sin eventos configurados', 'Crea el primer evento de premio o descuento.', NS.app.canAction('settings', 'parametros') ? '<button class="btn btn-primary" id="event-empty-new">Nuevo evento</button>' : '')}</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><div><h3>Integración con APIs externas</h3><p>Servicios externos sincronizados (tasa de cambio, tributos, etc.) y mantenibles desde este panel.</p></div>${NS.app.canAction('settings', 'parametros') ? `<button class="btn btn-primary btn-sm" id="api-new">${ui.icon('plus', 14)} Nueva API</button>` : ''}</div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Clave</th><th>Nombre</th><th>Endpoint</th><th>Activa</th><th>Sincronizada</th><th>Última sinc.</th><th class="actions-col">Acciones</th></tr></thead>
+            <tbody>
+              ${db.apiIntegrations.length ? db.apiIntegrations.map((a) => `<tr>
+                <td><span class="mono strong">${ui.esc(a.key)}</span></td>
+                <td>${ui.esc(a.nombre)}</td>
+                <td>${ui.esc(a.endpoint || '—')}</td>
+                <td>${ui.badge(a.activo ? 'Activa' : 'Inactiva', a.activo ? 'success' : 'danger')}</td>
+                <td>${ui.badge(a.sincronizado ? 'OK' : 'Pendiente', a.sincronizado ? 'success' : 'warning')}</td>
+                <td>${a.ultima_sincronizacion || '—'}</td>
+                <td class="actions-col">
+                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn" data-edit-api="${ui.esc(a.key)}" title="Editar">${ui.icon('edit', 16)}</button>` : ''}
+                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn danger" data-del-api="${ui.esc(a.key)}" title="Eliminar">${ui.icon('trash', 16)}</button>` : ''}
+                </td>
+              </tr>`).join('') : `<tr><td colspan="7">${ui.empty('api', 'Sin APIs configuradas', 'Registra la primera integración externa.', NS.app.canAction('settings', 'parametros') ? '<button class="btn btn-primary" id="api-empty-new">Nueva API</button>' : '')}</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card card-span-2">
         <div class="card-head"><div><h3>Credenciales del proyecto Supabase</h3><p>SUPABASE_URL y SUPABASE_ANON_KEY · se guardan solo en este navegador</p></div>${configured ? ui.badge('Configurado', 'success') : ui.badge('Pendiente', 'warning')}</div>
         <form id="supabase-form" class="form-grid" autocomplete="off">
           <label class="field field-full"><span>SUPABASE_URL *</span><input name="url" value="${ui.esc(cfg.url || '')}" placeholder="https://tu-proyecto.supabase.co" ${canWrite ? '' : 'disabled'}></label>
@@ -164,75 +233,6 @@
             ${lastReport.map((r) => `<div class="sync-report-row ${r.ok ? 'ok' : 'bad'}"><span>${ui.icon(r.ok ? 'check' : 'alert', 14)} ${ui.esc(r.table)}</span><strong>${r.ok ? r.count + ' registros' : ui.esc(r.error || 'Error')}</strong></div>`).join('')}
           </div>
         </div>` : ''}
-      </section>
-
-      <section class="card">
-        <div class="card-head"><div><h3>Integración con APIs externas</h3><p>Servicios externos sincronizados (tasa de cambio, tributos, etc.) y mantenibles desde este panel.</p></div>${NS.app.canAction('settings', 'parametros') ? `<button class="btn btn-primary btn-sm" id="api-new">${ui.icon('plus', 14)} Nueva API</button>` : ''}</div>
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead><tr><th>Clave</th><th>Nombre</th><th>Endpoint</th><th>Activa</th><th>Sincronizada</th><th>Última sinc.</th><th class="actions-col">Acciones</th></tr></thead>
-            <tbody>
-              ${db.apiIntegrations.length ? db.apiIntegrations.map((a) => `<tr>
-                <td><span class="mono strong">${ui.esc(a.key)}</span></td>
-                <td>${ui.esc(a.nombre)}</td>
-                <td>${ui.esc(a.endpoint || '—')}</td>
-                <td>${ui.badge(a.activo ? 'Activa' : 'Inactiva', a.activo ? 'success' : 'danger')}</td>
-                <td>${ui.badge(a.sincronizado ? 'OK' : 'Pendiente', a.sincronizado ? 'success' : 'warning')}</td>
-                <td>${a.ultima_sincronizacion || '—'}</td>
-                <td class="actions-col">
-                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn" data-edit-api="${ui.esc(a.key)}" title="Editar">${ui.icon('edit', 16)}</button>` : ''}
-                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn danger" data-del-api="${ui.esc(a.key)}" title="Eliminar">${ui.icon('trash', 16)}</button>` : ''}
-                </td>
-              </tr>`).join('') : `<tr><td colspan="7">${ui.empty('api', 'Sin APIs configuradas', 'Registra la primera integración externa.', NS.app.canAction('settings', 'parametros') ? '<button class="btn btn-primary" id="api-empty-new">Nueva API</button>' : '')}</td></tr>`}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="card card-span-2">
-        <div class="card-head"><div><h3>Planes de Conductores por Nivel</h3><p>Define el plan semanal (fijo o porcentaje) que se descontará a cada conductor según su nivel.</p></div>${NS.app.canAction('settings', 'parametros') ? `<button class="btn btn-primary btn-sm" id="plan-new">${ui.icon('plus', 14)} Nuevo plan</button>` : ''}</div>
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead><tr><th>Clave</th><th>Nivel</th><th>Tipo</th><th class="num">Valor</th><th>Descripción</th><th>Activo</th><th class="actions-col">Acciones</th></tr></thead>
-            <tbody>
-              ${db.driverPlans.length ? db.driverPlans.map((p) => `<tr>
-                <td><span class="mono strong">${ui.esc(p.key)}</span></td>
-                <td>${ui.badge(p.nivel, 'info')}</td>
-                <td>${ui.badge(p.tipo_plan, p.tipo_plan === 'fijo' ? 'success' : 'warning')}</td>
-                <td class="num"><strong>${p.tipo_plan === 'fijo' ? '$' + p.valor : p.valor + '%'}</strong></td>
-                <td>${ui.esc(p.descripcion || '—')}</td>
-                <td>${ui.badge(p.activo ? 'Activo' : 'Inactivo', p.activo ? 'success' : 'danger')}</td>
-                <td class="actions-col">
-                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn" data-edit-plan="${ui.esc(p.key)}" title="Editar">${ui.icon('edit', 16)}</button>` : ''}
-                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn danger" data-del-plan="${ui.esc(p.key)}" title="Eliminar">${ui.icon('trash', 16)}</button>` : ''}
-                </td>
-              </tr>`).join('') : `<tr><td colspan="7">${ui.empty('plan', 'Sin planes configurados', 'Crea el primer plan semanal por nivel.', NS.app.canAction('settings', 'parametros') ? '<button class="btn btn-primary" id="plan-empty-new">Nuevo plan</button>' : '')}</td></tr>`}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="card card-span-2">
-        <div class="card-head"><div><h3>Eventos de Conductores (Premio / Descuento)</h3><p>Crea eventos aplicables a todos los conductores o a un nivel específico, con valor en monto fijo o porcentaje.</p></div>${NS.app.canAction('settings', 'parametros') ? `<button class="btn btn-primary btn-sm" id="event-new">${ui.icon('plus', 14)} Nuevo evento</button>` : ''}</div>
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead><tr><th>Clave</th><th>Nombre</th><th>Tipo evento</th><th>Aplicación</th><th class="num">Valor</th><th>Activo</th><th class="actions-col">Acciones</th></tr></thead>
-            <tbody>
-              ${db.driverEvents.length ? db.driverEvents.map((e) => `<tr>
-                <td><span class="mono strong">${ui.esc(e.key)}</span></td>
-                <td>${ui.esc(e.nombre)}</td>
-                <td>${ui.badge(e.tipo_evento, e.tipo_evento === 'premio' ? 'success' : 'danger')}</td>
-                <td>${e.aplicacion === 'todos' ? 'Todos' : 'Nivel: ' + e.nivel_aplicar}</td>
-                <td class="num"><strong>${e.tipo_valor === 'porcentaje' ? e.valor + '%' : '$' + e.valor}</strong></td>
-                <td>${ui.badge(e.activo ? 'Activo' : 'Inactivo', e.activo ? 'success' : 'danger')}</td>
-                <td class="actions-col">
-                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn" data-edit-event="${ui.esc(e.key)}" title="Editar">${ui.icon('edit', 16)}</button>` : ''}
-                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn danger" data-del-event="${ui.esc(e.key)}" title="Eliminar">${ui.icon('trash', 16)}</button>` : ''}
-                </td>
-              </tr>`).join('') : `<tr><td colspan="7">${ui.empty('event', 'Sin eventos configurados', 'Crea el primer evento de premio o descuento.', NS.app.canAction('settings', 'parametros') ? '<button class="btn btn-primary" id="event-empty-new">Nuevo evento</button>' : '')}</td></tr>`}
-            </tbody>
-          </table>
-        </div>
       </section>
 
       <div class="dash-grid">
