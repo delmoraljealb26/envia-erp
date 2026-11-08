@@ -111,6 +111,12 @@
     table.data-table td { padding: 12px 14px; border-bottom: 1px solid var(--line); color: #37475F; vertical-align: top; }
     table.data-table tr:last-child td { border-bottom: 0; }
     table.data-table tr:hover { background: #FAFCFF; }
+    /* El manual conserva sus tablas clásicas aunque comparta styles.css. */
+    body.on-manual::before { display: none; }
+    body.on-manual .data-table tbody tr { background: #fff; box-shadow: none; transform: none; }
+    body.on-manual .data-table tbody td { border-left: 0; border-right: 0; border-radius: 0; background: transparent; }
+    body.on-manual .data-table tbody td:first-child,
+    body.on-manual .data-table tbody td:last-child { border-radius: 0; }
 
     .chip { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 700; margin: 2px 4px 2px 0; }
     .chip.navy { background: #0F1E36; color: #fff; }
@@ -200,6 +206,25 @@
           <div class="note info"><strong>¿Olvidaste la clave?</strong> En esta versión demo las claves se gestionan localmente. Contacta al SuperAdmin para restablecer acceso.</div>
           <div class="note"><strong>Inicio seguro:</strong> cada vez que inicies sesión, el sistema abre el <b>Dashboard</b>. No se restaura el último módulo visitado.</div>
           <div class="note info"><strong>Cerrar sesión:</strong> en escritorio usa el icono de salida de la barra superior. En móvil, abre el menú lateral (☰) y usa <b>Cerrar sesión</b>, que aparece al final después de Configuración Supabase.</div>
+          <div class="step-card">
+            <div class="step-head">
+              <span class="step-badge">3</span>
+              <h2 class="step-title">Nuevo espacio de trabajo · v1.13.0</h2>
+              <span class="step-meta">ENVIA Spatial OS</span>
+            </div>
+            <div class="step-body">
+              <ul class="step-list">
+                <li><span class="ord">◎</span><span class="txt"><b>Dock flotante:</b> el menú lateral es una cápsula de cristal; el título del módulo abre su pantalla y la flecha solo expande o recoge las opciones.</span></li>
+                <li><span class="ord">⌘</span><span class="txt"><b>Command palette:</b> pulsa <code>Ctrl + K</code> o <code>⌘ + K</code> para buscar módulos, cédulas, RIF, facturas, servicios y productos. Flechas para navegar y <code>Enter</code> para abrir.</span></li>
+                <li><span class="ord">◐</span><span class="txt"><b>Temas:</b> alterna entre <b>Dark Fintech</b> y <b>Light Spatial</b> desde la barra superior. La preferencia se guarda en el navegador.</span></li>
+                <li><span class="ord">▦</span><span class="txt"><b>Dashboard Bento y smart tables:</b> métricas en celdas asimétricas y tablas con filas-tarjeta; si hay muchas columnas, desplázate horizontalmente.</span></li>
+                <li><span class="ord">▣</span><span class="txt"><b>Fichas documentales:</b> las tarjetas abren una vista previa ampliada; los archivos se guardan en Supabase Storage o localmente sin conexión.</span></li>
+                <li><span class="ord">₿</span><span class="txt"><b>Cápsula BCV Live:</b> la tasa oficial muestra conversión rápida de USD a VES y de 1.000 Bs a USD.</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="note info"><strong>Volver al diseño anterior:</strong> ejecuta <code>revertir_diseno.ps1</code> desde la carpeta del proyecto; el respaldo está en <code>_backup_diseno_original/</code>.</div>
         </section>
 
         <!-- 2. Dashboard -->
@@ -818,7 +843,7 @@
         </section>
 
         <div class="footer-manual">
-          ENVIA ERP · Manual de Usuario v1.4 · noviembre de 2026 · <br>
+          ENVIA ERP · Manual de Usuario v1.5 · noviembre de 2026 · <br>
           <strong>Moneda funcional:</strong> Bolívares (VES) · <strong>Tasa BCV:</strong> automática y solo lectura · <strong>Auditoría:</strong> bitácora de cambios activada
         </div>
       </main>

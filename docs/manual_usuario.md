@@ -1,6 +1,6 @@
 # Manual de Usuario — ENVIA ERP
 
-**Versión:** 1.4 · **Fecha:** noviembre de 2026
+**Versión:** 1.5 · **Fecha:** noviembre de 2026
 
 **Para:** Usuarios del sistema ENVIA ERP
 **Cómo abrir:** Doble clic en `index.html` en Google Chrome
@@ -50,6 +50,19 @@ Cada vez que inicies sesión, el sistema abrirá siempre el **Dashboard**, aunqu
 El **menú lateral** está organizado por grupos (Operación, Maestros, Finanzas, Sistema). Cada módulo es un botón desplegable (acordeón): al hacer clic en el nombre del módulo se abre su pantalla principal y se despliegan sus opciones internas. Por ejemplo, en **Contabilidad** verás *Libro Diario*, *Libro Mayor*, *Balance de Comprobación*, *Estado de Resultados*, etc. Al hacer clic en cualquiera de estas opciones, el módulo muestra directamente ese contenido (no siempre la misma pantalla principal). Si estás dentro de un submódulo y pulsas de nuevo el nombre del módulo, vuelves a su pantalla principal; lo mismo ocurre al pulsar **Dashboard** desde cualquier parte del menú.
 
 **Reportes** siempre aparece como última opción dentro de cada módulo. Los módulos sin subopciones (como **Dashboard** y **Bitácora de Auditoría**) se abren directamente al hacer clic. El menú se adapta a la altura de la pantalla: en pantallas de portátil reduce los espacios para que veas todas las opciones sin desplazarte. En **móvil**, toca el icono de menú (☰) para abrir la navegación y usa el botón **Cerrar sesión** al final del menú. En escritorio puedes cerrar sesión con el icono de salida de la barra superior.
+
+### Paso 4 — Conocer el espacio de trabajo
+
+La versión **1.13.0** introdujo el rediseño **ENVIA Spatial OS**:
+
+- **Dock flotante:** el menú lateral es una cápsula de cristal con indicador luminoso de la sección activa. El título del módulo abre su pantalla; la flecha solo expande o recoge sus opciones.
+- **Command palette:** pulsa `Ctrl + K` (o `⌘ + K` en Mac) en cualquier momento para buscar módulos, cédulas, RIF, números de factura, servicios y productos. Usa las flechas para moverte y `Enter` para abrir. En móvil puedes tocar el icono de lupa de la barra superior.
+- **Temas:** el conmutador de la barra superior alterna entre **Dark Fintech** y **Light Spatial**. La preferencia se conserva en tu navegador.
+- **Dashboard Bento:** las métricas se organizan en celdas de distinto tamaño. Las tablas del sistema se muestran como filas-tarjeta con hover; si hay muchas columnas, desplázate horizontalmente.
+- **Fichas y documentos:** las tarjetas de documentos abren una vista previa ampliada. Los archivos se guardan en Supabase Storage o localmente si no hay conexión.
+- **Cápsula BCV:** muestra la tasa oficial como `LIVE`; al pasar el cursor ves la conversión rápida de USD a VES y de 1.000 Bs a USD.
+
+> Si alguna vez necesitas volver al diseño anterior, ejecuta `revertir_diseno.ps1` desde la carpeta del proyecto. El respaldo está en `_backup_diseno_original/`.
 
 ![Pantalla de acceso a ENVIA ERP](../imagen/manual/01-login.png)
 

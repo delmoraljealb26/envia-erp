@@ -76,6 +76,7 @@ js/
   services/
     store.js             # datos, seed, motor contable, CRUD, reportes
     supabaseService.js   # REST, Storage, sync, fallback
+    experienceService.js # tema, command palette y experiencia visual
   modules/
     ui.js                # helpers, iconos, modales, gráficos, print/CSV
     dashboard.js clients.js drivers.js services.js

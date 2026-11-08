@@ -1,11 +1,11 @@
 # MEMORY.md - ENVIA ERP
 ## Registro del proyecto para continuación de tareas
 
-**Fecha:** 07 de noviembre de 2026
+**Fecha:** 08 de noviembre de 2026
 
 **Estado:** Proyecto completo y funcional
 
-**Versión:** 1.12.0
+**Versión:** 1.13.0
 
 ---
 
@@ -24,6 +24,7 @@ EnVia/
 │   │   ├── ocrService.js          # Lectura IA opcional de fechas de documentos
 │   │   ├── sessionService.js      # Sesión, RBAC y expiración
 │   │   ├── routerService.js       # Rutas, shell, topbar, sidebar y tasa BCV
+│   │   ├── experienceService.js   # Tema, command palette y experiencia visual
 │   │   └── errorService.js        # Errores centralizados y feedback
 │   └── modules/
 │       ├── ui.js                  # Helpers, modales, print/CSV, gráficos, validación
@@ -454,6 +455,49 @@ navegación interna de Contabilidad y ajustar el título del tablero.
 - `node --check` en JS modificados.
 - CDP en `file://`: clic en flecha de Conductores abre y cierra el acordeón; URL y estado `aria-expanded` se mantienen consistentes.
 - CDP en `file://`: abrir Bitácora de Auditoría, pulsar una fila y se abre el modal con detalle; sin errores de consola.
+
+---
+
+## 5.11 Rediseño visual ENVIA Spatial OS (08/11/2026)
+
+**Objetivo:** transformar la interfaz en una plataforma fintech de vanguardia sin
+tocar la lógica de negocio, los identificadores del DOM ni los cálculos SENIAT.
+
+**Cambios principales:**
+
+| Archivo | Cambio |
+|---------|--------|
+| `css/styles.css` | Capa visual 2.0: tokens de tema, fondo ambiental, dock flotante, topbar de cristal, Bento Grid, smart tables, fichas documentales, modales, command palette y login cinematográfico. |
+| `index.html` | `data-theme="dark"`, composición de login con relato de marca, capas ambientales y raíz de la command palette. Se conservaron todos los `id`, `name`, `data-*` y eventos. |
+| `js/services/experienceService.js` | Nuevo servicio: tema persistente `Dark Fintech` / `Light Spatial`, command palette global (`Ctrl/Cmd+K`), búsqueda de módulos, cédulas/RIF, facturas, servicios y productos. |
+| `js/services/routerService.js` | Topbar con buscador global, botón de tema y cápsula BCV `LIVE` con conversión rápida. Sin cambios en rutas, RBAC ni sesión. |
+| `js/modules/ui.js` | Iconos nuevos `sun`, `moon`, `command`, `sparkles`, `layers`. |
+| `js/modules/settings.js` | Versión visible actualizada a `1.13.0`. |
+| `_backup_diseno_original/` | Copia exacta de `index.html`, `css/` y `js/` del diseño anterior. |
+| `revertir_diseno.ps1` | Restaura el diseño anterior desde el respaldo. |
+| `.agents/skills/avant-garde-ui.md` | Directivas permanentes de diseño para futuras iteraciones. |
+
+**Decisiones:**
+- Tema oscuro por defecto por identidad de marca; `Light Spatial` conserva la
+  legibilidad de oficina. La preferencia vive en `envia_theme_v2`.
+- El dock lateral se mantiene oscuro en ambos temas para preservar el logo blanco
+  de `/imagen`.
+- Las tablas se transforman en filas-tarjeta con desplazamiento horizontal
+  cuando el ancho no alcanza; no se elimina ninguna columna.
+- La command palette abre fichas existentes mediante los métodos públicos de
+  cada módulo (`openDetail`), sin duplicar lógica.
+- La app sigue funcionando con `file://`, sin build, sin módulos ES y sin
+  Supabase.
+
+**Validación:**
+- `node --check` en `experienceService.js`, `routerService.js`, `ui.js`,
+  `settings.js` y `store.js`.
+- CDP en `file://`: login, tema oscuro/claro persistente tras recarga,
+  navegación por módulos, command palette con búsqueda de cédula y apertura de
+  ficha, dock móvil, menú móvil, modales y tablas; `0` errores de consola.
+- Sin desbordamiento horizontal del documento en escritorio 1440 px ni móvil
+  390 px.
+- Imágenes de marca cargadas; no se modificaron datos ni asientos.
 
 ---
 

@@ -238,6 +238,7 @@
     const updatedLabel = NS.ui.date(updatedRaw);
     const updatedFull = meta.stamp ? NS.ui.dateTime(updatedRaw) : updatedLabel;
     const s = NS.session.getSession();
+    const per1000 = rate ? (1000 / rate) : 0;
     bar.innerHTML = `
       <button class="icon-btn menu-toggle" id="menu-toggle" aria-label="Menú">${NS.ui.icon('menu', 21)}</button>
       <div class="topbar-title">
@@ -245,18 +246,26 @@
         <h1 id="page-title">Dashboard</h1>
       </div>
       <div class="topbar-actions">
+        <button type="button" class="command-trigger" id="command-trigger" aria-label="Abrir búsqueda global" title="Buscar módulos, cédulas, RIF o facturas (Ctrl + K)">
+          <span class="command-trigger-ico">${NS.ui.icon('search', 17)}</span>
+          <span class="command-trigger-label">Buscar en ENVIA</span>
+          <kbd class="command-kbd" data-command-kbd>Ctrl K</kbd>
+        </button>
         <div class="rate-widget ${isHistoric ? 'rate-historic' : ''}" title="Tasa oficial del BCV · solo lectura (se actualiza desde DolarVZLA o por fecha)">
           <div class="rate-line">
             <span class="rate-value" id="bcv-rate-value">${NS.ui.icon('bank', 13)} Bs ${NS.ui.num(rate, 2)} <small>/ USD</small></span>
+            <span class="rate-live" title="Sincronización en vivo"><i></i>Live</span>
             ${canAction('taxes', 'editar') ? `<button type="button" id="bcv-calendar" class="rate-calendar" title="Seleccionar la tasa de una fecha">${NS.ui.icon('calendar', 14)}</button>` : ''}
             ${canAction('taxes', 'editar') ? `<button type="button" id="bcv-refresh" class="rate-refresh" title="Actualizar la tasa de hoy">${NS.ui.icon('refresh', 14)}</button>` : ''}
           </div>
           <span class="rate-date" title="${NS.ui.esc(updatedFull)} · ${NS.ui.esc(sourceLabel)}">${NS.ui.icon('clock', 11)} Tasa BCV · ${NS.ui.esc(updatedLabel)} · ${NS.ui.esc(sourceLabel)}</span>
+          <span class="rate-convert">1 USD = <b>Bs ${NS.ui.num(rate, 2)}</b><span>1.000 Bs = <b>$ ${NS.ui.num(per1000, 2)}</b></span></span>
         </div>
         <div class="currency-toggle" role="group" aria-label="Moneda de visualización">
           <button data-cur="USD" class="${NS.ui.currency() === 'USD' ? 'active' : ''}">USD</button>
           <button data-cur="VES" class="${NS.ui.currency() === 'VES' ? 'active' : ''}">VES</button>
         </div>
+        <button type="button" class="icon-btn theme-toggle" id="theme-toggle" aria-label="Cambiar tema" title="Cambiar tema">${NS.ui.icon('sun', 18)}</button>
         <div class="topbar-user" title="${NS.ui.esc(s.nombre)} · ${NS.ui.esc(s.rol)}">
           ${NS.ui.avatar(s.nombre, 36)}
           <div><strong>${NS.ui.esc(s.nombre.split(' ').slice(0, 2).join(' '))}</strong><span>${NS.ui.esc(s.rol)}</span></div>
@@ -276,6 +285,7 @@
       buildTopbar();
       renderRoute(true);
     }));
+    if (NS.experience && typeof NS.experience.syncTopbar === 'function') NS.experience.syncTopbar();
   }
 
   /* --------------------- Tasa BCV: DolarVZLA (solo lectura) -------------- */

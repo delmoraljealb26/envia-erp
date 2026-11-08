@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,6 +20,34 @@
     <div class="login-glow login-glow-2" aria-hidden="true"></div>
 
     <div class="login-panel">
+      <aside class="login-visual" aria-label="ENVIA Spatial Operations OS">
+        <div class="login-visual-top">
+          <img class="login-visual-logo" src="imagen/WhatsApp%20Image%202026-11-03%20at%2010.49.04%20PM.jpeg" alt="ENVIA">
+          <span class="login-visual-tag">Spatial Operations OS</span>
+        </div>
+        <h2 class="login-visual-title">La operación se mueve.<br><em>El control también.</em></h2>
+        <p class="login-visual-copy">Carreras, encomiendas, flota, SENIAT y tesorería en una sola superficie viva. Cada viaje y cada bolívar, en su lugar exacto.</p>
+        <div class="login-signals" aria-label="Señales del sistema">
+          <span class="login-signal"><i class="signal-live"></i> BCV en vivo</span>
+          <span class="login-signal"><i class="signal-blue"></i> SENIAT al día</span>
+          <span class="login-signal"><i class="signal-amber"></i> Flota conectada</span>
+        </div>
+        <div class="login-visual-stack" aria-hidden="true">
+          <figure class="login-visual-card login-visual-card-a">
+            <img src="imagen/UNIFORME1.jpeg" alt="">
+            <figcaption>Identidad de flota</figcaption>
+          </figure>
+          <figure class="login-visual-card login-visual-card-b">
+            <img src="imagen/WhatsApp%20Image%202026-11-03%20at%2010.49.20%20PM.jpeg" alt="">
+          </figure>
+          <div class="login-visual-orbit">
+            <img src="imagen/WhatsApp%20Image%202026-11-03%20at%2011.00.44%20PM.jpeg" alt="">
+          </div>
+          <span class="login-visual-ring"></span>
+        </div>
+      </aside>
+
+      <div class="login-form-side">
       <div class="login-card">
         <h1 class="login-title">
           <span>Bienvenido a</span>
@@ -228,11 +256,18 @@
         </span>
       </div>
       <p class="login-legal">ENVIA Technology C.A. © <span id="login-year">2026</span> · Uso exclusivo del personal autorizado. Las operaciones quedan registradas en los libros contables y fiscales del sistema.</p>
+      </div>
     </div>
   </section>
 
   <!-- ========================== APLICACIÓN =========================== -->
   <div id="app-shell" class="app-shell hidden">
+    <div class="app-ambient" aria-hidden="true">
+      <span class="ambient-orb ambient-orb-a"></span>
+      <span class="ambient-orb ambient-orb-b"></span>
+      <span class="ambient-orb ambient-orb-c"></span>
+      <span class="ambient-grid"></span>
+    </div>
     <aside id="sidebar" class="sidebar">
       <div class="sidebar-brand">
         <img src="imagen/WhatsApp%20Image%202026-11-03%20at%2010.49.04%20PM.jpeg" alt="ENVIA">
@@ -252,6 +287,22 @@
     </div>
   </div>
 
+  <div id="command-palette" class="command-palette hidden" role="dialog" aria-modal="true" aria-label="Búsqueda global ENVIA">
+    <div class="command-backdrop" data-command-close></div>
+    <div class="command-panel">
+      <div class="command-search">
+        <span class="command-search-ico" id="command-search-ico"></span>
+        <input id="command-input" type="text" placeholder="Buscar módulos, cédulas, RIF o facturas..." autocomplete="off" spellcheck="false" aria-label="Buscar en ENVIA">
+        <kbd>ESC</kbd>
+      </div>
+      <div id="command-results" class="command-results" role="listbox" aria-label="Resultados"></div>
+      <div class="command-foot">
+        <span><kbd>↑</kbd><kbd>↓</kbd> navegar</span>
+        <span><kbd>↵</kbd> abrir</span>
+        <span class="command-brand">ENVIA Command</span>
+      </div>
+    </div>
+  </div>
   <div id="modal-root"></div>
   <div id="toast-root"></div>
   <div id="print-root"></div>
@@ -272,6 +323,8 @@
   <script src="js/modules/ui.js"></script>
   <script src="js/services/errorService.js"></script>
   <script src="js/services/sessionService.js"></script>
+  <!-- Experiencia: tema, command palette y micro-interacciones -->
+  <script src="js/services/experienceService.js"></script>
   <!-- Módulos de vista -->
   <script src="js/modules/dashboard.js"></script>
   <script src="js/modules/clients.js"></script>

@@ -57,6 +57,29 @@ roles y permisos granulares.
   contenido sin repetir el encabezado de estadísticas del módulo. El título del
   módulo y **Dashboard** siempre regresan a la pantalla principal.
 
+## Experiencia visual (v1.13.0)
+
+- **ENVIA Spatial OS**: dock flotante de cristal, dashboard Bento asimétrico,
+  tablas convertidas en *smart cards* y fichas documentales con vista previa.
+- **Temas persistente**: `Dark Fintech` (por defecto) y `Light Spatial`. La
+  preferencia se guarda en `localStorage` (`envia_theme_v2`) y se aplica antes
+  del primer render.
+- **Command palette global**: `Ctrl + K` / `⌘ + K` busca módulos, cédulas/RIF,
+  facturas, servicios y productos. Navegación con flechas y `Enter`.
+- **Cápsula BCV Live**: la tasa oficial muestra estado `LIVE` y conversión
+  rápida `1 USD = Bs …` / `1.000 Bs = $ …` al pasar el cursor.
+- **Login cinematográfico**: composición de marca + formulario de cristal, con
+  los logos y fotografías de `imagen/`.
+- **Respaldo del diseño anterior**: `_backup_diseno_original/` contiene
+  `index.html`, `css/` y `js/` originales. Para volver atrás:
+
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File .\revertir_diseno.ps1
+  ```
+
+- **Archivo nuevo**: `js/services/experienceService.js` (tema, command palette y
+  sincronización visual). No altera datos, sesión, RBAC ni cálculos fiscales.
+
 ## Contabilidad y fiscalidad
 
 - Moneda funcional **VES**; operaciones en **USD** a la tasa **BCV**.

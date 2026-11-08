@@ -1,6 +1,7 @@
 -- ============================================================================
 --  ENVIA ERP · Esquema Supabase (PostgreSQL)
 --  Versión 1.0 · Noviembre 2026
+--  Última revisión de interfaz: v1.13.0 · ENVIA Spatial OS (sin cambios de esquema).
 --
 --  Este esquema replica la estructura local de ENVIA ERP y soporta la
 --  sincronización REST/Storage del frontend (js/services/supabaseService.js).
