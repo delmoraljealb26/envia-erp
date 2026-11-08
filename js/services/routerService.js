@@ -11,18 +11,62 @@
   const $ = (s, r) => NS.ui.$(s, r);
 
   const MODULES = {
-    dashboard: { label: 'Dashboard', sub: 'Visión ejecutiva de la operación ENVIA', icon: 'dashboard', group: 'Operación', module: 'dashboard' },
-    services: { label: 'Servicios', sub: 'Carreras de taxi y encomiendas en vivo', icon: 'route', group: 'Operación', module: 'services' },
-    clients: { label: 'Clientes', sub: 'Maestro de usuarios de la app · Cédula / RIF', icon: 'users', group: 'Maestros', module: 'clients' },
-    drivers: { label: 'Conductores y Flota', sub: 'Aliados operativos, vehículos y expedientes', icon: 'car', group: 'Maestros', module: 'drivers' },
-    partners: { label: 'Negocios Asociados', sub: 'Comercios aliados, comisiones y recaudaciones', icon: 'building', group: 'Operación', module: 'partners' },
-    inventory: { label: 'Tienda & Inventario', sub: 'Uniformes, equipamiento y financiamiento al conductor', icon: 'package', group: 'Operación', module: 'inventory' },
-    accounting: { label: 'Contabilidad', sub: 'Plan de cuentas, asientos y libros SENIAT', icon: 'book', group: 'Finanzas', module: 'accounting' },
-    taxes: { label: 'Tributos & BCV', sub: 'IVA, IGTF, ISLR, unidad tributaria y retenciones', icon: 'percent', group: 'Finanzas', module: 'taxes' },
-    payables: { label: 'Cuentas por Pagar', sub: 'Proveedores, facturas, retenciones y pagos', icon: 'wallet', group: 'Finanzas', module: 'payables' },
-    audit: { label: 'Bitácora de Auditoría', sub: 'Quién modificó qué, cuándo y con qué usuario', icon: 'activity', group: 'Sistema', module: 'audit' },
-    users: { label: 'Usuarios del sistema', sub: 'Roles, accesos y seguridad', icon: 'shield', group: 'Sistema', module: 'users' },
-    settings: { label: 'Configuración del Sistema', sub: 'Conexión Supabase, parámetros y sincronización', icon: 'database', group: 'Sistema', module: 'settings' }
+    dashboard: { label: 'Dashboard', sub: 'Visión ejecutiva de la operación ENVIA', icon: 'dashboard', group: 'Operación', module: 'dashboard', subitems: null },
+    services: { label: 'Servicios', sub: 'Carreras de taxi y encomiendas en vivo', icon: 'route', group: 'Operación', module: 'services', subitems: [
+      { id: 'services-list', label: 'Listado de servicios', icon: 'route', action: 'ver' },
+      { id: 'services-new', label: 'Nuevo servicio', icon: 'plus', action: 'crear' },
+      { id: 'services-reports', label: 'Reportes', icon: 'chart', action: 'reportes' }
+    ] },
+    clients: { label: 'Clientes', sub: 'Maestro de usuarios de la app · Cédula / RIF', icon: 'users', group: 'Maestros', module: 'clients', subitems: [
+      { id: 'clients-list', label: 'Listado de clientes', icon: 'users', action: 'ver' },
+      { id: 'clients-new', label: 'Nuevo cliente', icon: 'plus', action: 'crear' },
+      { id: 'clients-reports', label: 'Reportes', icon: 'chart', action: 'reportes' }
+    ] },
+    drivers: { label: 'Conductores y Flota', sub: 'Aliados operativos, vehículos y expedientes', icon: 'car', group: 'Maestros', module: 'drivers', subitems: [
+      { id: 'drivers-list', label: 'Maestro de conductores', icon: 'car', action: 'ver' },
+      { id: 'drivers-new', label: 'Nuevo conductor', icon: 'plus', action: 'crear' },
+      { id: 'drivers-reports', label: 'Reportes', icon: 'chart', action: 'reportes' }
+    ] },
+    partners: { label: 'Negocios Asociados', sub: 'Comercios aliados, comisiones y recaudaciones', icon: 'building', group: 'Operación', module: 'partners', subitems: [
+      { id: 'partners-list', label: 'Listado de negocios', icon: 'building', action: 'ver' },
+      { id: 'partners-new', label: 'Nuevo negocio', icon: 'plus', action: 'crear' },
+      { id: 'partners-reports', label: 'Reportes', icon: 'chart', action: 'reportes' }
+    ] },
+    inventory: { label: 'Tienda & Inventario', sub: 'Uniformes, equipamiento y financiamiento al conductor', icon: 'package', group: 'Operación', module: 'inventory', subitems: [
+      { id: 'inventory-list', label: 'Catálogo e inventario', icon: 'package', action: 'ver' },
+      { id: 'inventory-new', label: 'Nuevo producto', icon: 'plus', action: 'crear' },
+      { id: 'inventory-assign', label: 'Asignar producto', icon: 'user', action: 'asignar' },
+      { id: 'inventory-reports', label: 'Reportes', icon: 'chart', action: 'reportes' }
+    ] },
+    accounting: { label: 'Contabilidad', sub: 'Plan de cuentas, asientos y libros SENIAT', icon: 'book', group: 'Finanzas', module: 'accounting', subitems: [
+      { id: 'accounting-ledger', label: 'Libro diario', icon: 'book', action: 'ver' },
+      { id: 'accounting-mayor', label: 'Libro mayor', icon: 'book', action: 'ver' },
+      { id: 'accounting-balance', label: 'Balance de comprobación', icon: 'book', action: 'ver' },
+      { id: 'accounting-results', label: 'Estado de resultados', icon: 'book', action: 'ver' },
+      { id: 'accounting-reports', label: 'Reportes', icon: 'chart', action: 'reportes' }
+    ] },
+    taxes: { label: 'Tributos & BCV', sub: 'IVA, IGTF, ISLR, unidad tributaria y retenciones', icon: 'percent', group: 'Finanzas', module: 'taxes', subitems: [
+      { id: 'taxes-rate', label: 'Tasa BCV', icon: 'percent', action: 'ver' },
+      { id: 'taxes-params', label: 'Parámetros fiscales', icon: 'percent', action: 'ver' },
+      { id: 'taxes-reports', label: 'Reportes', icon: 'chart', action: 'reportes' }
+    ] },
+    payables: { label: 'Cuentas por Pagar', sub: 'Proveedores, facturas, retenciones y pagos', icon: 'wallet', group: 'Finanzas', module: 'payables', subitems: [
+      { id: 'payables-list', label: 'Proveedores', icon: 'wallet', action: 'ver' },
+      { id: 'payables-invoices', label: 'Facturas', icon: 'wallet', action: 'ver' },
+      { id: 'payables-payments', label: 'Pagos', icon: 'wallet', action: 'pagar' },
+      { id: 'payables-reports', label: 'Reportes', icon: 'chart', action: 'reportes' }
+    ] },
+    audit: { label: 'Bitácora de Auditoría', sub: 'Quién modificó qué, cuándo y con qué usuario', icon: 'activity', group: 'Sistema', module: 'audit', subitems: null },
+    users: { label: 'Usuarios del sistema', sub: 'Roles, accesos y seguridad', icon: 'shield', group: 'Sistema', module: 'users', subitems: [
+      { id: 'users-list', label: 'Usuarios', icon: 'shield', action: 'ver' },
+      { id: 'users-roles', label: 'Roles', icon: 'shield', action: 'roles' },
+      { id: 'users-reports', label: 'Reportes', icon: 'chart', action: 'reportes' }
+    ] },
+    settings: { label: 'Configuración del Sistema', sub: 'Conexión Supabase, parámetros y sincronización', icon: 'database', group: 'Sistema', module: 'settings', subitems: [
+      { id: 'settings-supabase', label: 'Credenciales Supabase', icon: 'database', action: 'ver' },
+      { id: 'settings-params', label: 'Parámetros de mantenimiento', icon: 'settings', action: 'ver' },
+      { id: 'settings-reports', label: 'Reportes', icon: 'chart', action: 'reportes' }
+    ] }
   };
 
   const GROUPS = ['Operación', 'Maestros', 'Finanzas', 'Sistema'];
@@ -57,11 +101,26 @@
         <span class="nav-group-label">${NS.ui.esc(group)}</span>
         ${items.map((m) => {
           const count = navCount(m.module);
-          return `<a href="#/${m.module}" class="nav-item" data-route="${m.module}">
-            <span class="nav-ico">${NS.ui.icon(m.icon, 19)}</span>
-            <span class="nav-label">${NS.ui.esc(m.label)}</span>
-            ${count ? `<span class="nav-count">${count}</span>` : ''}
-          </a>`;
+          const hasSub = m.subitems && m.subitems.length > 0;
+          const subVisible = m.subitems && m.subitems.some((s) => access.modules.includes('*') || access.modules.includes(m.module));
+          return `
+            <div class="nav-module ${hasSub ? 'has-sub' : ''} ${subVisible && currentRoute === m.module ? 'open' : ''}">
+              <button type="button" class="nav-item ${hasSub ? 'nav-item-parent' : ''}" data-route="${m.module}" aria-expanded="${hasSub ? 'false' : 'false'}">
+                <span class="nav-ico">${NS.ui.icon(m.icon, 19)}</span>
+                <span class="nav-label">${NS.ui.esc(m.label)}</span>
+                ${count ? `<span class="nav-count">${count}</span>` : ''}
+                ${hasSub ? `<span class="nav-toggle">${NS.ui.icon('chevronDown', 12)}</span>` : ''}
+              </button>
+              ${hasSub ? `<div class="nav-subitems" data-parent="${m.module}">
+                ${m.subitems.filter((s) => access.modules.includes('*') || access.modules.includes(m.module)).map((s) => `
+                  <a href="#/${m.module}" class="nav-subitem" data-route="${m.module}" data-sub="${s.id}" data-action="${s.action}">
+                    <span class="nav-sub-ico">${NS.ui.icon(s.icon, 16)}</span>
+                    <span class="nav-sub-label">${NS.ui.esc(s.label)}</span>
+                  </a>
+                `).join('')}
+              </div>` : ''}
+            </div>
+          `;
         }).join('')}
       </div>`;
     }).join('');
@@ -87,6 +146,50 @@
     }
 
     nav.querySelectorAll('a').forEach((a) => a.addEventListener('click', closeMobileNav));
+
+    // Toggle de acordeón para módulos con subitems
+    nav.querySelectorAll('.nav-item-parent').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const module = btn.dataset.route;
+        const subitems = nav.querySelector(`.nav-subitems[data-parent="${module}"]`);
+        const isOpen = btn.getAttribute('aria-expanded') === 'true';
+        // Cerrar todos los demás acordeones
+        nav.querySelectorAll('.nav-item-parent').forEach((b) => {
+          b.setAttribute('aria-expanded', 'false');
+          b.parentElement.classList.remove('open');
+        });
+        nav.querySelectorAll('.nav-subitems').forEach((s) => s.parentElement.classList.remove('open'));
+        if (!isOpen) {
+          btn.setAttribute('aria-expanded', 'true');
+          btn.parentElement.classList.add('open');
+          if (subitems) subitems.parentElement.classList.add('open');
+        }
+        closeMobileNav();
+      });
+    });
+
+    // Navegación a subitems (clic en opciones internas del módulo)
+    nav.querySelectorAll('.nav-subitem').forEach((a) => {
+      a.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const module = a.dataset.route;
+        const subId = a.dataset.sub;
+        const action = a.dataset.action;
+        closeMobileNav();
+        // Navegar al módulo (la página del módulo mostrará su contenido principal)
+        navigate(module, true);
+        // Guardar la sub-ruta seleccionada en sessionStorage para que el módulo la lea
+        try {
+          sessionStorage.setItem('envia_subroute', JSON.stringify({ module, sub: subId, action }));
+        } catch (e) { /* ignorar */ }
+        // Resaltar el subitem activo
+        nav.querySelectorAll('.nav-subitem').forEach((s) => s.classList.remove('active'));
+        a.classList.add('active');
+      });
+    });
   }
 
   function navCount(module) {
@@ -344,7 +447,33 @@
     $('#crumb-current').textContent = meta.label;
     $('#page-title').textContent = meta.label;
     document.title = meta.label + ' · ENVIA Technology C.A.';
-    document.querySelectorAll('#sidebar-nav .nav-item').forEach((a) => a.classList.toggle('active', a.dataset.route === route));
+
+    // Resaltar módulo padre y subitem activo
+    document.querySelectorAll('#sidebar-nav .nav-item').forEach((a) => {
+      const isActive = a.dataset.route === route;
+      a.classList.toggle('active', isActive);
+      if (isActive && a.classList.contains('nav-item-parent')) {
+        a.setAttribute('aria-expanded', 'true');
+        a.parentElement.classList.add('open');
+        const sub = a.parentElement.querySelector('.nav-subitems');
+        if (sub) sub.parentElement.classList.add('open');
+      } else if (a.classList.contains('nav-item-parent')) {
+        a.setAttribute('aria-expanded', 'false');
+        a.parentElement.classList.remove('open');
+      }
+    });
+
+    // Resaltar subitem activo según sessionStorage
+    try {
+      const stored = JSON.parse(sessionStorage.getItem('envia_subroute') || 'null');
+      if (stored && stored.module === route) {
+        document.querySelectorAll('#sidebar-nav .nav-subitem').forEach((s) => {
+          s.classList.toggle('active', s.dataset.sub === stored.sub);
+        });
+      } else {
+        document.querySelectorAll('#sidebar-nav .nav-subitem').forEach((s) => s.classList.remove('active'));
+      }
+    } catch (e) { /* ignorar */ }
 
     const view = $('#view');
     view.innerHTML = `<div class="view-loading"><span class="spinner dark"></span><span>Cargando ${NS.ui.esc(meta.label)}...</span></div>`;
@@ -387,6 +516,15 @@
     if (nav) {
       const active = nav.querySelector('.nav-item.active');
       if (active) active.classList.add('active');
+      // Resaltar subitem activo según sessionStorage
+      try {
+        const stored = JSON.parse(sessionStorage.getItem('envia_subroute') || 'null');
+        if (stored) {
+          document.querySelectorAll('#sidebar-nav .nav-subitem').forEach((s) => {
+            s.classList.toggle('active', s.dataset.sub === stored.sub && s.dataset.route === stored.module);
+          });
+        }
+      } catch (e) { /* ignorar */ }
     }
   }
 

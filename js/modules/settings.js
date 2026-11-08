@@ -392,7 +392,11 @@
       body: `<form id="param-form" class="form-grid" autocomplete="off">
         <label class="field"><span>Clave *</span><input name="key" value="${NS.ui.esc(p ? p.key : '')}" placeholder="tarifa_plana_semanal_usd" ${p ? 'disabled' : ''} required></label>
         <label class="field"><span>Etiqueta *</span><input name="label" value="${NS.ui.esc(p ? p.label : '')}" placeholder="Tarifa plana semanal" required></label>
-        <label class="field"><span>Módulo</span><input name="module" value="${NS.ui.esc(p ? p.module : 'sistema')}" placeholder="drivers"></label>
+        <label class="field"><span>Módulo *</span><select name="module" required>
+          <option value="">Selecciona un módulo...</option>
+          ${Object.values(NS.router.MODULES || {}).map((m) => `<option value="${m.module}" ${(p && p.module) === m.module ? 'selected' : ''}>${NS.ui.esc(m.label)}</option>`).join('')}
+        </select>
+        <small class="block muted">Elige el módulo al que pertenece este parámetro.</small>
         <label class="field"><span>Tipo *</span><select name="tipo">${['texto', 'monto', 'porcentaje', 'booleano', 'fecha'].map((t) => `<option value="${t}" ${(p && p.tipo) === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
         <label class="field"><span>Valor *</span><input name="value" value="${NS.ui.esc(p ? p.value : '')}" placeholder="10"></label>
         <label class="field field-full"><span>Descripción</span><textarea name="descripcion" rows="2" placeholder="Qué controla este parámetro...">${NS.ui.esc(p ? p.descripcion : '')}</textarea></label>
