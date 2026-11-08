@@ -1,6 +1,6 @@
 # Manual de Usuario — ENVIA ERP
 
-**Versión:** 1.5 · **Fecha:** noviembre de 2026
+**Versión:** 1.5.1 · **Fecha:** noviembre de 2026
 
 **Para:** Usuarios del sistema ENVIA ERP
 **Cómo abrir:** Doble clic en `index.html` en Google Chrome
@@ -53,8 +53,9 @@ El **menú lateral** está organizado por grupos (Operación, Maestros, Finanzas
 
 ### Paso 4 — Conocer el espacio de trabajo
 
-La versión **1.13.0** introdujo el rediseño **ENVIA Spatial OS**:
+La versión **1.13.1** introdujo el rediseño **ENVIA Spatial OS**:
 
+- **Acceso centrado:** el login es una sola tarjeta en el centro de la pantalla, sin panel lateral. En móvil se ajusta al ancho disponible y puedes desplazarte verticalmente si el formulario no cabe completo.
 - **Dock flotante:** el menú lateral es una cápsula de cristal con indicador luminoso de la sección activa. El título del módulo abre su pantalla; la flecha solo expande o recoge sus opciones.
 - **Command palette:** pulsa `Ctrl + K` (o `⌘ + K` en Mac) en cualquier momento para buscar módulos, cédulas, RIF, números de factura, servicios y productos. Usa las flechas para moverte y `Enter` para abrir. En móvil puedes tocar el icono de lupa de la barra superior.
 - **Temas:** el conmutador de la barra superior alterna entre **Dark Fintech** y **Light Spatial**. La preferencia se conserva en tu navegador.

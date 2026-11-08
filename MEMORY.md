@@ -5,7 +5,7 @@
 
 **Estado:** Proyecto completo y funcional
 
-**Versión:** 1.13.0
+**Versión:** 1.13.1
 
 ---
 
@@ -467,12 +467,12 @@ tocar la lógica de negocio, los identificadores del DOM ni los cálculos SENIAT
 
 | Archivo | Cambio |
 |---------|--------|
-| `css/styles.css` | Capa visual 2.0: tokens de tema, fondo ambiental, dock flotante, topbar de cristal, Bento Grid, smart tables, fichas documentales, modales, command palette y login cinematográfico. |
-| `index.html` | `data-theme="dark"`, composición de login con relato de marca, capas ambientales y raíz de la command palette. Se conservaron todos los `id`, `name`, `data-*` y eventos. |
+| `css/styles.css` | Capa visual 2.0: tokens de tema, fondo ambiental, dock flotante, topbar de cristal, Bento Grid, smart tables, fichas documentales, modales, command palette y login cinematográfico (simplificado a tarjeta centrada en 5.12). |
+| `index.html` | `data-theme="dark"`, composición de login (simplificada a tarjeta centrada en 5.12), capas ambientales y raíz de la command palette. Se conservaron todos los `id`, `name`, `data-*` y eventos. |
 | `js/services/experienceService.js` | Nuevo servicio: tema persistente `Dark Fintech` / `Light Spatial`, command palette global (`Ctrl/Cmd+K`), búsqueda de módulos, cédulas/RIF, facturas, servicios y productos. |
 | `js/services/routerService.js` | Topbar con buscador global, botón de tema y cápsula BCV `LIVE` con conversión rápida. Sin cambios en rutas, RBAC ni sesión. |
 | `js/modules/ui.js` | Iconos nuevos `sun`, `moon`, `command`, `sparkles`, `layers`. |
-| `js/modules/settings.js` | Versión visible actualizada a `1.13.0`. |
+| `js/modules/settings.js` | Versión visible actualizada a `1.13.0`; `1.13.1` en 5.12. |
 | `_backup_diseno_original/` | Copia exacta de `index.html`, `css/` y `js/` del diseño anterior. |
 | `revertir_diseno.ps1` | Restaura el diseño anterior desde el respaldo. |
 | `.agents/skills/avant-garde-ui.md` | Directivas permanentes de diseño para futuras iteraciones. |
@@ -498,6 +498,31 @@ tocar la lógica de negocio, los identificadores del DOM ni los cálculos SENIAT
 - Sin desbordamiento horizontal del documento en escritorio 1440 px ni móvil
   390 px.
 - Imágenes de marca cargadas; no se modificaron datos ni asientos.
+
+---
+
+## 5.12 Login centrado y ajuste móvil (08/11/2026)
+
+**Objetivo:** simplificar el acceso a una sola tarjeta centrada, eliminando el
+panel visual izquierdo, sin perder la identidad de marca.
+
+**Cambios:**
+- `index.html`: retirado el bloque `<aside class="login-visual">`; el formulario
+  queda como único contenido dentro de `.login-panel`.
+- `css/styles.css`: el `.login-panel` vuelve a ser una columna flex centrada;
+  `.login-form-side` y `.login-card` se limitan a 470 px y se centran.
+- La pantalla de login permite `overflow-y: auto` y usa `margin: auto` en el
+  panel, de modo que en móvil el formulario se puede desplazar sin recortes.
+- Las auroras y glows pasan a `position: fixed` para no crear espacio de scroll.
+- Ajustes móviles: padding reducido, ancho completo y ocultación de la tarjeta
+  lateral ya retirada.
+
+**Validación:**
+- Escritorio 1440×960: tarjeta centrada (470 px), sin scroll vertical.
+- Móvil 390×844: tarjeta de 366 px, botón visible, sin overflow horizontal.
+- Móvil 360×640: scroll vertical disponible (708 px de alto), botón visible.
+- Login con `ENVIA` / `123456789` y entrada al Dashboard en móvil: correcto.
+- `node --check` sin fallos; `0` errores de consola.
 
 ---
 

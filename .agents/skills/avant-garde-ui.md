@@ -72,10 +72,12 @@ SENIAT son inmutables.
 - Lightbox modal con fondo desenfocado.
 
 ### Login
-- Composición dividida: relato de marca a la izquierda, tarjeta de cristal con
-  formulario a la derecha.
+- Tarjeta de cristal única y centrada, sin panel lateral; la marca vive dentro
+  de la propia tarjeta.
 - Fondo cinematográfico animado con la paleta ENVIA.
 - Inputs con foco luminoso y transición de entrada al ERP.
+- En móvil, ancho completo, padding reducido y desplazamiento vertical cuando
+  el formulario supera el alto de la pantalla.
 
 ## 5. Reglas inquebrantables
 

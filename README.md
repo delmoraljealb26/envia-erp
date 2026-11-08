@@ -57,7 +57,7 @@ roles y permisos granulares.
   contenido sin repetir el encabezado de estadísticas del módulo. El título del
   módulo y **Dashboard** siempre regresan a la pantalla principal.
 
-## Experiencia visual (v1.13.0)
+## Experiencia visual (v1.13.1)
 
 - **ENVIA Spatial OS**: dock flotante de cristal, dashboard Bento asimétrico,
   tablas convertidas en *smart cards* y fichas documentales con vista previa.
@@ -68,8 +68,9 @@ roles y permisos granulares.
   facturas, servicios y productos. Navegación con flechas y `Enter`.
 - **Cápsula BCV Live**: la tasa oficial muestra estado `LIVE` y conversión
   rápida `1 USD = Bs …` / `1.000 Bs = $ …` al pasar el cursor.
-- **Login cinematográfico**: composición de marca + formulario de cristal, con
-  los logos y fotografías de `imagen/`.
+- **Login centrado**: una sola tarjeta de cristal con la marca y el formulario,
+  sin panel lateral. En móvil se adapta al ancho y permite desplazamiento
+  vertical cuando el formulario supera el alto de la pantalla.
 - **Respaldo del diseño anterior**: `_backup_diseno_original/` contiene
   `index.html`, `css/` y `js/` originales. Para volver atrás:
 
