@@ -26,7 +26,10 @@
     ['accountingRules', 'Reglas contables', 'evento'],
     ['entries', 'Asientos + líneas', 'id'],
     ['users', 'Usuarios del sistema', 'usuario'],
-    ['systemParams', 'Parámetros del sistema', 'key']
+    ['systemParams', 'Parámetros del sistema', 'key'],
+    ['driverPlans', 'Planes de conductor', 'key'],
+    ['driverEvents', 'Eventos de conductor', 'key'],
+    ['customReports', 'Reportes personalizados', 'id']
   ];
 
   function bytes(n) {
@@ -265,7 +268,7 @@
         <section class="card">
           <div class="card-head"><div><h3>Información del sistema</h3><p>Parámetros y documentación</p></div></div>
           <div class="status-list">
-            <div class="status-row"><span>Versión</span><strong>ENVIA Technology C.A. 1.10.0</strong></div>
+            <div class="status-row"><span>Versión</span><strong>ENVIA Technology C.A. 1.11.0</strong></div>
             <div class="status-row"><span>Moneda funcional</span><strong>VES (Bolívares)</strong></div>
             <div class="status-row"><span>Tasa BCV</span><strong>${ui.bs(db.taxParams.bcvRate)} / USD</strong></div>
             <div class="status-row"><span>Unidad Tributaria</span><strong>${ui.bs(db.taxParams.ut)}</strong></div>

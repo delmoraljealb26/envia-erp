@@ -1406,6 +1406,18 @@ button.mini-row:hover { background: #F7FAFE; }
 
 /* Centro de reportes */
 .report-list { display: grid; gap: 10px; }
+.report-section-label { display: flex; align-items: center; gap: 7px; font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.1px; color: var(--text-3); margin: 4px 0 8px; }
+.report-section-label + .report-list { margin-bottom: 16px; }
+.report-item-custom { border-color: #C9D8EE; background: #FBFDFF; }
+.report-custom-badge { display: inline-block; margin-left: 5px; padding: 1px 6px; border-radius: 999px; background: #E7EEFB; color: var(--navy); font-size: 8.5px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; vertical-align: middle; }
+.report-columns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 14px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #FAFCFF; }
+.report-col-check { font-size: 10.5px; font-weight: 600; }
+.report-filter-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.report-filter-field, .report-filter-op, .report-filter-value { min-height: 38px; border: 1px solid var(--line-strong); border-radius: 8px; padding: 0 10px; background: #fff; font-size: 11px; color: var(--text-1); }
+.report-filter-field { flex: 1 1 190px; min-width: 0; }
+.report-filter-op { flex: 0 1 130px; }
+.report-filter-value { flex: 1 1 180px; min-width: 0; }
+
 .report-item { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 13px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
 .report-ico { width: 42px; height: 42px; border-radius: 11px; display: grid; place-items: center; background: #EEF3FA; color: var(--navy); }
 .report-copy strong { display: block; font-size: 13px; color: var(--navy); }
@@ -1415,6 +1427,8 @@ button.mini-row:hover { background: #F7FAFE; }
   .report-item { grid-template-columns: 36px minmax(0, 1fr); }
   .report-actions { grid-column: 1 / -1; justify-content: stretch; }
   .report-actions .btn { flex: 1; }
+  .report-columns { grid-template-columns: 1fr 1fr; gap: 7px 10px; }
+  .report-filter-op { flex: 1 1 100%; }
 }
 
 /* Editor de roles y permisos */

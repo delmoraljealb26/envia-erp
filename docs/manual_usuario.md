@@ -47,9 +47,9 @@ Al entrar, verás tu nombre, tu rol y la tasa del dólar (BCV) en la parte super
 
 Cada vez que inicies sesión, el sistema abrirá siempre el **Dashboard**, aunque antes hayas estado trabajando en otro módulo. Así empiezas con la visión general de la operación.
 
-El **menú lateral** está organizado por grupos (Operación, Maestros, Finanzas, Sistema). Cada módulo es un botón desplegable (acordeón): al hacer clic en el nombre del módulo se abren sus opciones internas. Por ejemplo, en **Contabilidad** verás *Libro Diario*, *Libro Mayor*, *Balance de Comprobación*, *Estado de Resultados*, etc. Al hacer clic en cualquiera de estas opciones, el módulo muestra directamente ese contenido (no siempre la misma pantalla principal).
+El **menú lateral** está organizado por grupos (Operación, Maestros, Finanzas, Sistema). Cada módulo es un botón desplegable (acordeón): al hacer clic en el nombre del módulo se abre su pantalla principal y se despliegan sus opciones internas. Por ejemplo, en **Contabilidad** verás *Libro Diario*, *Libro Mayor*, *Balance de Comprobación*, *Estado de Resultados*, etc. Al hacer clic en cualquiera de estas opciones, el módulo muestra directamente ese contenido (no siempre la misma pantalla principal). Si estás dentro de un submódulo y pulsas de nuevo el nombre del módulo, vuelves a su pantalla principal; lo mismo ocurre al pulsar **Dashboard** desde cualquier parte del menú.
 
-**Reportes** siempre aparece como última opción dentro de cada módulo. Los módulos sin subopciones (como **Dashboard** y **Bitácora de Auditoría**) se abren directamente al hacer clic. El menú se adapta a la altura de la pantalla: en pantallas de portátil reduce los espacios para que veas todas las opciones sin desplazarte. En **móvil**, toca el icono de menú (☰) para abrir la navegación y usa el botón **Cerrar sesión** al final del menú. En escritorio también puedes cerrar sesión desde el icono de la barra superior o tocando tus iniciales (menú de usuario).
+**Reportes** siempre aparece como última opción dentro de cada módulo. Los módulos sin subopciones (como **Dashboard** y **Bitácora de Auditoría**) se abren directamente al hacer clic. El menú se adapta a la altura de la pantalla: en pantallas de portátil reduce los espacios para que veas todas las opciones sin desplazarte. En **móvil**, toca el icono de menú (☰) para abrir la navegación y usa el botón **Cerrar sesión** al final del menú. En escritorio puedes cerrar sesión con el icono de salida de la barra superior.
 
 ![Pantalla de acceso a ENVIA ERP](../imagen/manual/01-login.png)
 
@@ -553,6 +553,21 @@ Todos los módulos tienen el botón **Reportes** en la esquina superior derecha.
 4. Usa **Imprimir** para abrir el diálogo de impresoras del navegador. También puedes elegir “Guardar como PDF”.
 5. Usa **Excel** para descargar un archivo `.xls` con los mismos datos y totales.
 6. Cierra el centro con la **X** o con el botón **Cerrar**.
+
+### Crear reportes personalizados (solo administrador)
+
+El administrador puede crear listados nuevos con la información que ya está almacenada, sin depender de los reportes predefinidos. Por ejemplo: todos los conductores con su correo y dirección, o todos los usuarios con su nombre y correo.
+
+1. Entra al módulo donde quieres ver el reporte y haz clic en **Reportes**.
+2. Pulsa **Nuevo reporte a la medida**.
+3. Escribe un **nombre** y una **descripción**.
+4. Elige el **módulo** donde aparecerá el reporte y la **tabla base** (clientes, conductores, usuarios, servicios, proveedores, negocios asociados, productos, cuentas por pagar o comprobantes de retención).
+5. Marca las **columnas** que quieres mostrar.
+6. Si lo necesitas, agrega un **filtro** (contiene, igual a, mayor que o menor que) y un **orden** ascendente o descendente.
+7. Pulsa **Crear reporte**. El listado aparecerá en la sección **Reportes personalizados** del centro, con las mismas acciones **Imprimir** y **Excel**.
+8. Para cambiarlo, usa el lápiz; para eliminarlo, usa el cesto. Eliminar el reporte no borra los datos de las tablas, solo la definición del listado.
+
+> Los reportes personalizados los crea, edita y elimina únicamente el administrador. Los demás roles pueden ejecutarlos si tienen permiso de **Centro de reportes** en el módulo correspondiente.
 
 ### Reportes disponibles por módulo
 

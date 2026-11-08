@@ -558,6 +558,35 @@ create table if not exists public.driver_events (
 comment on table public.driver_events is 'Eventos de premio o descuento aplicables a conductores (todos o por nivel). Clave primaria: key.';
 
 -- ============================================================================
+--  13.6 REPORTES PERSONALIZADOS (CONSTRUCTOR DEL ADMINISTRADOR)
+-- ============================================================================
+create table if not exists public.custom_reports (
+  id            text primary key,
+  modulo        text not null,
+  nombre        text not null,
+  descripcion   text,
+  tabla         text not null,
+  columnas      jsonb not null default '[]'::jsonb,
+  filtro_campo  text,
+  filtro_op     text check (filtro_op in ('contiene','igual','mayor','menor')),
+  filtro_valor  text,
+  orden_campo   text,
+  orden_dir     text check (orden_dir in ('asc','desc')),
+  created_at    timestamptz not null default timezone('utc', now()),
+  updated_at    timestamptz not null default timezone('utc', now())
+);
+comment on table public.custom_reports is 'Definiciones de reportes/listados a la medida creados por el administrador sobre las tablas existentes. No almacena datos, solo la definición.';
+comment on column public.custom_reports.columnas is 'Arreglo JSON con las claves de columna seleccionadas.';
+comment on column public.custom_reports.modulo is 'Módulo del centro de reportes donde se muestra el listado.';
+
+-- Migraciones idempotentes por si la tabla ya existía sin estas columnas.
+alter table public.custom_reports add column if not exists filtro_campo text;
+alter table public.custom_reports add column if not exists filtro_op text;
+alter table public.custom_reports add column if not exists filtro_valor text;
+alter table public.custom_reports add column if not exists orden_campo text;
+alter table public.custom_reports add column if not exists orden_dir text;
+
+-- ============================================================================
 --  14. ÍNDICES
 -- ============================================================================
 create index if not exists idx_clients_estatus          on public.clients(estatus);
@@ -595,6 +624,7 @@ create index if not exists idx_system_params_module     on public.system_params(
 create index if not exists idx_driver_plans_nivel         on public.driver_plans(nivel);
 create index if not exists idx_driver_events_nivel        on public.driver_events(nivel_aplicar);
 create index if not exists idx_driver_events_activo       on public.driver_events(activo);
+create index if not exists idx_custom_reports_modulo      on public.custom_reports(modulo);
 
 -- ============================================================================
 --  15. TRIGGERS updated_at
@@ -679,6 +709,11 @@ create trigger trg_wallet_updated_at
   before update on public.wallet_movements
   for each row execute function public.set_updated_at();
 
+drop trigger if exists trg_custom_reports_updated_at on public.custom_reports;
+create trigger trg_custom_reports_updated_at
+  before update on public.custom_reports
+  for each row execute function public.set_updated_at();
+
 -- ============================================================================
 --  16. VALIDACIÓN DE PARTIDA DOBLE (por asiento)
 -- ============================================================================
@@ -747,6 +782,7 @@ alter table public.driver_movements        enable row level security;
 alter table public.system_params           enable row level security;
 alter table public.driver_plans            enable row level security;
 alter table public.driver_events           enable row level security;
+alter table public.custom_reports          enable row level security;
 
 -- Políticas demo: anon + authenticated con acceso completo.
 -- PRODUCCIÓN: reemplazar por políticas basadas en auth.uid(), rol y propietario.
@@ -759,7 +795,8 @@ begin
     'accounts_payable','withholding_vouchers','accounting_rules',
     'accounting_entries','accounting_entry_lines','erp_roles','erp_users',
     'tax_parameters','wallet_movements','partners','partner_movements',
-    'products','driver_charges','driver_movements','system_params','driver_plans','driver_events'
+    'products','driver_charges','driver_movements','system_params','driver_plans','driver_events',
+    'custom_reports'
   ]
   loop
     execute format('drop policy if exists envia_demo_all on public.%I', t);

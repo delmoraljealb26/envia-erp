@@ -5,7 +5,7 @@
 
 **Estado:** Proyecto completo y funcional
 
-**Versión:** 1.10.0
+**Versión:** 1.11.0
 
 ---
 
@@ -348,6 +348,46 @@ porcentual por conductor.
   `stat-strip`, inventario sin estadísticas, sin errores de consola.
 - Cambio de subitem en Contabilidad modifica el tab activo (Libro Diario, Libro
   Mayor, Balance de Comprobación).
+
+---
+
+## 5.8 Navegación directa, topbar y reportes personalizados (07/11/2026)
+
+**Objetivo:** corregir el regreso al Dashboard desde cualquier parte del menú,
+simplificar la barra superior y permitir que el administrador cree listados a la
+medida con la información ya almacenada.
+
+**Cambios principales:**
+
+| Archivo | Cambio |
+|---------|--------|
+| `js/services/routerService.js` | El título de cada módulo navega siempre a su pantalla principal y abre el acordeón; **Dashboard** vuelve al inicio desde cualquier ruta; se retiró el menú desplegable de perfil/logout del topbar y se conserva el icono de salida. |
+| `js/modules/reports.js` | Catálogo de tablas y columnas; constructor **Nuevo reporte a la medida** para el administrador (módulo, tabla, columnas, filtro y orden); sección **Reportes personalizados** con editar/eliminar; impresión y Excel usan el mismo motor. |
+| `js/services/store.js` | Colección `customReports` con CRUD, auditoría y persistencia; migración `schemaVersion = 4` con blindaje de la colección. |
+| `js/services/supabaseService.js` | `customReports` → `custom_reports` en `TABLE_MAP` para la sincronización opcional. |
+| `js/modules/settings.js` | `customReports` incluido en las tablas de respaldo/sincronización. |
+| `css/styles.css` | Estilos del constructor (columnas, filtros, orden), insignia **Personalizado** y responsive. |
+| `sql/supabase_schema.sql` | Tabla `custom_reports`, índices, RLS y política demo; migraciones idempotentes de sus columnas. |
+| `docs/manual_usuario.md`, `manual.html`, `README.md`, `MEMORY.md` | Documentación del constructor, navegación y cierre de sesión actualizados. |
+
+**Decisiones:**
+- El constructor trabaja sobre **una tabla base** por reporte y guarda solo la
+  definición (tabla, columnas, filtro, orden); no duplica datos.
+- Los reportes personalizados se muestran en el módulo elegido y solo el
+  administrador puede crearlos, editarlos o eliminarlos.
+- Los roles con permiso de **Centro de reportes** pueden ejecutar los listados
+  personalizados del módulo, pero no modificarlos.
+- El menú de perfil del topbar se elimina; el cierre de sesión queda en el icono
+  de la barra superior y en el pie del sidebar móvil.
+
+**Validación:**
+- `node --check` en los JS modificados.
+- CDP en `file://`: Dashboard regresa desde un submódulo; el título del módulo
+  abre su pantalla principal; `stat-strip` oculto en subitems.
+- Creación de reportes de conductores (correo/dirección) y usuarios
+  (nombre/correo), filtro y orden; Excel generado con las columnas y filas
+  esperadas.
+- Sin errores de consola.
 
 ---
 

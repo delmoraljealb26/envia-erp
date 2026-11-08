@@ -199,7 +199,7 @@
 
           <div class="note info"><strong>¿Olvidaste la clave?</strong> En esta versión demo las claves se gestionan localmente. Contacta al SuperAdmin para restablecer acceso.</div>
           <div class="note"><strong>Inicio seguro:</strong> cada vez que inicies sesión, el sistema abre el <b>Dashboard</b>. No se restaura el último módulo visitado.</div>
-          <div class="note info"><strong>Cerrar sesión:</strong> en escritorio usa el icono de salida de la barra superior o toca tus iniciales para abrir el menú de usuario. En móvil, abre el menú lateral (☰) y usa <b>Cerrar sesión</b>, que aparece al final después de Configuración Supabase.</div>
+          <div class="note info"><strong>Cerrar sesión:</strong> en escritorio usa el icono de salida de la barra superior. En móvil, abre el menú lateral (☰) y usa <b>Cerrar sesión</b>, que aparece al final después de Configuración Supabase.</div>
         </section>
 
         <!-- 2. Dashboard -->
@@ -778,6 +778,20 @@
               <tr><td>Configuración</td><td>Parámetros del sistema, almacenamiento y tasa BCV.</td></tr>
             </tbody>
           </table>
+
+          <div class="step-card">
+            <div class="step-head"><span class="step-badge">2</span><h2 class="step-title">Crear un reporte a la medida (solo administrador)</h2></div>
+            <div class="step-body">
+              <p class="step-p">El administrador puede crear listados nuevos con la información ya almacenada, por ejemplo todos los conductores con su correo y dirección, o todos los usuarios con su correo.</p>
+              <ul class="step-list">
+                <li><span class="ord">1</span><span class="txt">Abre <b>Reportes</b> en el módulo de destino y pulsa <b>Nuevo reporte a la medida</b>.</span></li>
+                <li><span class="ord">2</span><span class="txt">Escribe el nombre, la descripción, el módulo y la tabla base.</span></li>
+                <li><span class="ord">3</span><span class="txt">Marca las columnas y, si hace falta, define un filtro y un orden.</span></li>
+                <li><span class="ord">4</span><span class="txt">Pulsa <b>Crear reporte</b>. Aparecerá en <b>Reportes personalizados</b> con botones Imprimir y Excel.</span></li>
+                <li><span class="ord">5</span><span class="txt">Usa el lápiz para editarlo o el cesto para eliminarlo; eliminar solo borra la definición, no los datos.</span></li>
+              </ul>
+            </div>
+          </div>
 
           <div class="note"><strong>Control de acceso:</strong> el botón Reportes solo aparece si el rol o el usuario tiene habilitada la acción <b>Centro de reportes</b> para ese módulo. Todos los reportes incluyen la tasa BCV, el usuario y la fecha de generación.</div>
         </section>

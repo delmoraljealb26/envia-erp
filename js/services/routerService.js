@@ -155,26 +155,23 @@
 
     nav.querySelectorAll('a').forEach((a) => a.addEventListener('click', closeMobileNav));
 
-    // Toggle de acordeón para módulos con subitems
-    nav.querySelectorAll('.nav-item-parent').forEach((btn) => {
+    // Navegación de módulos: el título siempre abre el módulo principal.
+    nav.querySelectorAll('.nav-item').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         e.preventDefault();
         const module = btn.dataset.route;
-        const subitems = nav.querySelector(`.nav-subitems[data-parent="${module}"]`);
-        const isOpen = btn.getAttribute('aria-expanded') === 'true';
-        // Cerrar todos los demás acordeones
-        nav.querySelectorAll('.nav-item-parent').forEach((b) => {
-          b.setAttribute('aria-expanded', 'false');
-          b.parentElement.classList.remove('open');
-        });
-        nav.querySelectorAll('.nav-subitems').forEach((s) => s.parentElement.classList.remove('open'));
-        if (!isOpen) {
-          btn.setAttribute('aria-expanded', 'true');
-          btn.parentElement.classList.add('open');
-          if (subitems) subitems.parentElement.classList.add('open');
-        }
         closeMobileNav();
+        // Limpiar la subruta para no reabrir el último subitem visitado.
+        try { sessionStorage.removeItem('envia_subroute'); } catch (err) { /* ignorar */ }
+        navigate(module, true);
+        nav.querySelectorAll('.nav-subitem').forEach((s) => s.classList.remove('active'));
+        // Acordeón: abrir el módulo actual y cerrar los demás.
+        nav.querySelectorAll('.nav-item-parent').forEach((b) => {
+          const isCurrent = b.dataset.route === module;
+          b.setAttribute('aria-expanded', isCurrent ? 'true' : 'false');
+          b.parentElement.classList.toggle('open', isCurrent);
+        });
       });
     });
 
@@ -241,20 +238,9 @@
           <button data-cur="USD" class="${NS.ui.currency() === 'USD' ? 'active' : ''}">USD</button>
           <button data-cur="VES" class="${NS.ui.currency() === 'VES' ? 'active' : ''}">VES</button>
         </div>
-        <div class="user-menu-wrap">
-          <button type="button" class="topbar-user" id="user-menu-toggle" title="${NS.ui.esc(s.nombre)} · ${NS.ui.esc(s.rol)}" aria-haspopup="menu" aria-expanded="false">
-            ${NS.ui.avatar(s.nombre, 36)}
-            <div><strong>${NS.ui.esc(s.nombre.split(' ').slice(0, 2).join(' '))}</strong><span>${NS.ui.esc(s.rol)}</span></div>
-            <span class="user-menu-caret">${NS.ui.icon('chevronDown', 14)}</span>
-          </button>
-          <div class="user-menu" id="user-menu" role="menu" hidden>
-            <div class="user-menu-head">
-              ${NS.ui.avatar(s.nombre, 42)}
-              <div><strong>${NS.ui.esc(s.nombre)}</strong><span>${NS.ui.esc(s.rol)}</span><small>${NS.ui.esc(s.usuario)}</small></div>
-            </div>
-            <button type="button" class="user-menu-item" data-menu-profile="${NS.ui.esc(s.usuario)}">${NS.ui.icon('user', 16)} Mi perfil</button>
-            <button type="button" class="user-menu-item danger" id="user-menu-logout">${NS.ui.icon('logout', 16)} Cerrar sesión</button>
-          </div>
+        <div class="topbar-user" title="${NS.ui.esc(s.nombre)} · ${NS.ui.esc(s.rol)}">
+          ${NS.ui.avatar(s.nombre, 36)}
+          <div><strong>${NS.ui.esc(s.nombre.split(' ').slice(0, 2).join(' '))}</strong><span>${NS.ui.esc(s.rol)}</span></div>
         </div>
         <button class="icon-btn topbar-logout" id="topbar-logout" title="Cerrar sesión">${NS.ui.icon('logout', 19)}</button>
       </div>`;
@@ -262,39 +248,6 @@
     $('#menu-toggle').addEventListener('click', toggleMobileNav);
     $('#topbar-logout').addEventListener('click', NS.login.logoutRequest);
 
-    const userToggle = $('#user-menu-toggle');
-    const userMenu = $('#user-menu');
-    if (userToggle && userMenu) {
-      userToggle.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const open = userMenu.hidden;
-        userMenu.hidden = !open;
-        userToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-      });
-      $('#user-menu-logout').addEventListener('click', () => {
-        userMenu.hidden = true;
-        userToggle.setAttribute('aria-expanded', 'false');
-        NS.login.logoutRequest();
-      });
-      const profile = userMenu.querySelector('[data-menu-profile]');
-      if (profile) profile.addEventListener('click', () => {
-        userMenu.hidden = true;
-        userToggle.setAttribute('aria-expanded', 'false');
-        if (typeof NS.modules.users === 'object' && NS.modules.users.openProfile) NS.modules.users.openProfile();
-        else NS.ui.toast('Tu perfil se administra en Usuarios del sistema.', 'info');
-      });
-      if (!document.body.dataset.userMenuBound) {
-        document.body.dataset.userMenuBound = '1';
-        document.addEventListener('click', (ev) => {
-          const menu = $('#user-menu');
-          const toggle = $('#user-menu-toggle');
-          if (!menu || menu.hidden) return;
-          if (menu.contains(ev.target) || (toggle && toggle.contains(ev.target))) return;
-          menu.hidden = true;
-          if (toggle) toggle.setAttribute('aria-expanded', 'false');
-        });
-      }
-    }
     const refresh = $('#bcv-refresh');
     if (refresh) refresh.addEventListener('click', () => refreshRateFromApi(refresh));
     const calendar = $('#bcv-calendar');

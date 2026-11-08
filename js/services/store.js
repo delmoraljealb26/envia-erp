@@ -1011,6 +1011,7 @@
       apiIntegrations: [],
       driverPlans: [],
       driverEvents: [],
+      customReports: [],
       accounts: clone(ACCOUNTS),
       accountingRules: clone(DEFAULT_RULES).map((r) => ({ ...r, id: 'rule_' + r.evento, updated_at: stamp() })),
       entries: [],
@@ -1577,12 +1578,12 @@
    * ---------------------------------------------------------------- */
   function ensureSchema(db) {
     const currentVersion = Number(db.meta && db.meta.schemaVersion) || 0;
-    const targetVersion = 3;
+    const targetVersion = 4;
     let migrated = false;
 
     // Blindaje permanente: las colecciones nuevas deben existir en cualquier
     // instalación, incluso si la versión de esquema ya está actualizada.
-    ['systemParams', 'apiIntegrations', 'driverPlans', 'driverEvents'].forEach((key) => {
+    ['systemParams', 'apiIntegrations', 'driverPlans', 'driverEvents', 'customReports'].forEach((key) => {
       if (!Array.isArray(db[key])) { db[key] = []; migrated = true; }
     });
     // Normaliza la tarifa del conductor (fija o porcentual) en bases existentes.
@@ -2289,6 +2290,46 @@
     deleteDriverEvent(key) {
       current.driverEvents = current.driverEvents.filter((e) => e.key !== key);
       api.addAuditLog('eliminar', 'driver_events', `Evento ${key}`, key);
+      persist();
+    },
+
+    /* reportes personalizados por el administrador */
+    customReports() {
+      return (current.customReports || []).slice();
+    },
+    upsertCustomReport(data) {
+      const modulo = norm(data.modulo) || 'dashboard';
+      const nombre = required(data.nombre, 'Nombre del reporte');
+      const tabla = norm(data.tabla);
+      if (!tabla) throw new Error('Selecciona la tabla base del reporte.');
+      const columnas = Array.isArray(data.columnas) ? data.columnas.filter(Boolean) : [];
+      if (!columnas.length) throw new Error('Selecciona al menos una columna para el reporte.');
+      const existing = data.id ? (current.customReports || []).find((r) => r.id === data.id) : null;
+      const rec = {
+        ...(existing || {}),
+        id: existing ? existing.id : uid('cr'),
+        modulo,
+        nombre,
+        descripcion: data.descripcion || '',
+        tabla,
+        columnas,
+        filtro_campo: data.filtro_campo || '',
+        filtro_op: data.filtro_op || 'contiene',
+        filtro_valor: data.filtro_valor || '',
+        orden_campo: data.orden_campo || '',
+        orden_dir: data.orden_dir === 'desc' ? 'desc' : 'asc',
+        updated_at: stamp(),
+        created_at: existing ? existing.created_at : stamp()
+      };
+      if (existing) Object.assign(existing, rec);
+      else current.customReports.unshift(rec);
+      api.addAuditLog(existing ? 'actualizar' : 'crear', 'reportes', `Reporte personalizado · ${nombre}`, rec.id);
+      persist();
+      return rec;
+    },
+    deleteCustomReport(id) {
+      current.customReports = (current.customReports || []).filter((r) => r.id !== id);
+      api.addAuditLog('eliminar', 'reportes', `Reporte personalizado ${id}`, id);
       persist();
     },
 

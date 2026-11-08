@@ -45,13 +45,16 @@ roles y permisos granulares.
 - **Bitácora de auditoría**: trazabilidad de cambios por usuario, módulo y fecha.
 - **Usuarios del sistema**: roles base y personalizados con permisos por módulo,
   pestaña y acción; permisos personalizados por usuario.
-- **Reportes**: botón en cada módulo con impresión y descarga Excel.
+- **Reportes**: botón en cada módulo con impresión y descarga Excel; el
+  administrador puede crear reportes personalizados eligiendo tabla, columnas,
+  filtros y orden.
 - **Configuración del Sistema**: parámetros de mantenimiento con módulo, nivel y
   tipo de plan; planes y eventos de conductores; integración de APIs; Supabase;
   estado de conexión; mapa de sincronización y respaldos.
 - **Navegación por submenús**: el sidebar despliega las opciones de cada módulo y
   **Reportes** siempre queda al final; al elegir una opción se muestra su
-  contenido sin repetir el encabezado de estadísticas del módulo.
+  contenido sin repetir el encabezado de estadísticas del módulo. El título del
+  módulo y **Dashboard** siempre regresan a la pantalla principal.
 
 ## Contabilidad y fiscalidad
 
@@ -101,7 +104,7 @@ se migran automáticamente para liberar espacio para la base de datos.
 - Alta/edición de cliente, servicio, factura y pago con asientos cuadrados.
 - Asignación de productos con descuento de stock, cartera del conductor y abonos.
 - Movimientos de negocios asociados y alertas documentales (vencido / por vencer).
-- Reportes por módulo, incluidos asociados e inventario; impresión y Excel disponibles.
+- Reportes por módulo, incluidos asociados e inventario; impresión y Excel disponibles; reportes personalizados por el administrador con tabla, columnas, filtro y orden.
 - Creación de roles y usuarios con permisos granulares; rechazo de acciones no permitidas.
 - Subida de documento con fallback local, migración a IndexedDB y persistencia tras recarga.
 - Diseño responsive verificado a 1440 px y 390 px.
