@@ -137,7 +137,7 @@
       <div class="page-head dash-head">
         <div>
           <div class="dash-date">${ui.icon('clock', 12)} ${ui.esc(todayLong)}</div>
-          <h2 class="page-title">Así va la operación.</h2>
+          <h2 class="page-title">Resumen de operaciones</h2>
           <p class="page-sub">${m.activeDrivers} de ${m.totalDrivers} conductores activos y ${pendingAll.length} facturas pendientes por revisar.</p>
         </div>
         <div class="page-actions">

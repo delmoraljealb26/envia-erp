@@ -45,9 +45,10 @@ roles y permisos granulares.
 - **Bitácora de auditoría**: trazabilidad de cambios por usuario, módulo y fecha.
 - **Usuarios del sistema**: roles base y personalizados con permisos por módulo,
   pestaña y acción; permisos personalizados por usuario.
-- **Reportes**: botón en cada módulo con impresión y descarga Excel; el
-  administrador puede crear reportes personalizados eligiendo tabla, columnas,
-  filtros y orden.
+- **Reportes**: botón en cada módulo con impresión y descarga Excel; los usuarios
+  con permiso de escritura y reportes pueden crear listados personalizados
+  eligiendo tabla, columnas, filtros y orden, limitados a los módulos y tablas
+  que su rol o perfil tienen habilitados.
 - **Configuración del Sistema**: parámetros de mantenimiento con módulo, nivel y
   tipo de plan; planes y eventos de conductores; integración de APIs; Supabase;
   estado de conexión; mapa de sincronización y respaldos.

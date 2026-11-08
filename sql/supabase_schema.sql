@@ -572,12 +572,14 @@ create table if not exists public.custom_reports (
   filtro_valor  text,
   orden_campo   text,
   orden_dir     text check (orden_dir in ('asc','desc')),
+  creado_por    text,
   created_at    timestamptz not null default timezone('utc', now()),
   updated_at    timestamptz not null default timezone('utc', now())
 );
 comment on table public.custom_reports is 'Definiciones de reportes/listados a la medida creados por el administrador sobre las tablas existentes. No almacena datos, solo la definición.';
 comment on column public.custom_reports.columnas is 'Arreglo JSON con las claves de columna seleccionadas.';
 comment on column public.custom_reports.modulo is 'Módulo del centro de reportes donde se muestra el listado.';
+comment on column public.custom_reports.creado_por is 'Usuario que creó la definición; el administrador puede gestionar todas.';
 
 -- Migraciones idempotentes por si la tabla ya existía sin estas columnas.
 alter table public.custom_reports add column if not exists filtro_campo text;
@@ -585,6 +587,7 @@ alter table public.custom_reports add column if not exists filtro_op text;
 alter table public.custom_reports add column if not exists filtro_valor text;
 alter table public.custom_reports add column if not exists orden_campo text;
 alter table public.custom_reports add column if not exists orden_dir text;
+alter table public.custom_reports add column if not exists creado_por text;
 
 -- ============================================================================
 --  14. ÍNDICES

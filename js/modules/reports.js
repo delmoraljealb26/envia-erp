@@ -102,13 +102,13 @@
   // Catálogo de tablas y columnas disponibles para que el administrador arme
   // sus propios listados con la información ya almacenada.
   const CUSTOM_TABLES = {
-    clients: { label: 'Clientes', fields: [
+    clients: { label: 'Clientes', module: 'clients', fields: [
       ['cedula_rif', 'Cédula / RIF', 'text'], ['nombres', 'Nombres', 'text'], ['apellidos', 'Apellidos', 'text'],
       ['telefono', 'Teléfono', 'text'], ['correo', 'Correo', 'text'], ['direccion', 'Dirección', 'text'],
       ['estatus', 'Estatus', 'text'], ['saldo_wallet_usd', 'Saldo wallet USD', 'usd'], ['saldo_wallet_ves', 'Saldo wallet VES', 'ves'],
       ['total_carreras', 'Carreras', 'int'], ['total_encomiendas', 'Encomiendas', 'int'], ['fecha_registro', 'Fecha de registro', 'date']
     ] },
-    drivers: { label: 'Conductores', fields: [
+    drivers: { label: 'Conductores', module: 'drivers', fields: [
       ['cedula_rif', 'Cédula / RIF', 'text'], ['nombres', 'Nombres', 'text'], ['apellidos', 'Apellidos', 'text'],
       ['nivel', 'Nivel', 'text'], ['tipo_tarifa', 'Tarifa', 'text'], ['telefono', 'Teléfono', 'text'], ['correo', 'Correo', 'text'],
       ['direccion', 'Dirección', 'text'], ['tipo_servicio', 'Tipo de servicio', 'text'], ['placa', 'Placa', 'text'],
@@ -117,11 +117,11 @@
       ['saldo_por_liquidar_usd', 'Saldo por liquidar USD', 'usd'], ['estatus_conductor', 'Estatus', 'text'],
       ['fecha_registro', 'Fecha de registro', 'date']
     ] },
-    users: { label: 'Usuarios', fields: [
+    users: { label: 'Usuarios', module: 'users', fields: [
       ['usuario', 'Usuario', 'text'], ['nombre', 'Nombre', 'text'], ['rol', 'Rol', 'text'],
       ['correo', 'Correo', 'text'], ['activo', 'Activo', 'text'], ['created_at', 'Fecha de creación', 'date']
     ] },
-    services: { label: 'Servicios', fields: [
+    services: { label: 'Servicios', module: 'services', fields: [
       ['id', 'ID', 'text'], ['fecha', 'Fecha', 'date'], ['tipo', 'Tipo', 'text'],
       ['cliente_cedula_rif', 'Cliente', 'text'], ['conductor_cedula_rif', 'Conductor', 'text'],
       ['origen', 'Origen', 'text'], ['destino', 'Destino', 'text'], ['base_usd', 'Base USD', 'usd'],
@@ -129,31 +129,31 @@
       ['comision_usd', 'Comisión USD', 'usd'], ['pago_conductor_usd', 'Pago conductor USD', 'usd'],
       ['metodo_pago', 'Método de pago', 'text'], ['estatus', 'Estatus', 'text']
     ] },
-    suppliers: { label: 'Proveedores', fields: [
+    suppliers: { label: 'Proveedores', module: 'payables', fields: [
       ['rif', 'RIF', 'text'], ['razon_social', 'Razón social', 'text'], ['telefono', 'Teléfono', 'text'],
       ['correo', 'Correo', 'text'], ['direccion', 'Dirección', 'text'], ['actividad', 'Actividad', 'text'],
       ['tipo_persona', 'Tipo de persona', 'text'], ['retencion_iva_pct', 'Retención IVA %', 'pct'], ['estatus', 'Estatus', 'text']
     ] },
-    partners: { label: 'Negocios asociados', fields: [
+    partners: { label: 'Negocios asociados', module: 'partners', fields: [
       ['rif', 'RIF', 'text'], ['razon_social', 'Razón social', 'text'], ['tipo', 'Tipo', 'text'],
       ['contacto', 'Contacto', 'text'], ['telefono', 'Teléfono', 'text'], ['correo', 'Correo', 'text'],
       ['direccion', 'Dirección', 'text'], ['comision_pct', 'Comisión %', 'pct'],
       ['saldo_por_cobrar_usd', 'Saldo por cobrar USD', 'usd'], ['saldo_por_pagar_usd', 'Saldo por pagar USD', 'usd'],
       ['estatus', 'Estatus', 'text']
     ] },
-    products: { label: 'Productos / tienda', fields: [
+    products: { label: 'Productos / tienda', module: 'inventory', fields: [
       ['sku', 'SKU', 'text'], ['nombre', 'Nombre', 'text'], ['categoria', 'Categoría', 'text'],
       ['descripcion', 'Descripción', 'text'], ['precio_usd', 'Precio USD', 'usd'],
       ['stock', 'Stock', 'int'], ['stock_min', 'Stock mínimo', 'int'], ['activo', 'Activo', 'text']
     ] },
-    payables: { label: 'Cuentas por pagar', fields: [
+    payables: { label: 'Cuentas por pagar', module: 'payables', fields: [
       ['numero_factura', 'Factura', 'text'], ['numero_control', 'Control', 'text'], ['proveedor_rif', 'Proveedor', 'text'],
       ['fecha_emision', 'Fecha de emisión', 'date'], ['fecha_vencimiento', 'Vencimiento', 'date'],
       ['base_usd', 'Base USD', 'usd'], ['iva_usd', 'IVA USD', 'usd'], ['igtf_usd', 'IGTF USD', 'usd'],
       ['total_usd', 'Total USD', 'usd'], ['ret_iva_usd', 'Retención IVA USD', 'usd'],
       ['ret_islr_usd', 'Retención ISLR USD', 'usd'], ['estatus', 'Estatus', 'text']
     ] },
-    withholdings: { label: 'Comprobantes de retención', fields: [
+    withholdings: { label: 'Comprobantes de retención', module: 'taxes', fields: [
       ['numero_comprobante', 'Comprobante', 'text'], ['periodo', 'Período', 'text'], ['tipo', 'Tipo', 'text'],
       ['proveedor_rif', 'Proveedor RIF', 'text'], ['proveedor_nombre', 'Proveedor', 'text'],
       ['factura_numero', 'Factura', 'text'], ['fecha', 'Fecha', 'date'], ['base_ves', 'Base VES', 'ves'],
@@ -166,6 +166,10 @@
   function tableDef(key) {
     return CUSTOM_TABLES[key] || null;
   }
+  function tableModule(key) {
+    const t = tableDef(key);
+    return t ? t.module : '';
+  }
   function fieldDef(tableKey, fieldKey) {
     const t = tableDef(tableKey);
     if (!t) return null;
@@ -176,8 +180,32 @@
     const map = { clients: 'clients', drivers: 'drivers', users: 'users', services: 'services', payables: 'suppliers', partners: 'partners', inventory: 'products', taxes: 'withholdings', settings: 'users', audit: 'users', dashboard: 'services' };
     return map[module] || 'clients';
   }
+  function canAccessModule(module) {
+    if (!module) return false;
+    return NS.session.isAdmin() || NS.session.can(module);
+  }
+  function canCreateCustom(module) {
+    if (!canAccessModule(module) || !NS.app.canAction(module, 'reportes')) return false;
+    return NS.session.isAdmin() || NS.app.canWrite();
+  }
+  function accessibleModules() {
+    return Object.keys(NS.router.MODULES || {}).filter((m) => canCreateCustom(m));
+  }
+  function accessibleTables() {
+    return Object.keys(CUSTOM_TABLES).filter((k) => canAccessModule(CUSTOM_TABLES[k].module));
+  }
+  function canAccessTable(tabla) {
+    const t = tableDef(tabla);
+    return !!t && canAccessModule(t.module);
+  }
+  function canManageReport(rep) {
+    if (!rep || !canCreateCustom(rep.modulo) || !canAccessTable(rep.tabla)) return false;
+    if (NS.session.isAdmin()) return true;
+    const s = NS.session.getSession();
+    return !!(s && rep.creado_por === s.usuario);
+  }
   function customFor(module) {
-    return (db().customReports || []).filter((r) => r.modulo === module);
+    return (db().customReports || []).filter((r) => r.modulo === module && canAccessTable(r.tabla));
   }
   function customBuild(rep) {
     const table = tableDef(rep.tabla);
@@ -1022,14 +1050,15 @@
     if (!built.length && !customs.length) return NS.ui.toast('Este módulo no tiene reportes disponibles.', 'info');
     if (!NS.app.canAction(module, 'reportes')) return NS.ui.toast('Tu rol no tiene permiso para abrir reportes en este módulo.', 'warning');
     const meta = (NS.app.MODULES && NS.app.MODULES[module]) || { label: module };
-    const isAdmin = NS.session.isAdmin();
+    const canCreate = canCreateCustom(module);
     const itemHtml = (r) => {
       const custom = !!r.custom;
+      const manage = custom && canManageReport(r.definition);
       return `<article class="report-item ${custom ? 'report-item-custom' : ''}">
         <span class="report-ico">${NS.ui.icon(r.icon || 'chart', 20)}</span>
         <div class="report-copy"><strong>${NS.ui.esc(r.title)}${custom ? ' <span class="report-custom-badge">Personalizado</span>' : ''}</strong><p>${NS.ui.esc(r.description || '')}</p></div>
         <div class="report-actions">
-          ${custom && isAdmin ? `<button class="icon-btn" data-edit-custom="${NS.ui.esc(r.id)}" title="Editar reporte">${NS.ui.icon('edit', 16)}</button>
+          ${manage ? `<button class="icon-btn" data-edit-custom="${NS.ui.esc(r.id)}" title="Editar reporte">${NS.ui.icon('edit', 16)}</button>
           <button class="icon-btn danger" data-del-custom="${NS.ui.esc(r.id)}" title="Eliminar reporte">${NS.ui.icon('trash', 16)}</button>` : ''}
           <button class="btn btn-ghost btn-sm" data-report-print="${NS.ui.esc(r.id)}">${NS.ui.icon('print', 14)} Imprimir</button>
           <button class="btn btn-primary btn-sm" data-report-excel="${NS.ui.esc(r.id)}">${NS.ui.icon('download', 14)} Excel</button>
@@ -1046,7 +1075,7 @@
         <div class="report-list">${customs.map(itemHtml).join('')}</div>` : ''}
         <div class="report-section-label">${NS.ui.icon('chart', 14)} Reportes del módulo</div>
         <div class="report-list">${built.map(itemHtml).join('')}</div>`,
-      footer: `${isAdmin ? `<button class="btn btn-ghost" id="custom-report-new">${NS.ui.icon('plus', 14)} Nuevo reporte a la medida</button>` : ''}<button class="btn btn-ghost" data-close-modal>Cerrar</button>`
+      footer: `${canCreate ? `<button class="btn btn-ghost" id="custom-report-new">${NS.ui.icon('plus', 14)} Nuevo reporte a la medida</button>` : ''}<button class="btn btn-ghost" data-close-modal>Cerrar</button>`
     });
     overlay.querySelectorAll('[data-report-print]').forEach((btn) => btn.addEventListener('click', () => {
       const rep = all.find((r) => r.id === btn.dataset.reportPrint);
@@ -1056,38 +1085,41 @@
       const rep = all.find((r) => r.id === btn.dataset.reportExcel);
       if (rep) run(module, rep, 'excel');
     }));
-    if (isAdmin) {
-      const newBtn = overlay.querySelector('#custom-report-new');
-      if (newBtn) newBtn.addEventListener('click', () => openBuilder(module));
-      overlay.querySelectorAll('[data-edit-custom]').forEach((btn) => btn.addEventListener('click', () => openBuilder(module, btn.dataset.editCustom)));
-      overlay.querySelectorAll('[data-del-custom]').forEach((btn) => btn.addEventListener('click', () => {
-        const rep = customs.find((r) => r.id === btn.dataset.delCustom);
-        NS.ui.confirm({
-          title: 'Eliminar reporte personalizado',
-          message: `¿Eliminar el reporte "${rep ? rep.title : btn.dataset.delCustom}"? Esta acción no elimina datos, solo la definición del listado.`,
-          confirmText: 'Eliminar', danger: true
-        }).then((ok) => {
-          if (!ok) return;
-          try {
-            NS.store.deleteCustomReport(btn.dataset.delCustom);
-            NS.ui.toast('Reporte personalizado eliminado.', 'success');
-            NS.ui.closeModal(overlay);
-            open(module);
-          } catch (e) { NS.ui.toast(e.message, 'error'); }
-        });
-      }));
-    }
+    const newBtn = overlay.querySelector('#custom-report-new');
+    if (newBtn) newBtn.addEventListener('click', () => openBuilder(module));
+    overlay.querySelectorAll('[data-edit-custom]').forEach((btn) => btn.addEventListener('click', () => openBuilder(module, btn.dataset.editCustom)));
+    overlay.querySelectorAll('[data-del-custom]').forEach((btn) => btn.addEventListener('click', () => {
+      const rep = customs.find((r) => r.id === btn.dataset.delCustom);
+      NS.ui.confirm({
+        title: 'Eliminar reporte personalizado',
+        message: `¿Eliminar el reporte "${rep ? rep.title : btn.dataset.delCustom}"? Esta acción no elimina datos, solo la definición del listado.`,
+        confirmText: 'Eliminar', danger: true
+      }).then((ok) => {
+        if (!ok) return;
+        try {
+          NS.store.deleteCustomReport(btn.dataset.delCustom);
+          NS.ui.toast('Reporte personalizado eliminado.', 'success');
+          NS.ui.closeModal(overlay);
+          open(module);
+        } catch (e) { NS.ui.toast(e.message, 'error'); }
+      });
+    }));
   }
 
   /* ------------------ Constructor de reportes a la medida ------------------ */
   function openBuilder(module, reportId) {
-    if (!NS.session.isAdmin()) return NS.ui.toast('Solo el administrador puede crear reportes personalizados.', 'warning');
     const existing = reportId ? (db().customReports || []).find((r) => r.id === reportId) : null;
-    const modules = Object.values(NS.router.MODULES || {}).map((m) => m.module);
+    const permitted = existing ? canManageReport(existing) : canCreateCustom(module);
+    if (!permitted) return NS.ui.toast('No tienes acceso a este módulo o a la tabla de datos para crear el reporte.', 'warning');
+    const modules = accessibleModules();
+    const tables = accessibleTables();
+    if (!modules.length || !tables.length) return NS.ui.toast('Tu rol no tiene módulos o tablas habilitadas para reportes personalizados.', 'warning');
+    const preferred = existing && tables.includes(existing.tabla) ? existing.tabla : defaultTable(module);
+    const initialTable = tables.includes(preferred) ? preferred : tables[0];
     const overlay = NS.ui.modal({
       title: existing ? 'Editar reporte personalizado' : 'Nuevo reporte a la medida',
       eyebrow: 'Constructor de reportes',
-      subtitle: 'Elige la tabla, las columnas y los filtros. El listado se arma con la información almacenada.',
+      subtitle: 'Solo verás los módulos y tablas a los que tienes acceso. El listado se arma con la información almacenada.',
       size: 'lg',
       body: `<form id="custom-report-form" class="form-grid" autocomplete="off">
         <label class="field field-full"><span>Nombre del reporte *</span><input name="nombre" value="${NS.ui.esc(existing ? existing.nombre : '')}" placeholder="Conductores · correo y dirección" required></label>
@@ -1096,7 +1128,7 @@
           const mm = NS.router.MODULES[m];
           return `<option value="${NS.ui.esc(m)}" ${((existing && existing.modulo) || module) === m ? 'selected' : ''}>${NS.ui.esc(mm.label)}</option>`;
         }).join('')}</select></label>
-        <label class="field"><span>Tabla base *</span><select name="tabla">${Object.keys(CUSTOM_TABLES).map((k) => `<option value="${NS.ui.esc(k)}" ${((existing && existing.tabla) || defaultTable(module)) === k ? 'selected' : ''}>${NS.ui.esc(CUSTOM_TABLES[k].label)}</option>`).join('')}</select></label>
+        <label class="field"><span>Tabla base *</span><select name="tabla">${tables.map((k) => `<option value="${NS.ui.esc(k)}" ${initialTable === k ? 'selected' : ''}>${NS.ui.esc(CUSTOM_TABLES[k].label)}</option>`).join('')}</select></label>
         <div class="field field-full"><span>Columnas del listado *</span><div class="report-columns" id="custom-columns"></div><small class="block muted">Marca las columnas que quieres ver, imprimir o exportar.</small></div>
         <div class="field field-full"><span>Filtro (opcional)</span><div class="report-filter-row" id="custom-filter-row"></div></div>
         <div class="field field-full"><span>Orden (opcional)</span><div class="report-filter-row" id="custom-order-row"></div></div>
@@ -1108,7 +1140,6 @@
     const filterRow = overlay.querySelector('#custom-filter-row');
     const orderRow = overlay.querySelector('#custom-order-row');
     const initialColumns = existing && existing.columnas ? existing.columnas.slice() : [];
-    const initialTable = existing ? existing.tabla : defaultTable(module);
 
     function refreshFields() {
       const tableKey = form.elements.tabla.value;
@@ -1136,15 +1167,20 @@
     overlay.querySelector('[data-cancel]').addEventListener('click', () => NS.ui.closeModal(overlay));
     overlay.querySelector('#custom-report-save').addEventListener('click', () => {
       if (!form.reportValidity()) return;
+      const target = form.elements.modulo.value;
+      const tableKey = form.elements.tabla.value;
+      if (!modules.includes(target) || !tables.includes(tableKey)) {
+        return NS.ui.toast('El módulo o la tabla seleccionada no está disponible para tu rol.', 'warning');
+      }
       const columnas = Array.from(form.querySelectorAll('input[name="columna"]:checked')).map((i) => i.value);
       if (!columnas.length) return NS.ui.toast('Selecciona al menos una columna.', 'warning');
       try {
         NS.store.upsertCustomReport({
           id: existing ? existing.id : '',
-          modulo: form.elements.modulo.value,
+          modulo: target,
           nombre: form.elements.nombre.value,
           descripcion: form.elements.descripcion.value,
-          tabla: form.elements.tabla.value,
+          tabla: tableKey,
           columnas,
           filtro_campo: form.elements.filtro_campo.value,
           filtro_op: form.elements.filtro_op.value,
@@ -1152,7 +1188,6 @@
           orden_campo: form.elements.orden_campo.value,
           orden_dir: form.elements.orden_dir.value
         });
-        const target = form.elements.modulo.value;
         NS.ui.closeAllModals();
         NS.ui.toast(existing ? 'Reporte personalizado actualizado.' : 'Reporte personalizado creado.', 'success');
         open(target);
@@ -1174,5 +1209,5 @@
     }
   }
 
-  NS.reports = { list, has, button, open, run, openBuilder };
+  NS.reports = { list, has, button, open, run, openBuilder, tableModule };
 })();

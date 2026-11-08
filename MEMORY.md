@@ -5,7 +5,7 @@
 
 **Estado:** Proyecto completo y funcional
 
-**Versión:** 1.11.0
+**Versión:** 1.12.0
 
 ---
 
@@ -373,8 +373,9 @@ medida con la información ya almacenada.
 **Decisiones:**
 - El constructor trabaja sobre **una tabla base** por reporte y guarda solo la
   definición (tabla, columnas, filtro, orden); no duplica datos.
-- Los reportes personalizados se muestran en el módulo elegido y solo el
-  administrador puede crearlos, editarlos o eliminarlos.
+- Los reportes personalizados se muestran en el módulo elegido. En esta versión
+  solo el administrador podía crearlos, editarlos o eliminarlos; la sección 5.9
+  amplía la creación a usuarios con permiso de reportes y escritura.
 - Los roles con permiso de **Centro de reportes** pueden ejecutar los listados
   personalizados del módulo, pero no modificarlos.
 - El menú de perfil del topbar se elimina; el cierre de sesión queda en el icono
@@ -388,6 +389,46 @@ medida con la información ya almacenada.
   (nombre/correo), filtro y orden; Excel generado con las columnas y filas
   esperadas.
 - Sin errores de consola.
+
+---
+
+## 5.9 Reportes según acceso, pestañas contables y título del Dashboard (08/11/2026)
+
+**Objetivo:** alinear el constructor de reportes con el RBAC, reparar la
+navegación interna de Contabilidad y ajustar el título del tablero.
+
+**Cambios principales:**
+
+| Archivo | Cambio |
+|---------|--------|
+| `js/modules/reports.js` | El constructor solo ofrece módulos y tablas a los que el usuario tiene acceso; los reportes personalizados se ocultan si la tabla pertenece a un módulo no permitido; `Nuevo reporte` aparece solo con permiso de reportes y escritura; cada usuario gestiona sus reportes y el administrador todos. |
+| `js/services/store.js` | `customReports` guarda `creado_por` para controlar la edición/eliminación por propietario. |
+| `js/services/routerService.js` | Nuevo `setSubroute()` para sincronizar pestaña, URL y sidebar sin re-renderizar el módulo. |
+| `js/modules/accounting.js` | Las pestañas internas (Asientos, Plan de cuentas, Libro Mayor, Balance, etc.) actualizan la subruta y ya no vuelven a la pestaña anterior del sidebar. |
+| `js/modules/dashboard.js` | El título **Así va la operación.** pasa a **Resumen de operaciones**. |
+| `sql/supabase_schema.sql` | `custom_reports.creado_por` y migración idempotente. |
+| `docs/manual_usuario.md`, `manual.html`, `README.md`, `MEMORY.md` | Documentación del acceso por rol/perfil y de la gestión de reportes por propietario. |
+
+**Decisiones:**
+- Crear reportes requiere permiso de **Centro de reportes** y capacidad de
+  escritura; los roles de solo lectura solo ejecutan reportes existentes.
+- El desplegable de módulos solo muestra módulos con permiso de reportes; el de
+  tablas solo incluye datos de módulos accesibles para el rol o perfil.
+- Un reporte personalizado solo se muestra si el usuario tiene acceso a su
+  módulo y a la tabla de origen, evitando exponer datos de otras áreas.
+- El propietario puede editar/eliminar su reporte; el administrador puede
+  gestionar todos. Los reportes antiguos sin `creado_por` quedan bajo control
+  del administrador.
+
+**Validación:**
+- `node --check` en los JS modificados.
+- CDP en `file://`: las pestañas de Contabilidad cambian de contenido aun
+  entrando por un subitem del sidebar; URL y subitem activo quedan sincronizados.
+- SuperAdmin ve los 12 módulos y las 9 tablas; Contador no ve Usuarios ni
+  Configuración; Auditor no ve el botón de creación y no puede editar/eliminar.
+- El reporte creado por `contador` guarda `creado_por: contador` y solo muestra
+  acciones de gestión a su propietario y al administrador.
+- Dashboard muestra **Resumen de operaciones**. Sin errores de consola.
 
 ---
 

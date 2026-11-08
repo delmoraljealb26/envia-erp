@@ -397,6 +397,25 @@
     renderRoute(false, clean, query);
   }
 
+  // Sincroniza la subruta activa sin volver a renderizar el módulo completo.
+  // Se usa cuando una pestaña interna cambia (por ejemplo, Contabilidad) para
+  // que el sidebar y la URL reflejen la pestaña y no reabran la anterior.
+  function setSubroute(module, sub, action) {
+    if (!MODULES[module]) return;
+    currentRoute = module;
+    currentSubroute = sub ? { module, sub, action: action || 'ver' } : null;
+    currentSubquery = sub ? 'sub=' + encodeURIComponent(sub) + '&action=' + encodeURIComponent(action || 'ver') : '';
+    try {
+      if (currentSubroute) sessionStorage.setItem('envia_subroute', JSON.stringify(currentSubroute));
+      else sessionStorage.removeItem('envia_subroute');
+    } catch (e) { /* ignorar */ }
+    const hash = '#/' + module + (sub ? '?sub=' + encodeURIComponent(sub) + '&action=' + encodeURIComponent(action || 'ver') : '');
+    if (location.hash !== hash) history.replaceState(null, '', hash);
+    document.querySelectorAll('#sidebar-nav .nav-subitem').forEach((s) => {
+      s.classList.toggle('active', !!sub && s.dataset.route === module && s.dataset.sub === sub);
+    });
+  }
+
   function renderRoute(force, routeOverride, query) {
     if (!NS.session.getSession()) return;
     const full = routeOverride || (location.hash || '').replace(/^#\/?/, '') || 'dashboard';
@@ -540,6 +559,7 @@
     canWrite,
     isAdmin,
     navigate,
+    setSubroute,
     renderRoute,
     refresh,
     buildSidebar,

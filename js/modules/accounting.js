@@ -21,6 +21,14 @@
     { id: 'purchases', label: 'Libro de Compras', icon: 'wallet' }
   ];
 
+  // Equivalencia entre la pestaña interna y el subitem del sidebar.
+  const TAB_SUB = {
+    journal: 'accounting-ledger',
+    ledger: 'accounting-mayor',
+    trial: 'accounting-balance',
+    income: 'accounting-results'
+  };
+
   let state = {
     tab: 'entries',
     q: '',
@@ -99,6 +107,8 @@
 
     view.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => {
       state.tab = b.dataset.tab;
+      // Actualiza la subruta para que el render no vuelva a la pestaña anterior.
+      NS.router.setSubroute('accounting', TAB_SUB[state.tab] || '');
       render(view);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }));

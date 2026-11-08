@@ -2304,7 +2304,26 @@
       if (!tabla) throw new Error('Selecciona la tabla base del reporte.');
       const columnas = Array.isArray(data.columnas) ? data.columnas.filter(Boolean) : [];
       if (!columnas.length) throw new Error('Selecciona al menos una columna para el reporte.');
+      const session = NS.session && NS.session.getSession ? NS.session.getSession() : null;
+      const usuarioActual = (session && session.usuario) || 'sistema';
       const existing = data.id ? (current.customReports || []).find((r) => r.id === data.id) : null;
+      if (session && !api.isAdmin(session.rol)) {
+        if (!api.canWrite(session.rol, session.usuario)) {
+          throw new Error('Tu rol no tiene permiso de escritura para crear reportes personalizados.');
+        }
+        const access = api.accessFor(session.rol, session.usuario);
+        const canModule = (m) => access.modules.includes('*') || access.modules.includes(m);
+        if (!canModule(modulo) || !api.canAction(session.rol, modulo, 'reportes', session.usuario)) {
+          throw new Error('No tienes acceso al módulo seleccionado.');
+        }
+        const dataModule = NS.reports && NS.reports.tableModule ? NS.reports.tableModule(tabla) : '';
+        if (dataModule && !canModule(dataModule)) {
+          throw new Error('No tienes acceso a los datos de la tabla seleccionada.');
+        }
+        if (existing && existing.creado_por !== session.usuario) {
+          throw new Error('Solo puedes modificar los reportes que hayas creado.');
+        }
+      }
       const rec = {
         ...(existing || {}),
         id: existing ? existing.id : uid('cr'),
@@ -2318,6 +2337,7 @@
         filtro_valor: data.filtro_valor || '',
         orden_campo: data.orden_campo || '',
         orden_dir: data.orden_dir === 'desc' ? 'desc' : 'asc',
+        creado_por: existing ? (existing.creado_por || usuarioActual) : usuarioActual,
         updated_at: stamp(),
         created_at: existing ? existing.created_at : stamp()
       };
@@ -2328,6 +2348,11 @@
       return rec;
     },
     deleteCustomReport(id) {
+      const rec = (current.customReports || []).find((r) => r.id === id);
+      const session = NS.session && NS.session.getSession ? NS.session.getSession() : null;
+      if (rec && session && !api.isAdmin(session.rol) && rec.creado_por !== session.usuario) {
+        throw new Error('Solo puedes eliminar los reportes que hayas creado.');
+      }
       current.customReports = (current.customReports || []).filter((r) => r.id !== id);
       api.addAuditLog('eliminar', 'reportes', `Reporte personalizado ${id}`, id);
       persist();
