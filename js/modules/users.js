@@ -25,6 +25,14 @@
     const canDelete = NS.app.canAction('users', 'eliminar');
     const canRoles = NS.app.canAction('users', 'roles');
 
+    // Leer sub-ruta del sidebar
+    const sub = NS.router.getSubroute();
+    if (sub && sub.module === 'users') {
+      if (sub.sub === 'users-new' && canCreate) {
+        setTimeout(() => openForm(), 50);
+      }
+    }
+
     view.innerHTML = `
       <div class="page-head">
         <div>

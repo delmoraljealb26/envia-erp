@@ -49,6 +49,25 @@
     const fileSize = JSON.stringify(files).length;
     const dbSize = JSON.stringify(db).length;
 
+    // Leer sub-ruta del sidebar
+    const sub = NS.router.getSubroute();
+    if (sub && sub.module === 'settings') {
+      if (sub.sub === 'settings-params') {
+        // Hacer scroll a la sección de parámetros después de renderizar
+        setTimeout(() => {
+          const el = document.querySelector('h3');
+          if (el && el.textContent.includes('Parámetros de mantenimiento')) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 100);
+      } else if (sub.sub === 'settings-supabase') {
+        setTimeout(() => {
+          const el = document.querySelector('.connection-pill');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }
+    }
+
     view.innerHTML = `
       <div class="page-head">
         <div>

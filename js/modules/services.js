@@ -17,6 +17,14 @@
     const canCreate = NS.app.canAction('services', 'crear');
     const canExport = NS.app.canAction('services', 'exportar');
     const q = filters.q.toLowerCase();
+
+    // Leer sub-ruta del sidebar
+    const sub = NS.router.getSubroute();
+    if (sub && sub.module === 'services') {
+      if (sub.sub === 'services-new' && canCreate) {
+        setTimeout(() => openForm(), 50);
+      }
+    }
     const list = db.services.filter((s) => {
       const c = db.clients.find((x) => x.cedula_rif === s.cliente_cedula_rif);
       const d = db.drivers.find((x) => x.cedula_rif === s.conductor_cedula_rif);

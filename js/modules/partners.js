@@ -20,6 +20,14 @@
     const canMove = NS.app.canAction('partners', 'movimientos');
     const canExport = NS.app.canAction('partners', 'exportar');
     const q = filters.q.toLowerCase();
+
+    // Leer sub-ruta del sidebar
+    const sub = NS.router.getSubroute();
+    if (sub && sub.module === 'partners') {
+      if (sub.sub === 'partners-new' && canCreate) {
+        setTimeout(() => openForm(), 50);
+      }
+    }
     const list = db.partners.filter((p) => {
       const hay = [p.rif, p.razon_social, p.tipo, p.contacto, p.telefono, p.correo].join(' ').toLowerCase();
       return (!q || hay.includes(q)) && (!filters.status || p.estatus === filters.status) && (!filters.type || p.tipo === filters.type);

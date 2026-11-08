@@ -51,6 +51,16 @@
     const canPay = NS.app.canAction('inventory', 'cobrar');
     const canExport = NS.app.canAction('inventory', 'exportar');
     const q = filters.q.toLowerCase();
+
+    // Leer sub-ruta del sidebar
+    const sub = NS.router.getSubroute();
+    if (sub && sub.module === 'inventory') {
+      if (sub.sub === 'inventory-new' && canCreate) {
+        setTimeout(() => openProductForm(), 50);
+      } else if (sub.sub === 'inventory-assign' && canAssign) {
+        setTimeout(() => openAssign(), 50);
+      }
+    }
     const products = db.products.filter((p) => {
       const hay = [p.sku, p.nombre, p.categoria, p.descripcion].join(' ').toLowerCase();
       return (!q || hay.includes(q)) && (!filters.low || p.stock <= p.stock_min);

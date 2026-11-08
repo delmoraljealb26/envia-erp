@@ -53,6 +53,15 @@
     const canDelete = NS.app.canAction('drivers', 'eliminar');
     const canExport = NS.app.canAction('drivers', 'exportar');
     const q = filters.q.toLowerCase();
+
+    // Leer sub-ruta del sidebar
+    const sub = NS.router.getSubroute();
+    if (sub && sub.module === 'drivers') {
+      if (sub.sub === 'drivers-new' && canCreate) {
+        // Abrir formulario de nuevo conductor después de renderizar
+        setTimeout(() => openForm(), 50);
+      }
+    }
     const list = db.drivers.filter((d) => {
       const hay = [d.cedula_rif, d.nombres, d.apellidos, d.placa, d.marca, d.modelo, d.telefono, d.correo, d.tipo_servicio].join(' ').toLowerCase();
       return (!q || hay.includes(q)) && (!filters.status || d.estatus_conductor === filters.status) && (!filters.type || d.tipo_servicio === filters.type);

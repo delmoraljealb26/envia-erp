@@ -71,6 +71,8 @@
 
   const GROUPS = ['Operación', 'Maestros', 'Finanzas', 'Sistema'];
   let currentRoute = 'dashboard';
+  let currentSubroute = null; // { module, sub, action } o null
+  let currentSubquery = ''; // query string actual (ej. "sub=accounting-ledger")
 
   /* ----------------------------- Sesión/RBAC ----------------------------- */
   function can(module) {
@@ -113,7 +115,7 @@
               </button>
               ${hasSub ? `<div class="nav-subitems" data-parent="${m.module}">
                 ${m.subitems.filter((s) => access.modules.includes('*') || access.modules.includes(m.module)).map((s) => `
-                  <a href="#/${m.module}" class="nav-subitem" data-route="${m.module}" data-sub="${s.id}" data-action="${s.action}">
+                  <a href="#/${m.module}?sub=${s.id}" class="nav-subitem" data-route="${m.module}" data-sub="${s.id}" data-action="${s.action}">
                     <span class="nav-sub-ico">${NS.ui.icon(s.icon, 16)}</span>
                     <span class="nav-sub-label">${NS.ui.esc(s.label)}</span>
                   </a>
@@ -179,12 +181,8 @@
         const subId = a.dataset.sub;
         const action = a.dataset.action;
         closeMobileNav();
-        // Navegar al módulo (la página del módulo mostrará su contenido principal)
-        navigate(module, true);
-        // Guardar la sub-ruta seleccionada en sessionStorage para que el módulo la lea
-        try {
-          sessionStorage.setItem('envia_subroute', JSON.stringify({ module, sub: subId, action }));
-        } catch (e) { /* ignorar */ }
+        // Navegar al módulo con el sub como query string para que el módulo sepa qué mostrar
+        navigate(module + '?sub=' + subId + '&action=' + action, true);
         // Resaltar el subitem activo
         nav.querySelectorAll('.nav-subitem').forEach((s) => s.classList.remove('active'));
         a.classList.add('active');
@@ -424,7 +422,9 @@
 
   /* ------------------------------- Router -------------------------------- */
   function navigate(route, replace) {
-    const clean = String(route || 'dashboard').replace(/^#?\/?/, '').split('?')[0];
+    const full = String(route || 'dashboard').replace(/^#?\/?/, '');
+    const clean = full.split('?')[0];
+    const query = full.includes('?') ? full.split('?')[1] : '';
     if (!MODULES[clean] || !can(clean)) {
       const routeOk = Object.keys(MODULES).find((r) => can(r)) || 'dashboard';
       if (replace) {
@@ -434,15 +434,30 @@
       NS.ui.toast('No tienes permisos para acceder a ese módulo.', 'warning');
       return navigate(routeOk, true);
     }
-    if (location.hash !== '#/' + clean) history.pushState(null, '', '#/' + clean);
-    renderRoute(false, clean);
+    if (location.hash !== '#/' + full) history.pushState(null, '', '#/' + full);
+    renderRoute(false, clean, query);
   }
 
-  function renderRoute(force, routeOverride) {
+  function renderRoute(force, routeOverride, query) {
     if (!NS.session.getSession()) return;
-    const route = routeOverride || (location.hash || '').replace(/^#\/?/, '').split('?')[0] || 'dashboard';
+    const full = routeOverride || (location.hash || '').replace(/^#\/?/, '') || 'dashboard';
+    const route = full.split('?')[0];
+    const qs = query || (full.includes('?') ? full.split('?')[1] : '');
     if (!MODULES[route] || !can(route)) return navigate('dashboard', true);
     currentRoute = route;
+    currentSubquery = qs;
+
+    // Extraer sub-ruta del query string
+    currentSubroute = null;
+    if (qs) {
+      const params = new URLSearchParams(qs);
+      const sub = params.get('sub');
+      const action = params.get('action');
+      if (sub) {
+        currentSubroute = { module: route, sub, action };
+        try { sessionStorage.setItem('envia_subroute', JSON.stringify(currentSubroute)); } catch (e) { /* ignorar */ }
+      }
+    }
     const meta = MODULES[route];
     $('#crumb-current').textContent = meta.label;
     $('#page-title').textContent = meta.label;
@@ -531,8 +546,13 @@
   function init() {
     window.addEventListener('hashchange', () => {
       if (!NS.session.getSession()) return;
-      const route = (location.hash || '').replace(/^#\/?/, '') || 'dashboard';
-      if (route !== currentRoute) renderRoute(false, route);
+      const full = (location.hash || '').replace(/^#\/?/, '') || 'dashboard';
+      const route = full.split('?')[0];
+      const query = full.includes('?') ? full.split('?')[1] : '';
+      // Re-renderizar si cambió el módulo O la sub-ruta (query string)
+      if (route !== currentRoute || query !== currentSubquery) {
+        renderRoute(false, route, query);
+      }
     });
     window.addEventListener('resize', () => { if (window.innerWidth > 1100) closeMobileNav(); });
   }
@@ -555,6 +575,7 @@
     closeMobileNav,
     refreshRateFromApi,
     openRateCalendar,
-    init
+    init,
+    getSubroute() { return currentSubroute; }
   };
 })();

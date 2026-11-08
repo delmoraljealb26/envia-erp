@@ -38,6 +38,25 @@
     const store = NS.store;
     const db = store.db;
     const tb = store.trialBalance();
+
+    // Leer sub-ruta del sidebar (ej. contabilidad?sub=accounting-ledger)
+    const sub = NS.router.getSubroute();
+    if (sub && sub.module === 'accounting') {
+      const tabMap = {
+        'accounting-ledger': 'journal',
+        'accounting-mayor': 'ledger',
+        'accounting-balance': 'trial',
+        'accounting-results': 'income',
+        'accounting-sales': 'sales',
+        'accounting-purchases': 'purchases',
+        'accounting-accounts': 'accounts',
+        'accounting-rules': 'rules',
+        'accounting-entries': 'entries'
+      };
+      if (sub.sub && tabMap[sub.sub]) {
+        state.tab = tabMap[sub.sub];
+      }
+    }
     const totals = tb.reduce((s, r) => ({ debe: s.debe + r.debe, haber: s.haber + r.haber, deudor: s.deudor + r.deudor, acreedor: s.acreedor + r.acreedor }), { debe: 0, haber: 0, deudor: 0, acreedor: 0 });
     const diff = Math.abs(totals.debe - totals.haber);
     const canWrite = NS.app.canAction('accounting', 'editar');

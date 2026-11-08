@@ -22,6 +22,14 @@
     const canDelete = NS.app.canAction('clients', 'eliminar');
     const canExport = NS.app.canAction('clients', 'exportar');
     const q = filters.q.toLowerCase();
+
+    // Leer sub-ruta del sidebar
+    const sub = NS.router.getSubroute();
+    if (sub && sub.module === 'clients') {
+      if (sub.sub === 'clients-new' && canCreate) {
+        setTimeout(() => openForm(), 50);
+      }
+    }
     const list = db.clients.filter((c) => {
       const hay = [c.cedula_rif, c.nombres, c.apellidos, c.telefono, c.correo, c.direccion].join(' ').toLowerCase();
       return (!q || hay.includes(q)) && (!filters.status || c.estatus === filters.status);
