@@ -181,7 +181,7 @@
         const subId = a.dataset.sub;
         const action = a.dataset.action;
         closeMobileNav();
-        // Navegar al módulo con el sub como query string para que el módulo sepa qué mostrar
+        // Navegar al módulo con el sub como query string; si es "reportes", renderRoute abrirá el modal automáticamente
         navigate(module + '?sub=' + subId + '&action=' + action, true);
         // Resaltar el subitem activo
         nav.querySelectorAll('.nav-subitem').forEach((s) => s.classList.remove('active'));
@@ -510,6 +510,21 @@
           btn.innerHTML = NS.ui.icon('chart', 16) + ' Reportes';
           btn.title = 'Abrir el centro de reportes de este módulo';
           actions.insertBefore(btn, actions.firstChild);
+        }
+      }
+
+      // Ocultar estadísticas del encabezado (stat-strip) cuando se entra por un subitem
+      if (currentSubroute) {
+        const statStrip = view.querySelector('.stat-strip');
+        if (statStrip) statStrip.style.display = 'none';
+      }
+
+      // Abrir modal de reportes automáticamente si se seleccionó "Reportes" del sidebar
+      if (currentSubroute && currentSubroute.sub && String(currentSubroute.sub).endsWith('-reports')) {
+        if (NS.reports && NS.reports.has(route) && canAction(route, 'reportes')) {
+          setTimeout(() => {
+            NS.reports.open(route);
+          }, 100);
         }
       }
 

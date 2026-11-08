@@ -86,13 +86,6 @@
         </div>
       </div>
 
-      <div class="stat-strip">
-        <div class="stat-strip-item"><span>Valor del inventario</span><strong>${ui.usd(valor)}</strong><small>${ui.bs(ui.toBs(valor))} al costo</small></div>
-        <div class="stat-strip-item"><span>Unidades disponibles</span><strong>${ui.num(stockTotal, 0)}</strong><small>${db.products.filter((p) => p.activo).length} SKU activos</small></div>
-        <div class="stat-strip-item"><span>Saldo financiado</span><strong>${ui.usd(financiado)}</strong><small>${db.driverCharges.filter((c) => c.saldo_usd > 0).length} financiamientos vigentes</small></div>
-        <div class="stat-strip-item"><span>Alertas de stock</span><strong>${ui.num(lowCount, 0)}</strong><small>${lowCount ? 'productos en o bajo el mínimo' : 'inventario saludable'}</small></div>
-      </div>
-
       <section class="card card-flush">
         <div class="toolbar">
           <div class="search-box">${ui.icon('search', 17)}<input id="inventory-search" type="search" placeholder="Buscar por SKU, producto o categoría..." value="${ui.esc(filters.q)}"></div>
