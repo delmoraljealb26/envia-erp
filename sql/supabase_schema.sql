@@ -509,6 +509,44 @@ comment on table public.system_params is 'Parámetros configurables por el admin
 comment on column public.system_params.value is 'Valor guardado como texto; se interpreta según tipo (monto/porcentaje/etc).';
 
 -- ============================================================================
+--  13.4 PLANES DE CONDUCTORES POR NIVEL
+-- ============================================================================
+create table if not exists public.driver_plans (
+  key          text primary key check (key ~ '^[a-z0-9_]{3,40}$'),
+  nivel        text not null check (nivel in ('Zafiro','Esmeralda','Diamante')),
+  tipo_plan    text not null check (tipo_plan in ('fijo','porcentaje')),
+  valor        numeric(14,2) not null default 0 check (valor >= 0),
+  descripcion  text,
+  modulo       text not null default 'drivers',
+  activo       boolean not null default true,
+  created_at   timestamptz not null default timezone('utc', now()),
+  updated_at   timestamptz not null default timezone('utc', now())
+);
+comment on table public.driver_plans is 'Planes de descuento semanal por nivel de conductor (fijo o porcentaje). Clave primaria: key.';
+comment on column public.driver_plans.valor is 'Si tipo_plan=fijo: monto en USD. Si tipo_plan=porcentaje: porcentaje (0-100).';
+
+-- ============================================================================
+--  13.5 EVENTOS DE CONDUCTORES (PREMIOS / BENEFICIOS)
+-- ============================================================================
+create table if not exists public.driver_events (
+  key           text primary key check (key ~ '^[a-z0-9_]{3,40}$'),
+  nombre        text not null,
+  tipo_evento   text not null default 'premio' check (tipo_evento in ('premio','descuento')),
+  aplicacion    text not null check (aplicacion in ('todos','nivel')),
+  nivel_aplicar text check (nivel_aplicar in ('Zafiro','Esmeralda','Diamante')),
+  valor         numeric(14,2) not null default 0 check (valor >= 0),
+  tipo_valor    text not null check (tipo_valor in ('monto','porcentaje')),
+  descripcion   text,
+  fecha_inicio  date,
+  fecha_fin     date,
+  activo        boolean not null default true,
+  modulo        text not null default 'drivers',
+  created_at    timestamptz not null default timezone('utc', now()),
+  updated_at    timestamptz not null default timezone('utc', now())
+);
+comment on table public.driver_events is 'Eventos de premio o descuento aplicables a conductores (todos o por nivel). Clave primaria: key.';
+
+-- ============================================================================
 --  14. ÍNDICES
 -- ============================================================================
 create index if not exists idx_clients_estatus          on public.clients(estatus);
@@ -543,6 +581,9 @@ create index if not exists idx_driver_charges_estatus   on public.driver_charges
 create index if not exists idx_driver_movements_driver  on public.driver_movements(conductor_cedula_rif);
 create index if not exists idx_driver_movements_fecha   on public.driver_movements(fecha);
 create index if not exists idx_system_params_module     on public.system_params(module);
+create index if not exists idx_driver_plans_nivel         on public.driver_plans(nivel);
+create index if not exists idx_driver_events_nivel        on public.driver_events(nivel_aplicar);
+create index if not exists idx_driver_events_activo       on public.driver_events(activo);
 
 -- ============================================================================
 --  15. TRIGGERS updated_at
@@ -693,6 +734,8 @@ alter table public.products                enable row level security;
 alter table public.driver_charges          enable row level security;
 alter table public.driver_movements        enable row level security;
 alter table public.system_params           enable row level security;
+alter table public.driver_plans            enable row level security;
+alter table public.driver_events           enable row level security;
 
 -- Políticas demo: anon + authenticated con acceso completo.
 -- PRODUCCIÓN: reemplazar por políticas basadas en auth.uid(), rol y propietario.
@@ -705,7 +748,7 @@ begin
     'accounts_payable','withholding_vouchers','accounting_rules',
     'accounting_entries','accounting_entry_lines','erp_roles','erp_users',
     'tax_parameters','wallet_movements','partners','partner_movements',
-    'products','driver_charges','driver_movements','system_params'
+    'products','driver_charges','driver_movements','system_params','driver_plans','driver_events'
   ]
   loop
     execute format('drop policy if exists envia_demo_all on public.%I', t);

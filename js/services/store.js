@@ -1009,6 +1009,8 @@
       driverMovements: [],
       systemParams: [],
       apiIntegrations: [],
+      driverPlans: [],
+      driverEvents: [],
       accounts: clone(ACCOUNTS),
       accountingRules: clone(DEFAULT_RULES).map((r) => ({ ...r, id: 'rule_' + r.evento, updated_at: stamp() })),
       entries: [],
@@ -1604,6 +1606,33 @@
           migrated = true;
         }
       });
+      // Planes de conductores por defecto
+      if (!Array.isArray(db.driverPlans)) { db.driverPlans = []; migrated = true; }
+      const defaultPlans = [
+        { key: 'plan_fijo_zafiro', nivel: 'Zafiro', tipo_plan: 'fijo', valor: 27, descripcion: 'Plan fijo semanal Zafiro: $27 a descontar cada semana.', modulo: 'drivers', creado_por: 'sistema' },
+        { key: 'plan_fijo_esmeralda', nivel: 'Esmeralda', tipo_plan: 'fijo', valor: 25, descripcion: 'Plan fijo semanal Esmeralda: 25% de lo generado en la semana a descontar.', modulo: 'drivers', creado_por: 'sistema' },
+        { key: 'plan_fijo_diamante', nivel: 'Diamante', tipo_plan: 'fijo', valor: 22, descripcion: 'Plan fijo semanal Diamante: $22 a descontar cada semana.', modulo: 'drivers', creado_por: 'sistema' },
+        { key: 'plan_porcentaje_zafiro', nivel: 'Zafiro', tipo_plan: 'porcentaje', valor: 20, descripcion: 'Plan porcentaje semanal Zafiro: 20% de lo generado en la semana a descontar.', modulo: 'drivers', creado_por: 'sistema' },
+        { key: 'plan_porcentaje_esmeralda', nivel: 'Esmeralda', tipo_plan: 'porcentaje', valor: 18, descripcion: 'Plan porcentaje semanal Esmeralda: 18% de lo generado en la semana a descontar.', modulo: 'drivers', creado_por: 'sistema' },
+        { key: 'plan_porcentaje_diamante', nivel: 'Diamante', tipo_plan: 'porcentaje', valor: 16, descripcion: 'Plan porcentaje semanal Diamante: 16% de lo generado en la semana a descontar.', modulo: 'drivers', creado_por: 'sistema' }
+      ];
+      defaultPlans.forEach((p) => {
+        if (!db.driverPlans.some((x) => x.key === p.key)) {
+          db.driverPlans.push({ ...p, created_at: stamp(), updated_at: stamp() });
+          migrated = true;
+        }
+      });
+      // Eventos de conductores por defecto
+      if (!Array.isArray(db.driverEvents)) { db.driverEvents = []; migrated = true; }
+      const defaultEvents = [
+        { key: 'evento_premio_semanal_100', nombre: 'Premio Semana 100%', tipo_evento: 'premio', aplicacion: 'todos', nivel_aplicar: '', valor: 100, tipo_valor: 'porcentaje', descripcion: 'Evento semanal: el conductor recibe 100% de lo generado (sin descuentos).', fecha_inicio: new Date().toISOString().slice(0, 10), fecha_fin: '', activo: true, modulo: 'drivers' }
+      ];
+      defaultEvents.forEach((e) => {
+        if (!db.driverEvents.some((x) => x.key === e.key)) {
+          db.driverEvents.push({ ...e, created_at: stamp(), updated_at: stamp() });
+          migrated = true;
+        }
+      });
       if (migrated) {
         db.meta.schemaVersion = targetVersion;
         persist();
@@ -2155,6 +2184,196 @@
       current.apiIntegrations = current.apiIntegrations.filter((a) => a.key !== key);
       api.addAuditLog('eliminar', 'api_integrations', `API ${key}`, key);
       persist();
+    },
+
+    /* planes de conductores por nivel */
+    driverPlans() {
+      return current.driverPlans.slice();
+    },
+    driverPlan(key) {
+      const p = current.driverPlans.find((x) => x.key === key);
+      return p ? clone(p) : null;
+    },
+    upsertDriverPlan(data) {
+      const key = norm(data.key);
+      if (!key) throw new Error('La clave del plan es obligatoria.');
+      if (!/^[a-z0-9_]{3,40}$/.test(key)) throw new Error('La clave debe tener entre 3 y 40 caracteres (minúsculas, números y guion bajo).');
+      if (!DRIVER_LEVELS.includes(data.nivel)) throw new Error('Nivel de conductor no válido.');
+      if (!['fijo', 'porcentaje'].includes(data.tipo_plan)) throw new Error('Tipo de plan no válido (fijo o porcentaje).');
+      const valor = Number(data.valor);
+      if (!isFinite(valor) || valor < 0) throw new Error('El valor debe ser mayor o igual a cero.');
+      const existing = current.driverPlans.find((x) => x.key === key);
+      if (!existing && current.driverPlans.some((x) => x.key === key)) throw new Error('Ya existe un plan con esa clave.');
+      const rec = {
+        ...(existing || {}),
+        ...data,
+        key,
+        nivel: data.nivel,
+        tipo_plan: data.tipo_plan,
+        valor,
+        descripcion: data.descripcion || '',
+        modulo: data.modulo || 'drivers',
+        activo: data.activo !== false,
+        updated_at: stamp(),
+        created_at: existing ? existing.created_at : stamp()
+      };
+      if (existing) Object.assign(existing, rec);
+      else current.driverPlans.unshift(rec);
+      api.addAuditLog(existing ? 'actualizar' : 'crear', 'driver_plans', `Plan ${key} · ${data.nivel} · ${data.tipo_plan}`, key);
+      persist();
+      return rec;
+    },
+    deleteDriverPlan(key) {
+      current.driverPlans = current.driverPlans.filter((p) => p.key !== key);
+      api.addAuditLog('eliminar', 'driver_plans', `Plan ${key}`, key);
+      persist();
+    },
+
+    /* eventos de conductores (premios/beneficios) */
+    driverEvents() {
+      return current.driverEvents.slice();
+    },
+    driverEvent(key) {
+      const e = current.driverEvents.find((x) => x.key === key);
+      return e ? clone(e) : null;
+    },
+    upsertDriverEvent(data) {
+      const key = norm(data.key);
+      if (!key) throw new Error('La clave del evento es obligatoria.');
+      if (!/^[a-z0-9_]{3,40}$/.test(key)) throw new Error('La clave debe tener entre 3 y 40 caracteres (minúsculas, números y guion bajo).');
+      if (!['todos', 'nivel'].includes(data.aplicacion)) throw new Error('Aplicación no válida (todos o nivel).');
+      if (data.aplicacion === 'nivel' && !DRIVER_LEVELS.includes(data.nivel_aplicar)) throw new Error('Selecciona un nivel válido.');
+      const valor = Number(data.valor);
+      if (!isFinite(valor) || valor < 0) throw new Error('El valor debe ser mayor o igual a cero.');
+      if (!['monto', 'porcentaje'].includes(data.tipo_valor)) throw new Error('Tipo de valor no válido (monto o porcentaje).');
+      const existing = current.driverEvents.find((x) => x.key === key);
+      if (!existing && current.driverEvents.some((x) => x.key === key)) throw new Error('Ya existe un evento con esa clave.');
+      const rec = {
+        ...(existing || {}),
+        ...data,
+        key,
+        nombre: required(data.nombre, 'Nombre del evento'),
+        tipo_evento: data.tipo_evento || 'premio',
+        aplicacion: data.aplicacion,
+        nivel_aplicar: data.aplicacion === 'nivel' ? data.nivel_aplicar : '',
+        valor,
+        tipo_valor: data.tipo_valor,
+        descripcion: data.descripcion || '',
+        fecha_inicio: data.fecha_inicio || today(),
+        fecha_fin: data.fecha_fin || '',
+        activo: data.activo !== false,
+        modulo: data.modulo || 'drivers',
+        updated_at: stamp(),
+        created_at: existing ? existing.created_at : stamp()
+      };
+      if (existing) Object.assign(existing, rec);
+      else current.driverEvents.unshift(rec);
+      api.addAuditLog(existing ? 'actualizar' : 'crear', 'driver_events', `Evento ${key} · ${data.nombre}`, key);
+      persist();
+      return rec;
+    },
+    deleteDriverEvent(key) {
+      current.driverEvents = current.driverEvents.filter((e) => e.key !== key);
+      api.addAuditLog('eliminar', 'driver_events', `Evento ${key}`, key);
+      persist();
+    },
+
+    /* aplicar plan semanal a un conductor */
+    applyDriverWeeklyPlan(cedula, data) {
+      const driver = current.drivers.find((d) => d.cedula_rif === cedula);
+      if (!driver) throw new Error('Conductor no encontrado.');
+      const nivel = driver.nivel || 'Zafiro';
+      const plan = current.driverPlans.find((p) => p.nivel === nivel && p.activo !== false);
+      if (!plan) throw new Error(`No hay plan activo configurado para el nivel ${nivel}.`);
+      const fecha = (data && data.fecha) || today();
+      const semanaInicio = new Date(fecha + 'T12:00:00');
+      semanaInicio.setDate(semanaInicio.getDate() - ((semanaInicio.getDay() + 6) % 7));
+      const semanaInicioStr = semanaInicio.toISOString().slice(0, 10);
+      const referencia = 'PLAN-' + semanaInicioStr + '-' + cedula;
+      const yaAplicado = current.driverMovements.some((m) => m.conductor_cedula_rif === cedula && m.referencia === referencia && m.tipo === 'plan_semanal');
+      if (yaAplicado) throw new Error('El plan semanal ya fue aplicado esta semana a este conductor.');
+      // Calcular monto a descontar según tipo de plan
+      let montoDescontar = 0;
+      let conceptoBase = '';
+      if (plan.tipo_plan === 'fijo') {
+        montoDescontar = round(plan.valor);
+        conceptoBase = 'Plan fijo semanal ' + plan.nivel + ': $' + plan.valor;
+      } else {
+        // porcentaje: calcular lo generado en la semana (ganancias de servicios)
+        const semanaFin = new Date(semanaInicio);
+        semanaFin.setDate(semanaFin.getDate() + 6);
+        const semanaFinStr = semanaFin.toISOString().slice(0, 10);
+        const serviciosSemana = current.services.filter((s) => s.conductor_cedula_rif === cedula && s.fecha >= semanaInicioStr && s.fecha <= semanaFinStr);
+        const generadoSemana = round(serviciosSemana.reduce((s, sv) => s + Number(sv.base_usd || 0), 0));
+        montoDescontar = round(generadoSemana * plan.valor / 100);
+        conceptoBase = 'Plan porcentaje semanal ' + plan.nivel + ': ' + plan.valor + '% de $' + generadoSemana + ' generados';
+      }
+      if (montoDescontar <= 0) {
+        // No hay nada que descontar, pero registramos el evento con monto 0
+        montoDescontar = 0;
+      }
+      const mov = {
+        id: uid('dmv'), conductor_cedula_rif: cedula, tipo: 'plan_semanal',
+        concepto: conceptoBase + ' · semana ' + semanaInicioStr,
+        monto_usd: -Math.abs(montoDescontar), fecha, referencia, created_at: stamp()
+      };
+      current.driverMovements.unshift(mov);
+      api.addAuditLog('plan_semanal', 'conductores', `Plan semanal aplicado a ${driver.nombres} ${driver.apellidos} (${nivel}): $${montoDescontar}`, cedula);
+      persist();
+      return { plan, montoDescontar, movimiento: mov };
+    },
+
+    /* aplicar evento a conductores */
+    applyDriverEvent(keyEvent, data) {
+      const evento = current.driverEvents.find((e) => e.key === keyEvent);
+      if (!evento) throw new Error('Evento no encontrado.');
+      const fecha = (data && data.fecha) || today();
+      const referencia = 'EVENTO-' + keyEvent + '-' + fecha;
+      let conductoresAfectados = [];
+      if (evento.aplicacion === 'todos') {
+        conductoresAfectados = current.drivers.filter((d) => d.activo !== false);
+      } else if (evento.aplicacion === 'nivel') {
+        conductoresAfectados = current.drivers.filter((d) => (d.nivel || 'Zafiro') === evento.nivel_aplicar && d.activo !== false);
+      }
+      if (data && data.cedulas) {
+        const cedulasReq = data.cedulas.split(',').map((c) => c.trim()).filter(Boolean);
+        conductoresAfectados = conductoresAfectados.filter((d) => cedulasReq.includes(d.cedula_rif));
+      }
+      const resultados = [];
+      conductoresAfectados.forEach((d) => {
+        const yaExiste = current.driverMovements.some((m) => m.conductor_cedula_rif === d.cedula_rif && m.referencia === referencia);
+        if (yaExiste) return;
+        let monto = 0;
+        let concepto = '';
+        if (evento.tipo_valor === 'porcentaje') {
+          // porcentaje de lo generado en la semana actual
+          const hoy = new Date(fecha + 'T12:00:00');
+          const inicio = new Date(hoy);
+          inicio.setDate(inicio.getDate() - ((inicio.getDay() + 6) % 7));
+          const inicioStr = inicio.toISOString().slice(0, 10);
+          const fin = new Date(inicio);
+          fin.setDate(fin.getDate() + 6);
+          const finStr = fin.toISOString().slice(0, 10);
+          const serviciosSemana = current.services.filter((s) => s.conductor_cedula_rif === d.cedula_rif && s.fecha >= inicioStr && s.fecha <= finStr);
+          const generado = round(serviciosSemana.reduce((s, sv) => s + Number(sv.base_usd || 0), 0));
+          monto = round(generado * evento.valor / 100);
+          concepto = 'Evento ' + evento.nombre + ': ' + evento.valor + '% de $' + generado + ' generados semana';
+        } else {
+          monto = round(evento.valor);
+          concepto = 'Evento ' + evento.nombre + ': $' + evento.valor + (evento.tipo_evento === 'premio' ? ' bono' : ' descuento');
+        }
+        const signo = evento.tipo_evento === 'premio' ? Math.abs(monto) : -Math.abs(monto);
+        const mov = {
+          id: uid('dmv'), conductor_cedula_rif: d.cedula_rif, tipo: 'evento',
+          concepto: concepto + ' · ' + fecha,
+          monto_usd: signo, fecha, referencia, created_at: stamp()
+        };
+        current.driverMovements.unshift(mov);
+        resultados.push({ conductor: d.cedula_rif, nombre: d.nombres + ' ' + d.apellidos, monto: signo });
+      });
+      api.addAuditLog('evento', 'conductores', `Evento ${evento.nombre} aplicado a ${resultados.length} conductor(es)`, keyEvent);
+      persist();
+      return { evento, resultados };
     },
 
     /* tienda del conductor e inventario */

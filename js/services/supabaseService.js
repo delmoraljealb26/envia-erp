@@ -406,6 +406,8 @@
     driverMovements: { table: 'driver_movements', conflict: 'id' },
     partnerMovements: { table: 'partner_movements', conflict: 'id' },
     systemParams: { table: 'system_params', conflict: 'key' },
+    driverPlans: { table: 'driver_plans', conflict: 'key' },
+    driverEvents: { table: 'driver_events', conflict: 'key' },
     services: { table: 'services_orders', conflict: 'id' },
     payables: { table: 'accounts_payable', conflict: 'id' },
     withholdings: { table: 'withholding_vouchers', conflict: 'numero_comprobante' },

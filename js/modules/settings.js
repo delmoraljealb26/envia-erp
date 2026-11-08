@@ -170,6 +170,52 @@
         </div>
       </section>
 
+      <section class="card card-span-2">
+        <div class="card-head"><div><h3>Planes de Conductores por Nivel</h3><p>Define el plan semanal (fijo o porcentaje) que se descontará a cada conductor según su nivel.</p></div>${NS.app.canAction('settings', 'parametros') ? `<button class="btn btn-primary btn-sm" id="plan-new">${ui.icon('plus', 14)} Nuevo plan</button>` : ''}</div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Clave</th><th>Nivel</th><th>Tipo</th><th class="num">Valor</th><th>Descripción</th><th>Activo</th><th class="actions-col">Acciones</th></tr></thead>
+            <tbody>
+              ${db.driverPlans.length ? db.driverPlans.map((p) => `<tr>
+                <td><span class="mono strong">${ui.esc(p.key)}</span></td>
+                <td>${ui.badge(p.nivel, 'info')}</td>
+                <td>${ui.badge(p.tipo_plan, p.tipo_plan === 'fijo' ? 'success' : 'warning')}</td>
+                <td class="num"><strong>${p.tipo_plan === 'fijo' ? '$' + p.valor : p.valor + '%'}</strong></td>
+                <td>${ui.esc(p.descripcion || '—')}</td>
+                <td>${ui.badge(p.activo ? 'Activo' : 'Inactivo', p.activo ? 'success' : 'danger')}</td>
+                <td class="actions-col">
+                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn" data-edit-plan="${ui.esc(p.key)}" title="Editar">${ui.icon('edit', 16)}</button>` : ''}
+                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn danger" data-del-plan="${ui.esc(p.key)}" title="Eliminar">${ui.icon('trash', 16)}</button>` : ''}
+                </td>
+              </tr>`).join('') : `<tr><td colspan="7">${ui.empty('plan', 'Sin planes configurados', 'Crea el primer plan semanal por nivel.', NS.app.canAction('settings', 'parametros') ? '<button class="btn btn-primary" id="plan-empty-new">Nuevo plan</button>' : '')}</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card card-span-2">
+        <div class="card-head"><div><h3>Eventos de Conductores (Premio / Descuento)</h3><p>Crea eventos aplicables a todos los conductores o a un nivel específico, con valor en monto fijo o porcentaje.</p></div>${NS.app.canAction('settings', 'parametros') ? `<button class="btn btn-primary btn-sm" id="event-new">${ui.icon('plus', 14)} Nuevo evento</button>` : ''}</div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Clave</th><th>Nombre</th><th>Tipo evento</th><th>Aplicación</th><th class="num">Valor</th><th>Activo</th><th class="actions-col">Acciones</th></tr></thead>
+            <tbody>
+              ${db.driverEvents.length ? db.driverEvents.map((e) => `<tr>
+                <td><span class="mono strong">${ui.esc(e.key)}</span></td>
+                <td>${ui.esc(e.nombre)}</td>
+                <td>${ui.badge(e.tipo_evento, e.tipo_evento === 'premio' ? 'success' : 'danger')}</td>
+                <td>${e.aplicacion === 'todos' ? 'Todos' : 'Nivel: ' + e.nivel_aplicar}</td>
+                <td class="num"><strong>${e.tipo_valor === 'porcentaje' ? e.valor + '%' : '$' + e.valor}</strong></td>
+                <td>${ui.badge(e.activo ? 'Activo' : 'Inactivo', e.activo ? 'success' : 'danger')}</td>
+                <td class="actions-col">
+                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn" data-edit-event="${ui.esc(e.key)}" title="Editar">${ui.icon('edit', 16)}</button>` : ''}
+                  ${NS.app.canAction('settings', 'parametros') ? `<button class="icon-btn danger" data-del-event="${ui.esc(e.key)}" title="Eliminar">${ui.icon('trash', 16)}</button>` : ''}
+                </td>
+              </tr>`).join('') : `<tr><td colspan="7">${ui.empty('event', 'Sin eventos configurados', 'Crea el primer evento de premio o descuento.', NS.app.canAction('settings', 'parametros') ? '<button class="btn btn-primary" id="event-empty-new">Nuevo evento</button>' : '')}</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <div class="dash-grid">
         <section class="card">
           <div class="card-head"><div><h3>Respaldo y restauración</h3><p>Exporta toda la base local + archivos</p></div></div>
@@ -318,6 +364,22 @@
     if (apiEmptyNew) apiEmptyNew.addEventListener('click', () => openApiForm());
     view.querySelectorAll('[data-edit-api]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); openApiForm(b.dataset.editApi); }));
     view.querySelectorAll('[data-del-api]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); askDeleteApi(b.dataset.delApi); }));
+
+    /* Planes de conductores */
+    const planNew = $('#plan-new');
+    if (planNew) planNew.addEventListener('click', () => openPlanForm());
+    const planEmptyNew = $('#plan-empty-new');
+    if (planEmptyNew) planEmptyNew.addEventListener('click', () => openPlanForm());
+    view.querySelectorAll('[data-edit-plan]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); openPlanForm(b.dataset.editPlan); }));
+    view.querySelectorAll('[data-del-plan]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); askDeletePlan(b.dataset.delPlan); }));
+
+    /* Eventos de conductores */
+    const eventNew = $('#event-new');
+    if (eventNew) eventNew.addEventListener('click', () => openEventForm());
+    const eventEmptyNew = $('#event-empty-new');
+    if (eventEmptyNew) eventEmptyNew.addEventListener('click', () => openEventForm());
+    view.querySelectorAll('[data-edit-event]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); openEventForm(b.dataset.editEvent); }));
+    view.querySelectorAll('[data-del-event]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); askDeleteEvent(b.dataset.delEvent); }));
   }
 
   function openParamForm(key) {
@@ -428,5 +490,119 @@
     });
   }
 
-  NS.modules.settings = { render, openParamForm, openApiForm };
+  function openPlanForm(key) {
+    const p = key ? NS.store.driverPlan(key) : null;
+    const overlay = NS.ui.modal({
+      title: p ? 'Editar plan de conductor' : 'Nuevo plan de conductor',
+      eyebrow: 'Planes de conductores por nivel',
+      subtitle: p ? `Clave: ${NS.ui.esc(p.key)}` : 'Define un plan semanal (fijo o porcentaje) por nivel.',
+      size: 'sm',
+      body: `<form id="plan-form" class="form-grid" autocomplete="off">
+        <label class="field"><span>Clave *</span><input name="key" value="${NS.ui.esc(p ? p.key : '')}" placeholder="plan_fijo_zafiro" ${p ? 'disabled' : ''} required></label>
+        <label class="field"><span>Nivel *</span><select name="nivel">${NS.store.DRIVER_LEVELS.map((n) => `<option value="${n}" ${(p && p.nivel) === n ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+        <label class="field"><span>Tipo de plan *</span><select name="tipo_plan"><option value="fijo" ${(p && p.tipo_plan) === 'fijo' ? 'selected' : ''}>Fijo (monto USD)</option><option value="porcentaje" ${(p && p.tipo_plan) === 'porcentaje' ? 'selected' : ''}>Porcentaje (%)</option></select></label>
+        <label class="field"><span>Valor *</span><input name="valor" type="number" min="0" step="0.01" value="${NS.ui.esc(p ? p.valor : '')}" placeholder="27 o 25" required></label>
+        <label class="field field-full"><span>Descripción</span><textarea name="descripcion" rows="2" placeholder="Ej: Plan fijo semanal Zafiro: $27 a descontar cada semana.">${NS.ui.esc(p ? p.descripcion : '')}</textarea></label>
+        <label class="field check-inline"><input type="checkbox" name="activo" ${p ? (p.activo !== false ? 'checked' : '') : 'checked'}> Plan activo</label>
+      </form>`,
+      footer: `<button class="btn btn-ghost" data-cancel>Cancelar</button><button class="btn btn-primary" id="plan-save">${NS.ui.icon('check', 15)} ${p ? 'Guardar' : 'Crear'}</button>`
+    });
+    overlay.querySelector('[data-cancel]').addEventListener('click', () => NS.ui.closeModal(overlay));
+    overlay.querySelector('#plan-save').addEventListener('click', () => {
+      const form = overlay.querySelector('#plan-form');
+      if (!form.reportValidity()) return;
+      try {
+        NS.store.upsertDriverPlan({
+          key: form.elements.key.value,
+          nivel: form.elements.nivel.value,
+          tipo_plan: form.elements.tipo_plan.value,
+          valor: form.elements.valor.value,
+          descripcion: form.elements.descripcion.value,
+          activo: form.elements.activo.checked
+        });
+        NS.ui.closeModal(overlay);
+        NS.ui.toast(p ? 'Plan actualizado.' : 'Plan creado.', 'success');
+        NS.app.refresh(true);
+      } catch (e) { NS.ui.toast(e.message, 'error'); }
+    });
+  }
+
+  function askDeletePlan(key) {
+    const p = NS.store.driverPlan(key);
+    NS.ui.confirm({
+      title: 'Eliminar plan de conductor',
+      message: `¿Eliminar el plan "${NS.ui.esc(p ? p.key : key)}" (${NS.ui.esc(p ? p.nivel : '')})?`,
+      confirmText: 'Eliminar', danger: true
+    }).then((ok) => {
+      if (!ok) return;
+      try {
+        NS.store.deleteDriverPlan(key);
+        NS.ui.toast('Plan eliminado.', 'success');
+        NS.app.refresh(true);
+      } catch (e) { NS.ui.toast(e.message, 'error'); }
+    });
+  }
+
+  function openEventForm(key) {
+    const e = key ? NS.store.driverEvent(key) : null;
+    const overlay = NS.ui.modal({
+      title: e ? 'Editar evento de conductor' : 'Nuevo evento de conductor',
+      eyebrow: 'Eventos de conductores (premio / descuento)',
+      subtitle: e ? `Clave: ${NS.ui.esc(e.key)}` : 'Crea un evento aplicable a todos o a un nivel específico.',
+      size: 'sm',
+      body: `<form id="event-form" class="form-grid" autocomplete="off">
+        <label class="field"><span>Clave *</span><input name="key" value="${NS.ui.esc(e ? e.key : '')}" placeholder="evento_premio_semanal" ${e ? 'disabled' : ''} required></label>
+        <label class="field"><span>Nombre *</span><input name="nombre" value="${NS.ui.esc(e ? e.nombre : '')}" placeholder="Premio Semana 100%" required></label>
+        <label class="field"><span>Tipo de evento *</span><select name="tipo_evento"><option value="premio" ${(e && e.tipo_evento) === 'premio' ? 'selected' : ''}>Premio (suma)</option><option value="descuento" ${(e && e.tipo_evento) === 'descuento' ? 'selected' : ''}>Descuento (resta)</option></select></label>
+        <label class="field"><span>Aplicación *</span><select name="aplicacion"><option value="todos" ${(e && e.aplicacion) === 'todos' ? 'selected' : ''}>Todos los conductores</option><option value="nivel" ${(e && e.aplicacion) === 'nivel' ? 'selected' : ''}>Nivel específico</option></select></label>
+        <label class="field"><span>Nivel a aplicar</span><select name="nivel_aplicar">${NS.store.DRIVER_LEVELS.map((n) => `<option value="${n}" ${(e && e.nivel_aplicar) === n ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+        <label class="field"><span>Tipo de valor *</span><select name="tipo_valor"><option value="porcentaje" ${(e && e.tipo_valor) === 'porcentaje' ? 'selected' : ''}>Porcentaje (%)</option><option value="monto" ${(e && e.tipo_valor) === 'monto' ? 'selected' : ''}>Monto fijo (USD)</option></select></label>
+        <label class="field"><span>Valor *</span><input name="valor" type="number" min="0" step="0.01" value="${NS.ui.esc(e ? e.valor : '')}" placeholder="100 o 50" required></label>
+        <label class="field"><span>Fecha inicio</span><input name="fecha_inicio" type="date" value="${NS.ui.esc(e ? e.fecha_inicio : '')}"></label>
+        <label class="field field-full"><span>Descripción</span><textarea name="descripcion" rows="2" placeholder="Ej: Premio semanal: conductor recibe 100% de lo generado.">${NS.ui.esc(e ? e.descripcion : '')}</textarea></label>
+        <label class="field check-inline"><input type="checkbox" name="activo" ${e ? (e.activo !== false ? 'checked' : '') : 'checked'}> Evento activo</label>
+      </form>`,
+      footer: `<button class="btn btn-ghost" data-cancel>Cancelar</button><button class="btn btn-primary" id="event-save">${NS.ui.icon('check', 15)} ${e ? 'Guardar' : 'Crear'}</button>`
+    });
+    overlay.querySelector('[data-cancel]').addEventListener('click', () => NS.ui.closeModal(overlay));
+    overlay.querySelector('#event-save').addEventListener('click', () => {
+      const form = overlay.querySelector('#event-form');
+      if (!form.reportValidity()) return;
+      try {
+        NS.store.upsertDriverEvent({
+          key: form.elements.key.value,
+          nombre: form.elements.nombre.value,
+          tipo_evento: form.elements.tipo_evento.value,
+          aplicacion: form.elements.aplicacion.value,
+          nivel_aplicar: form.elements.nivel_aplicar.value,
+          valor: form.elements.valor.value,
+          tipo_valor: form.elements.tipo_valor.value,
+          fecha_inicio: form.elements.fecha_inicio.value,
+          descripcion: form.elements.descripcion.value,
+          activo: form.elements.activo.checked
+        });
+        NS.ui.closeModal(overlay);
+        NS.ui.toast(e ? 'Evento actualizado.' : 'Evento creado.', 'success');
+        NS.app.refresh(true);
+      } catch (ex) { NS.ui.toast(ex.message, 'error'); }
+    });
+  }
+
+  function askDeleteEvent(key) {
+    const e = NS.store.driverEvent(key);
+    NS.ui.confirm({
+      title: 'Eliminar evento de conductor',
+      message: `¿Eliminar el evento "${NS.ui.esc(e ? e.nombre : key)}" (${NS.ui.esc(key)})?`,
+      confirmText: 'Eliminar', danger: true
+    }).then((ok) => {
+      if (!ok) return;
+      try {
+        NS.store.deleteDriverEvent(key);
+        NS.ui.toast('Evento eliminado.', 'success');
+        NS.app.refresh(true);
+      } catch (ex) { NS.ui.toast(ex.message, 'error'); }
+    });
+  }
+
+  NS.modules.settings = { render, openParamForm, openApiForm, openPlanForm, openEventForm };
 })();

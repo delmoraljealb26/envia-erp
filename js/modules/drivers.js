@@ -123,7 +123,6 @@
                   <td class="num">-</td>
                   <td>${ui.badge(d.estatus_conductor)}</td>
                   <td class="actions-col">
-                    <button class="icon-btn" data-driver="${ui.esc(d.cedula_rif)}" title="Ver expediente">${ui.icon('eye', 16)}</button>
                     ${canEdit ? `<button class="icon-btn" data-edit-driver="${ui.esc(d.cedula_rif)}" title="Editar">${ui.icon('edit', 16)}</button>` : ''}
                     ${canDelete ? `<button class="icon-btn danger" data-del-driver="${ui.esc(d.cedula_rif)}" title="Eliminar">${ui.icon('trash', 16)}</button>` : ''}
                   </td>
@@ -251,6 +250,8 @@
     const info = docsInfo(d);
     const tarifaPlanaParam = NS.store.systemParam('tarifa_plana_semanal_usd');
     const tarifaPlanaMonto = tarifaPlanaParam ? Number(tarifaPlanaParam.value) : 0;
+    const planConductor = NS.store.driverPlans().find((p) => p.nivel === (d.nivel || 'Zafiro') && p.activo !== false);
+    const planConductorLabel = planConductor ? (planConductor.tipo_plan === 'fijo' ? '$' + planConductor.valor + ' fijo' : planConductor.valor + '% porcentaje') : 'Sin plan';
     const st = d.docs_estado || {};
     const services = db.services.filter((s) => s.conductor_cedula_rif === d.cedula_rif).slice(0, 4);
     const photos = d.urls_fotos_vehiculo || [];
@@ -339,11 +340,17 @@
               ${charges.map((c) => `<div class="charge-row"><span><strong>${ui.esc(c.producto_nombre)}</strong><small>${c.cuotas} cuota(s) · ${ui.usd(c.cuota_usd)} c/u</small></span><b>${ui.usd(c.saldo_usd)}</b></div>`).join('')}
             </div>` : ''}
             ${canTarifa && tarifaPlanaMonto > 0 ? `<div class="tarifa-plana-card">
-              <span>Tarifa plana semanal</span>
+              <span>Tarifa plana semanal (global)</span>
               <strong>${ui.usd(tarifaPlanaMonto)}</strong>
               <small>Descuento automático de la wallet del conductor</small>
               <button class="btn btn-primary btn-block btn-sm" id="driver-tarifa-plana">${ui.icon('calendar', 15)} Aplicar esta semana</button>
             </div>` : ''}
+            <div class="tarifa-plana-card">
+              <span>Plan semanal del conductor · Nivel ${ui.esc(d.nivel || 'Zafiro')}</span>
+              <strong>${planConductorLabel}</strong>
+              <small>${planConductor ? planConductor.descripcion : 'No hay plan configurado para este nivel. Ve a Configuración del Sistema → Planes de Conductores.'}</small>
+              ${canTarifa ? `<button class="btn btn-primary btn-block btn-sm" id="driver-apply-weekly-plan">${ui.icon('calendar', 15)} Aplicar plan esta semana</button>` : ''}
+            </div>
           </div>
         </div>
 
@@ -613,6 +620,16 @@
       try {
         NS.store.applyTarifaPlana(cedula);
         ui.toast('Tarifa plana semanal aplicada y descontada de la wallet.', 'success');
+        NS.app.refresh(true);
+        openDetail(cedula);
+      } catch (e) { ui.toast(e.message, 'error'); }
+    });
+    const applyPlanBtn = overlay.querySelector('#driver-apply-weekly-plan');
+    if (applyPlanBtn) applyPlanBtn.addEventListener('click', () => {
+      ui.closeModal(overlay);
+      try {
+        const r = NS.store.applyDriverWeeklyPlan(cedula);
+        ui.toast('Plan semanal aplicado: descontado $' + r.montoDescontar + ' de la wallet.', 'success');
         NS.app.refresh(true);
         openDetail(cedula);
       } catch (e) { ui.toast(e.message, 'error'); }
