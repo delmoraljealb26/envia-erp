@@ -432,6 +432,31 @@ navegación interna de Contabilidad y ajustar el título del tablero.
 
 ---
 
+## 5.10 Sidebar toggle, endpoint BCV y detalle de auditoría (08/11/2026)
+
+**Objetivo:** mejorar la usabilidad del menú lateral, corregir el endpoint de la API BCV y enriquecer la bitácora de auditoría.
+
+**Cambios principales:**
+
+| Archivo | Cambio |
+|---------|--------|
+| `js/services/routerService.js` | La flecha del módulo solo expande/recoge el acordeón sin navegar; el título del módulo sigue abriendo su pantalla principal. Se agregó `setSidebarModuleOpen()` y `aria-expanded` en toggle. |
+| `css/styles.css` | Estilos del botón `.nav-toggle` (posición absoluta, rotación al abrir, colores). |
+| `js/services/store.js` | Endpoint predeterminado de `bcv_tasa_dolar` pasa de `https://bcv.org.ve` a `https://rates.dolarvzla.com` (servicio real usado por `exchangeRateService.js`). `addAuditLog` acepta `extras` con `antes`/`después`; upsert/delete de clientes, conductores, proveedores, negocios asociados, planes, eventos, parámetros, APIs y usuarios guardan el diff. |
+| `js/modules/audit.js` | Las filas de la bitácora son clicables y abren un modal con detalle del movimiento, tabla de cambios campo a campo (antes → después) y registro JSON completo. |
+
+**Decisiones:**
+- El endpoint `https://bcv.org.ve` solo era una referencia descriptiva; el consumo real de tasa BCV se hace desde `https://rates.dolarvzla.com` (CDN público, sin API key) en `js/services/exchangeRateService.js`.
+- El detalle de auditoría se guarda como `extras.antes` / `extras.después` en cada entrada; las filas antiguas sin el campo se muestran sin tabla de cambios.
+- Al pulsar una fila de auditoría se abre una ventana (modal) con el detalle completo, no solo el texto resumido.
+
+**Validación:**
+- `node --check` en JS modificados.
+- CDP en `file://`: clic en flecha de Conductores abre y cierra el acordeón; URL y estado `aria-expanded` se mantienen consistentes.
+- CDP en `file://`: abrir Bitácora de Auditoría, pulsar una fila y se abre el modal con detalle; sin errores de consola.
+
+---
+
 ## 6. Próximas tareas pendientes (opcionales)
 
 1. **Integración WhatsApp** para notificaciones a conductores (pendiente de conversación con equipo).
