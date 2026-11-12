@@ -1,9 +1,0 @@
-{
-  "name": "envia-erp",
-  "version": "1.14.0",
-  "private": true,
-  "description": "ENVIA ERP - sistema de gestión para movilidad y delivery (Venezuela)",
-  "engines": {
-    "node": "20.x"
-  }
-}
