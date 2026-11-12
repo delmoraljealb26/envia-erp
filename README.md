@@ -77,7 +77,8 @@ roles y permisos granulares.
 - **Navegación y sincronización**: el acordeón del menú se recoge al pulsarlo de
   nuevo; las ventanas de alta/asignación se cierran y vuelven al módulo; la
   sincronización con Supabase tiene timeout de 20 s y libera el botón con el
-  detalle del error.
+  detalle del error. Los campos opcionales vacíos (fechas y nivel de evento) se
+  envían como `NULL` para que PostgreSQL acepte el registro.
 - **Respaldo del diseño anterior**: `_backup_diseno_original/` contiene
   `index.html`, `css/` y `js/` originales. Para volver atrás:
 

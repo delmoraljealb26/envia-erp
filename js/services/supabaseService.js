@@ -483,6 +483,23 @@
         }
         continue;
       }
+      if (key === 'driverEvents') {
+        // Las fechas vacías del formulario se envían como NULL para PostgreSQL.
+        const rows = (db.driverEvents || []).map((e) => ({
+          ...e,
+          nivel_aplicar: e.nivel_aplicar || null,
+          fecha_inicio: e.fecha_inicio || null,
+          fecha_fin: e.fecha_fin || null
+        }));
+        try {
+          const n = await upsert(map.table, map.conflict, rows);
+          report.push({ key, table: map.table, ok: true, count: n });
+        } catch (err) {
+          report.push({ key, table: map.table, ok: false, error: err.message });
+          if (isNetworkFailure(err)) fatal = err.message;
+        }
+        continue;
+      }
       try {
         const n = await upsert(map.table, map.conflict, db[key] || []);
         report.push({ key, table: map.table, ok: true, count: n });

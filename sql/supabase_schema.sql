@@ -97,13 +97,14 @@ create table if not exists public.drivers (
 );
 
 comment on table public.drivers is 'Conductores y vehículos. Clave primaria: cédula o RIF.';
-comment on column public.drivers.docs_meta is 'Fechas de emisión/vencimiento por documento: {cedula:{emision,vencimiento,origen}}';
 
 -- Migración idempotente para instalaciones existentes.
 alter table public.drivers add column if not exists url_seguro_rcv text;
 alter table public.drivers add column if not exists docs_meta jsonb not null default '{}'::jsonb;
+comment on column public.drivers.docs_meta is 'Fechas de emisión/vencimiento por documento: {cedula:{emision,vencimiento,origen}}';
 alter table public.drivers add column if not exists inactivado_por_documentos boolean not null default false;
 alter table public.drivers add column if not exists tipo_tarifa text not null default 'fijo';
+alter table public.drivers add column if not exists nivel text not null default 'Zafiro';
 alter table public.drivers alter column nivel set default 'Zafiro';
 alter table public.drivers drop constraint if exists drivers_estatus_conductor_check;
 alter table public.drivers add constraint drivers_estatus_conductor_check
@@ -365,9 +366,9 @@ comment on table public.erp_users is
   'Usuarios demo. En producción migrar a Supabase Auth y almacenar solo hash.';
 
 -- Migraciones idempotentes para instalaciones existentes.
-alter table public.drivers add column if not exists nivel text not null default 'Plata';
+alter table public.drivers add column if not exists nivel text not null default 'Zafiro';
 alter table public.drivers drop constraint if exists drivers_nivel_check;
-alter table public.drivers add constraint drivers_nivel_check check (nivel in ('Plata','Oro','Platium'));
+alter table public.drivers add constraint drivers_nivel_check check (nivel in ('Zafiro','Esmeralda','Diamante'));
 alter table public.erp_users add column if not exists permisos jsonb;
 alter table public.erp_users drop constraint if exists erp_users_rol_check;
 
@@ -513,12 +514,12 @@ create table if not exists public.system_params (
 );
 comment on table public.system_params is 'Parámetros configurables por el administrador (tarifas, comisiones por nivel, descuentos, beneficios). Clave primaria: key.';
 comment on column public.system_params.value is 'Valor guardado como texto; se interpreta según tipo (monto/porcentaje/etc).';
-comment on column public.system_params.nivel is 'Nivel de conductor al que aplica el parámetro (opcional).';
-comment on column public.system_params.tipo_plan is 'Esquema de tarifa asociado: fijo o porcentual (opcional).';
 
 -- Migración idempotente para instalaciones existentes.
 alter table public.system_params add column if not exists nivel text;
 alter table public.system_params add column if not exists tipo_plan text;
+comment on column public.system_params.nivel is 'Nivel de conductor al que aplica el parámetro (opcional).';
+comment on column public.system_params.tipo_plan is 'Esquema de tarifa asociado: fijo o porcentual (opcional).';
 
 -- ============================================================================
 --  13.4 PLANES DE CONDUCTORES POR NIVEL
@@ -530,12 +531,16 @@ create table if not exists public.driver_plans (
   valor        numeric(14,2) not null default 0 check (valor >= 0),
   descripcion  text,
   modulo       text not null default 'drivers',
+  creado_por   text,
   activo       boolean not null default true,
   created_at   timestamptz not null default timezone('utc', now()),
   updated_at   timestamptz not null default timezone('utc', now())
 );
 comment on table public.driver_plans is 'Planes de descuento semanal por nivel de conductor (fijo o porcentaje). Clave primaria: key.';
+-- Migración idempotente para instalaciones existentes.
+alter table public.driver_plans add column if not exists creado_por text;
 comment on column public.driver_plans.valor is 'Si tipo_plan=fijo: monto en USD. Si tipo_plan=porcentaje: porcentaje (0-100).';
+comment on column public.driver_plans.creado_por is 'Usuario que creó el plan.';
 
 -- ============================================================================
 --  13.5 EVENTOS DE CONDUCTORES (PREMIOS / BENEFICIOS)
@@ -580,8 +585,6 @@ create table if not exists public.custom_reports (
 comment on table public.custom_reports is 'Definiciones de reportes/listados a la medida creados por el administrador sobre las tablas existentes. No almacena datos, solo la definición.';
 comment on column public.custom_reports.columnas is 'Arreglo JSON con las claves de columna seleccionadas.';
 comment on column public.custom_reports.modulo is 'Módulo del centro de reportes donde se muestra el listado.';
-comment on column public.custom_reports.creado_por is 'Usuario que creó la definición; el administrador puede gestionar todas.';
-
 -- Migraciones idempotentes por si la tabla ya existía sin estas columnas.
 alter table public.custom_reports add column if not exists filtro_campo text;
 alter table public.custom_reports add column if not exists filtro_op text;
@@ -589,6 +592,7 @@ alter table public.custom_reports add column if not exists filtro_valor text;
 alter table public.custom_reports add column if not exists orden_campo text;
 alter table public.custom_reports add column if not exists orden_dir text;
 alter table public.custom_reports add column if not exists creado_por text;
+comment on column public.custom_reports.creado_por is 'Usuario que creó la definición; el administrador puede gestionar todas.';
 
 -- ============================================================================
 --  14. ÍNDICES

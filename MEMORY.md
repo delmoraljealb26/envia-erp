@@ -568,6 +568,31 @@ cálculos fiscales.
 
 ---
 
+## 5.14 Sincronización remota completa y ajuste de esquema (11/11/2026)
+
+**Objetivo:** dejar la base de Supabase alineada con los datos locales y corregir
+las diferencias de esquema que bloqueaban la sincronización completa.
+
+**Cambios:**
+- `sql/supabase_schema.sql`: se agregó la columna `creado_por` a `driver_plans`,
+  se alineó la restricción de niveles con `Zafiro`/`Esmeralda`/`Diamante`, se
+  aseguró la columna `nivel` en instalaciones existentes y se movieron los
+  comentarios de columnas migradas después de sus `ALTER TABLE`.
+- `js/services/supabaseService.js`: `driverEvents` normaliza `nivel_aplicar`,
+  `fecha_inicio` y `fecha_fin` vacíos a `NULL` antes del upsert.
+- Se aplicó el esquema actualizado al proyecto `vnxmztvkrskppznaaenq` y se
+  ejecutó una sincronización completa.
+- Se eliminaron **155 líneas contables duplicadas** que no existían en la base
+  local; antes se guardó un respaldo en
+  `%TEMP%\opencode\remote-lines-backup.json`.
+
+**Validación:**
+- 22 tablas remotas comparadas contra la base local: todas coinciden.
+- 50 asientos y 155 líneas contables remotas; sin faltantes ni duplicados.
+- `node --check js/services/supabaseService.js` sin errores.
+
+---
+
 ## 6. Próximas tareas pendientes (opcionales)
 
 1. **Integración WhatsApp** para notificaciones a conductores (pendiente de conversación con equipo).

@@ -546,7 +546,7 @@ Muestra si la API REST y el Storage están configurados, la fecha de la última 
 ### Mapa de sincronización
 Lista cada tabla local con su tabla remota, clave de conflicto, cantidad de registros y estado (Listo o Local). Desde aquí puedes descargar clientes y conductores cuando Supabase está configurado.
 
-> La sincronización espera como máximo **20 segundos por solicitud**. Si la red o Supabase no responden, el botón se libera y se muestra el detalle del error; revisa la URL, la anon key, las políticas RLS y la conexión.
+> La sincronización espera como máximo **20 segundos por solicitud**. Si la red o Supabase no responden, el botón se libera y se muestra el detalle del error; revisa la URL, la anon key, las políticas RLS y la conexión. Los campos opcionales vacíos, como la fecha de fin o el nivel de un evento, se envían como `NULL` para que PostgreSQL no rechace el registro.
 
 ### Respaldo y restauración
 1. **Exportar respaldo JSON:** descarga la base local y los archivos en un solo archivo.
