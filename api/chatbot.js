@@ -22,7 +22,15 @@
 'use strict';
 
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
-const MODEL_FALLBACKS = ['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
+// La cuota del plan gratuito de Gemini es POR MODELO (20 requests/día cada
+// uno), así que la lista de respaldo amplía el margen antes de fallar.
+const MODEL_FALLBACKS = [
+  'gemini-3.5-flash',
+  'gemini-3.6-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'gemini-flash-lite-latest'
+];
 
 const MAX_MESSAGE_CHARS = 1600;
 const MAX_CONTEXT_CHARS = 12000;
@@ -208,12 +216,19 @@ module.exports = async (req, res) => {
     }
     lastStatus = attempt.status;
     lastData = attempt.data;
-    // 404 (modelo retirado) y 503 (demanda) se resuelven con el siguiente modelo.
-    if (attempt.status === 400 || attempt.status === 401 || attempt.status === 403 || attempt.status === 429) break;
+    // 404 (modelo retirado), 429 (cuota diaria de ESE modelo agotada) y 503
+    // (demanda) se resuelven probando el siguiente modelo: la cuota de Gemini
+    // en el plan gratuito es por modelo, así que un 429 en uno no implica que
+    // fallen los demás. 400/401/403 sí son definitivos (clave o payload).
+    if (attempt.status === 400 || attempt.status === 401 || attempt.status === 403) break;
   }
 
-  return json(res, lastStatus >= 400 && lastStatus < 600 ? lastStatus : 502, {
+  const body_ = {
     ok: false,
     error: friendlyError(lastStatus, lastData)
-  });
+  };
+  if (lastStatus === 429) {
+    body_.hint = 'La cuota diaria gratuita de Gemini se agota por modelo. Se probaron ' + MODEL_FALLBACKS.join(', ') + '. Revisa <https://ai.dev/rate-limit> o usa una API Key con saldo.';
+  }
+  return json(res, lastStatus >= 400 && lastStatus < 600 ? lastStatus : 502, body_);
 };

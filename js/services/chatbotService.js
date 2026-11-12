@@ -16,7 +16,7 @@
   // Modelos de respaldo: Google retira versiones antiguas y los más recientes
   // pueden devolver 503 por demanda alta. Se prueban en orden hasta que uno
   // responda correctamente.
-  const MODEL_FALLBACKS = ['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
+  const MODEL_FALLBACKS = ['gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-flash-lite-latest'];
   const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
   const PROXY_PATH = 'api/chatbot';
   const MAX_HISTORY_MESSAGES = 16;
@@ -533,7 +533,7 @@
     if (status === 400) return 'Gemini rechazó la solicitud' + (detail ? ': ' + detail : '. Revisa el modelo y la API Key.');
     if (status === 401 || status === 403) return 'La API Key no tiene permisos para usar este modelo. Verifica el acceso en Google AI Studio.';
     if (status === 404) return 'El modelo configurado no está disponible. Prueba con otro modelo de Gemini.';
-    if (status === 429) return 'Se alcanzó el límite de cuota de Gemini. Espera un momento y vuelve a intentar.';
+    if (status === 429) return 'Se alcanzó el límite de cuota de Gemini. El plan gratuito permite unas pocas consultas por día y por modelo; espera a que se restablezca o usa una API Key con saldo.';
     if (status >= 500) return 'Gemini no está disponible en este momento. Intenta de nuevo en unos minutos.';
     return 'No se pudo completar la consulta con Gemini' + (detail ? ': ' + detail : ' (HTTP ' + status + ').');
   }
@@ -622,8 +622,10 @@
         continue;
       }
       lastError = chatError(apiErrorMessage(response.status, data), 'API_ERROR');
-      // 400/401/403/429 no se resuelven cambiando de modelo.
-      if ([400, 401, 403, 429].indexOf(response.status) !== -1) break;
+      // La cuota del plan gratuito es por modelo: un 429 en uno no implica que
+      // fallen los demás, así que se sigue probando la lista de respaldo.
+      // Solo 400/401/403 son definitivos (clave o payload incorrectos).
+      if ([400, 401, 403].indexOf(response.status) !== -1) break;
     }
     throw lastError || chatError('No se pudo completar la consulta con Gemini.', 'API_ERROR');
   }
