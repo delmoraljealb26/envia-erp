@@ -10,6 +10,7 @@
 
   let lastReport = null;
   let testResult = null;
+  let chatbotTestResult = null;
 
   const TABLES = [
     ['clients', 'Clientes', 'cedula_rif'],
@@ -332,6 +333,14 @@
     const dbSize = JSON.stringify(db).length;
     const reportByKey = new Map((lastReport || []).map((r) => [r.key, r]));
     const failedReports = (lastReport || []).filter((r) => !r.ok);
+    const chatbotCfg = NS.chatbot ? NS.chatbot.getConfig() : { apiKey: '', model: 'gemini-1.5-pro', lastTest: null };
+    const chatbotConfigured = !!(NS.chatbot && NS.chatbot.isConfigured());
+    const chatbotAllowed = NS.chatbot ? NS.chatbot.allowedModules().map((key) => NS.chatbot.moduleLabel(key)) : [];
+    const chatbotTest = chatbotTestResult || chatbotCfg.lastTest || null;
+    const chatbotCanWrite = canWrite && !!NS.chatbot;
+    const chatbotHealth = !chatbotConfigured
+      ? { label: 'Sin configurar', tone: 'warning' }
+      : (chatbotTest ? (chatbotTest.ok ? { label: 'Conectado', tone: 'success' } : { label: 'Requiere atención', tone: 'danger' }) : { label: 'Sin verificar', tone: 'info' });
 
     // Leer sub-ruta del sidebar y desplazar a la sección correspondiente
     const sub = NS.router.getSubroute();
@@ -341,6 +350,7 @@
         'settings-plans': 'settings-section-plans',
         'settings-events': 'settings-section-events',
         'settings-apis': 'settings-section-apis',
+        'settings-chatbot': 'settings-section-chatbot',
         'settings-supabase': 'settings-section-supabase',
         'settings-status': 'settings-section-status',
         'settings-sync': 'settings-section-sync',
@@ -469,6 +479,45 @@
         </div>
       </section>
 
+      <section class="card card-span-2" id="settings-section-chatbot">
+        <div class="card-head">
+          <div>
+            <h3>Configuración de Asistente ChatBot</h3>
+            <p>Conecta Google Gemini para consultas guiadas sobre la operación y el uso de ENVIA ERP.</p>
+          </div>
+          <div class="chatbot-config-status">${ui.badge(chatbotHealth.label, chatbotHealth.tone)}</div>
+        </div>
+        <div class="chatbot-config-grid">
+          <form id="chatbot-form" class="form-grid" autocomplete="off">
+            <label class="field field-full"><span>API Key de Google Gemini</span>
+              <div class="secret-input">
+                <input name="apiKey" id="chatbot-api-key" type="password" value="${chatbotCanWrite ? ui.esc(chatbotCfg.apiKey || '') : ''}" placeholder="${chatbotConfigured && !chatbotCanWrite ? 'Configurada en este navegador' : 'AIza...'}" ${chatbotCanWrite ? '' : 'disabled'}>
+                ${chatbotCanWrite ? `<button type="button" class="icon-btn" id="toggle-chatbot-key" title="Mostrar u ocultar">${ui.icon('eye', 17)}</button>` : ''}
+              </div>
+              <small>Se guarda solo en este navegador (localStorage). No se envía a Supabase. En producción usa un proxy backend para no exponer la clave.</small>
+            </label>
+            <label class="field field-full"><span>Modelo</span>
+              <input name="model" value="${ui.esc(chatbotCfg.model || 'gemini-1.5-pro')}" placeholder="gemini-1.5-pro" ${chatbotCanWrite ? '' : 'disabled'}>
+              <small>Valor por defecto: <strong>gemini-1.5-pro</strong>. Si tu API Key no tiene acceso, prueba otro modelo disponible en Google AI Studio.</small>
+            </label>
+            <div class="field-full form-actions">
+              ${chatbotCanWrite ? `<button type="button" class="btn btn-ghost" id="chatbot-test">${ui.icon('link', 15)} Probar conexión</button><button type="button" class="btn btn-primary" id="chatbot-save">${ui.icon('check', 15)} Guardar Credenciales IA</button>` : `<span class="readonly-chip">${ui.icon('eye', 13)} Solo lectura</span>`}
+              <button type="button" class="btn btn-ghost" id="chatbot-open" data-chat-open>${ui.icon('sparkles', 15)} Abrir asistente</button>
+            </div>
+          </form>
+          <aside class="chatbot-config-aside">
+            <span class="chatbot-config-orb">${ui.icon('sparkles', 19)}</span>
+            <strong>Asistente con contexto autorizado</strong>
+            <p>El bot solo consulta los módulos habilitados para tu rol: ${chatbotAllowed.length ? ui.esc(chatbotAllowed.join(', ')) : 'ninguno'}. Las preguntas sobre módulos bloqueados se rechazan.</p>
+            <div class="chatbot-config-meta"><span>Estado</span><strong>${chatbotConfigured ? 'Credenciales guardadas' : 'Pendiente de API Key'}</strong></div>
+            <div class="chatbot-config-meta"><span>Modelo</span><strong>${ui.esc(chatbotCfg.model || 'gemini-1.5-pro')}</strong></div>
+            <div class="chatbot-config-meta"><span>Última prueba</span><strong>${chatbotTest && chatbotTest.at ? ui.dateTime(chatbotTest.at) : '—'}</strong></div>
+          </aside>
+        </div>
+        ${chatbotTest ? `<div class="chatbot-test-result ${chatbotTest.ok ? 'ok' : 'warn'}">${ui.icon(chatbotTest.ok ? 'check' : 'alert', 17)}<div><strong>${chatbotTest.ok ? 'Conexión verificada' : 'Conexión con observaciones'}</strong><span>${ui.esc(chatbotTest.message || '')}</span></div></div>` : ''}
+        <p class="form-note">${ui.icon('shield', 14)} La clave se usa directamente desde este navegador hacia Google Gemini. No se sincroniza con Supabase ni se comparte con otros usuarios.</p>
+      </section>
+
       <section class="card card-span-2" id="settings-section-supabase">
         <div class="card-head"><div><h3>Credenciales del proyecto Supabase</h3><p>SUPABASE_URL y SUPABASE_ANON_KEY · se guardan solo en este navegador</p></div>${configured ? ui.badge('Configurado', 'success') : ui.badge('Pendiente', 'warning')}</div>
         <form id="supabase-form" class="form-grid" autocomplete="off">
@@ -560,12 +609,13 @@
         <section class="card">
           <div class="card-head"><div><h3>Información del sistema</h3><p>Parámetros y documentación</p></div></div>
           <div class="status-list">
-            <div class="status-row"><span>Versión</span><strong>ENVIA Technology C.A. 1.13.4</strong></div>
+            <div class="status-row"><span>Versión</span><strong>ENVIA Technology C.A. 1.14.0</strong></div>
             <div class="status-row"><span>Moneda funcional</span><strong>VES (Bolívares)</strong></div>
             <div class="status-row"><span>Tasa BCV</span><strong>${ui.bs(db.taxParams.bcvRate)} / USD</strong></div>
             <div class="status-row"><span>Unidad Tributaria</span><strong>${ui.bs(db.taxParams.ut)}</strong></div>
             <div class="status-row"><span>IVA</span><strong>${db.taxParams.ivaGeneral}% general · ${db.taxParams.ivaReducido}% reducido</strong></div>
             <div class="status-row"><span>IGTF</span><strong>${db.taxParams.igtf}%</strong></div>
+            <div class="status-row"><span>Asistente IA</span><strong>${chatbotConfigured ? 'Gemini configurado' : 'Pendiente de API Key'}</strong></div>
             <div class="status-row"><span>Sesión</span><strong>${ui.esc(NS.app.session.rol)}</strong></div>
           </div>
           <div class="doc-links">
@@ -609,6 +659,66 @@
           render(view);
         }
       });
+    }
+
+    /* Asistente ChatBot Gemini */
+    const chatbotForm = $('#chatbot-form');
+    const chatbotOpen = $('#chatbot-open');
+    if (chatbotOpen) {
+      chatbotOpen.addEventListener('click', () => {
+        if (NS.chatbot) NS.chatbot.open();
+        else ui.toast('El asistente no está disponible en esta carga.', 'warning');
+      });
+    }
+    if (chatbotCanWrite && chatbotForm) {
+      const toggleChatbotKey = $('#toggle-chatbot-key');
+      if (toggleChatbotKey) {
+        toggleChatbotKey.addEventListener('click', () => {
+          const input = $('#chatbot-api-key');
+          input.type = input.type === 'password' ? 'text' : 'password';
+        });
+      }
+      const saveChatbot = $('#chatbot-save');
+      if (saveChatbot) {
+        saveChatbot.addEventListener('click', async () => {
+          const apiKey = chatbotForm.elements.apiKey.value.trim();
+          const model = chatbotForm.elements.model.value.trim() || 'gemini-1.5-pro';
+          if (!apiKey) return ui.toast('Ingresa la API Key de Google Gemini.', 'warning');
+          try {
+            NS.chatbot.saveConfig({ apiKey, model });
+          } catch (e) {
+            return ui.toast(e.message, 'error');
+          }
+          ui.toast('Credenciales IA guardadas en este navegador.', 'success');
+          ui.setBusy(saveChatbot, true, 'Comprobando...');
+          try {
+            chatbotTestResult = await NS.chatbot.probarConexion(apiKey, model);
+            ui.toast(chatbotTestResult.message, chatbotTestResult.ok ? 'success' : 'warning');
+          } catch (e) {
+            chatbotTestResult = { ok: false, message: e.message, at: new Date().toISOString() };
+            ui.toast(e.message, 'error');
+          }
+          render(view);
+        });
+      }
+      const testChatbot = $('#chatbot-test');
+      if (testChatbot) {
+        testChatbot.addEventListener('click', async () => {
+          const current = NS.chatbot.getConfig();
+          const apiKey = chatbotForm.elements.apiKey.value.trim() || current.apiKey;
+          const model = chatbotForm.elements.model.value.trim() || current.model || 'gemini-1.5-pro';
+          if (!apiKey) return ui.toast('Ingresa la API Key de Google Gemini antes de probar.', 'warning');
+          ui.setBusy(testChatbot, true, 'Probando...');
+          try {
+            chatbotTestResult = await NS.chatbot.probarConexion(apiKey, model);
+            ui.toast(chatbotTestResult.message, chatbotTestResult.ok ? 'success' : 'warning');
+          } catch (e) {
+            chatbotTestResult = { ok: false, message: e.message, at: new Date().toISOString() };
+            ui.toast(e.message, 'error');
+          }
+          render(view);
+        });
+      }
     }
 
     const syncErrorsBtn = $('#settings-sync-errors');

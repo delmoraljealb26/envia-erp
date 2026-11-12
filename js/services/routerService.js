@@ -67,6 +67,7 @@
       { id: 'settings-plans', label: 'Planes de conductores', icon: 'car', action: 'ver' },
       { id: 'settings-events', label: 'Eventos de conductores', icon: 'activity', action: 'ver' },
       { id: 'settings-apis', label: 'Integración de APIs', icon: 'link', action: 'ver' },
+      { id: 'settings-chatbot', label: 'Asistente ChatBot', icon: 'sparkles', action: 'ver' },
       { id: 'settings-supabase', label: 'Credenciales Supabase', icon: 'database', action: 'ver' },
       { id: 'settings-status', label: 'Estado de conexión', icon: 'activity', action: 'ver' },
       { id: 'settings-sync', label: 'Mapa de sincronización', icon: 'refresh', action: 'ver' },

@@ -5,7 +5,7 @@
 
 **Estado:** Proyecto completo y funcional
 
-**Versión:** 1.13.4
+**Versión:** 1.14.0
 
 ---
 
@@ -22,6 +22,7 @@ EnVia/
 │   │   ├── supabaseService.js     # REST/Storage, IndexedDB, sync, fallback
 │   │   ├── exchangeRateService.js # Tasa BCV oficial (DolarVZLA), caché e históricos
 │   │   ├── ocrService.js          # Lectura IA opcional de fechas de documentos
+│   │   ├── chatbotService.js      # Asistente Gemini, contexto RBAC y widget flotante
 │   │   ├── sessionService.js      # Sesión, RBAC y expiración
 │   │   ├── routerService.js       # Rutas, shell, topbar, sidebar y tasa BCV
 │   │   ├── experienceService.js   # Tema, command palette y experiencia visual
@@ -41,7 +42,7 @@ EnVia/
 │       ├── reports.js             # Centro de reportes, impresión y Excel por módulo
 │       ├── audit.js               # Bitácora de auditoría
 │       ├── users.js               # Usuarios del sistema, roles y permisos granulares
-│       └── settings.js            # Configuración Supabase y sistema
+│       └── settings.js            # Configuración Supabase, sistema y Asistente ChatBot
 ├── sql/supabase_schema.sql        # Esquema SQL completo (tablas, buckets, RLS, seeds)
 ├── docs/
 │   ├── constitution.md            # Constitución vinculante del proyecto
@@ -650,6 +651,52 @@ debe corregirse y que el mapa muestre qué tablas no se actualizaron.
   al pulsar Clientes se abrió el detalle filtrado; **Ver mapa** cerró el modal y
   enfocó la sección.
 - Sin errores de consola en Chrome headless.
+
+---
+
+## 5.17 Asistente Inteligente ENVIA con Google Gemini (11/11/2026)
+
+**Objetivo:** integrar un chat flotante conectado a Google Gemini, con contexto
+operativo filtrado por RBAC y credenciales guardadas solo en el navegador.
+
+**Cambios:**
+- `js/services/chatbotService.js`: servicio nuevo con `enviarMensajeGemini`,
+  `probarConexion`, configuración local, historial, Markdown seguro, widget y
+  bloqueo previo de consultas sobre módulos no permitidos.
+- `index.html`: widget flotante en la esquina inferior derecha, cuatro preguntas
+  rápidas, ventana de cristal, formulario y carga de `chatbotService.js`.
+- `js/modules/settings.js`: sección **Configuración de Asistente ChatBot** con API
+  Key, modelo, guardado, prueba de conexión, estado y acceso al asistente.
+- `js/services/routerService.js`: subitem **Asistente ChatBot** en Configuración.
+- `css/styles.css`: estilos del widget, ventana, burbujas, Markdown, sugerencias,
+  estados de carga/error, responsive 390 px y temas claro/oscuro.
+- `README.md`, `docs/manual_usuario.md` y `manual.html`: documentación y versión
+  visible actualizadas a **1.14.0** (manual 1.6.0).
+- No se modificó `sql/supabase_schema.sql`: la API Key y el historial son locales;
+  no se sincronizan con Supabase.
+
+**Seguridad:**
+- La API Key se guarda en `localStorage` (`envia_chatbot_v1`) y se envía
+  directamente a Google Gemini desde el navegador. Para producción debe usarse
+  un proxy backend; nunca una `service_role` ni secretos en el frontend.
+- El contexto se construye con los módulos que `NS.session.can` / `canAction`
+  permiten. El bloqueo local rechaza consultas de módulos no autorizados y el
+  `system_instruction` refuerza la restricción y la prohibición de temas ajenos
+  al ERP.
+- Markdown seguro: se escapa el texto y solo se generan `<strong>`, `<em>`,
+  listas, encabezados y `<code>`.
+
+**Validación:**
+- `node --check` sobre `chatbotService.js`, `settings.js` y `routerService.js`.
+- Chrome headless `file://`: login, dashboard, apertura del widget, 4 sugerencias,
+  flujo sin API Key, navegación a Configuración, sección visible y versión 1.14.0.
+- Guardado de credenciales con clave inválida: `localStorage`, badge **Requiere
+  atención**, resultado de prueba y sin excepciones.
+- Envío con clave inválida: indicador **Pensando...**, botones deshabilitados,
+  error legible y sin excepciones.
+- Markdown, contexto de servicios/ranking y guard de contabilidad simulado.
+- Temas claro/oscuro y viewport 390×844 sin desbordamiento horizontal.
+- CORS desde `file://` verificado con respuesta 400 controlada de Gemini.
 
 ---
 

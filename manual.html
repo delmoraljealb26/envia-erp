@@ -209,7 +209,7 @@
           <div class="step-card">
             <div class="step-head">
               <span class="step-badge">3</span>
-              <h2 class="step-title">Nuevo espacio de trabajo · v1.13.2</h2>
+              <h2 class="step-title">Nuevo espacio de trabajo · v1.14.0</h2>
               <span class="step-meta">ENVIA Spatial OS</span>
             </div>
             <div class="step-body">
@@ -221,6 +221,7 @@
                 <li><span class="ord">▦</span><span class="txt"><b>Dashboard Bento y smart tables:</b> métricas en celdas asimétricas y tablas con filas-tarjeta; si hay muchas columnas, desplázate horizontalmente.</span></li>
                 <li><span class="ord">▣</span><span class="txt"><b>Fichas documentales:</b> las tarjetas abren una vista previa ampliada; los archivos se guardan en Supabase Storage o localmente sin conexión.</span></li>
                 <li><span class="ord">₿</span><span class="txt"><b>Cápsula BCV Live:</b> la tasa oficial muestra conversión rápida de USD a VES y de 1.000 Bs a USD.</span></li>
+                <li><span class="ord">✦</span><span class="txt"><b>Asistente Inteligente:</b> botón flotante con Google Gemini, preguntas rápidas y respuestas limitadas a los módulos de tu rol.</span></li>
               </ul>
             </div>
           </div>
@@ -844,8 +845,53 @@
           </ul>
         </section>
 
+
+        <!-- 13. Asistente Inteligente -->
+        <section class="manual-section" id="sec-13">
+          <div class="section-head">
+            <span class="section-kicker"><span class="num">13</span> Asistente Inteligente</span>
+            <h1 class="section-title">ChatBot ENVIA con Google Gemini</h1>
+            <p class="section-sub">El asistente responde consultas sobre el uso de ENVIA ERP y solo consulta los módulos habilitados para tu rol.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head">
+              <span class="step-badge">1</span>
+              <h2 class="step-title">Configurar la API Key y el modelo</h2>
+              <span class="step-meta">Solo en este navegador</span>
+            </div>
+            <div class="step-body">
+              <ul class="step-list">
+                <li><span class="ord">1</span><span class="txt">Ve a <b>Configuración del Sistema → Asistente ChatBot</b>.</span></li>
+                <li><span class="ord">2</span><span class="txt">Pega la <b>API Key de Google Gemini</b>. Se guarda en <code>localStorage</code> (<code>envia_chatbot_v1</code>) y no se sincroniza con Supabase.</span></li>
+                <li><span class="ord">3</span><span class="txt">Revisa el <b>Modelo</b>; el valor por defecto es <code>gemini-1.5-pro</code>.</span></li>
+                <li><span class="ord">4</span><span class="txt">Pulsa <b>Guardar Credenciales IA</b>. La app guarda y comprueba la conexión; verás el resultado en la misma sección.</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-head">
+              <span class="step-badge">2</span>
+              <h2 class="step-title">Usar el asistente</h2>
+              <span class="step-meta">Preguntas rápidas</span>
+            </div>
+            <div class="step-body">
+              <ul class="step-list">
+                <li><span class="ord">1</span><span class="txt">Pulsa el botón flotante <b>Asistente ENVIA</b> en la esquina inferior derecha o usa <b>Abrir asistente</b> desde Configuración.</span></li>
+                <li><span class="ord">2</span><span class="txt">Elige una de las cuatro preguntas rápidas o escribe tu consulta. Al pulsar una sugerencia se envía automáticamente y las píldoras desaparecen.</span></li>
+                <li><span class="ord">3</span><span class="txt">Mientras Gemini responde verás <b>Pensando...</b>. Las respuestas aceptan negritas, listas y código en línea; el contenido se escapa para evitar HTML inseguro.</span></li>
+                <li><span class="ord">4</span><span class="txt"><b>Nueva conversación</b> borra el historial local de la ventana. La clave permanece guardada hasta que la borres desde el navegador.</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="note info"><strong>Acceso restringido:</strong> si tu rol no tiene acceso a Contabilidad, el asistente rechazará preguntas de contabilidad y no recibirá datos de ese módulo. Si no hay API Key, el chat pedirá configurarla antes de enviar.</div>
+          <div class="note"><strong>Seguridad:</strong> la API Key se envía directamente desde el navegador a Google Gemini. Para producción usa un proxy backend; no guardes claves privadas ni <code>service_role</code> en el frontend.</div>
+        </section>
+
         <div class="footer-manual">
-          ENVIA ERP · Manual de Usuario v1.5.2 · noviembre de 2026 · <br>
+          ENVIA ERP · Manual de Usuario v1.6.0 · noviembre de 2026 · <br>
           <strong>Moneda funcional:</strong> Bolívares (VES) · <strong>Tasa BCV:</strong> automática y solo lectura · <strong>Auditoría:</strong> bitácora de cambios activada
         </div>
       </main>

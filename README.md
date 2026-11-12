@@ -51,13 +51,37 @@ roles y permisos granulares.
   que su rol o perfil tienen habilitados.
 - **Configuración del Sistema**: parámetros de mantenimiento con módulo, nivel y
   tipo de plan; planes y eventos de conductores; integración de APIs; Supabase;
-  estado de conexión; mapa de sincronización y respaldos.
+  estado de conexión; mapa de sincronización y respaldos; **Asistente ChatBot (Gemini)**.
 - **Navegación por submenús**: el sidebar despliega las opciones de cada módulo y
   **Reportes** siempre queda al final; al elegir una opción se muestra su
   contenido sin repetir el encabezado de estadísticas del módulo. El título del
   módulo y **Dashboard** siempre regresan a la pantalla principal.
 
-## Experiencia visual (v1.13.4)
+## Asistente Inteligente ENVIA (v1.14.0)
+
+- **Widget flotante** en la esquina inferior derecha, visible solo con sesión activa.
+  Incluye ventana de cristal, historial de conversación y cuatro preguntas rápidas
+  que se envían automáticamente al pulsarlas.
+- **Google Gemini** con `system_instruction` corporativo: solo responde sobre
+  ENVIA ERP y rechaza temas generales, política, clima, recetas o programación
+  ajena al sistema.
+- **Contexto filtrado por RBAC**: el asistente solo recibe datos de los módulos
+  que el rol o usuario tiene habilitados. Las consultas de módulos bloqueados se
+  rechazan antes de llamar a Gemini y el prompt refuerza la restricción.
+- **Configuración local**: API Key y modelo (`gemini-1.5-pro` por defecto) en
+  `Configuración → Asistente ChatBot`. Se guardan en `localStorage`
+  (`envia_chatbot_v1`) y se envían directamente a Google Gemini; no se
+  sincronizan con Supabase. Para producción se recomienda un proxy backend.
+- **Markdown seguro**: negritas, énfasis, listas, encabezados y código en línea
+  se generan después de escapar el texto. Indicador **Pensando...** durante la
+  solicitud y mensajes de error legibles sin exponer la clave.
+- **Archivo nuevo**: `js/services/chatbotService.js` (Gemini, contexto RBAC,
+  widget y Markdown seguro). No altera la lógica contable, fiscal ni el RBAC.
+
+No se agregaron tablas ni columnas a `sql/supabase_schema.sql`: la configuración
+del asistente y el historial de conversación permanecen en el navegador.
+
+## Experiencia visual
 
 - **ENVIA Spatial OS**: dock flotante de cristal, dashboard Bento asimétrico,
   tablas convertidas en *smart cards* y fichas documentales con vista previa.

@@ -1,6 +1,6 @@
 # Manual de Usuario — ENVIA ERP
 
-**Versión:** 1.5.2 · **Fecha:** noviembre de 2026
+**Versión:** 1.6.0 · **Fecha:** noviembre de 2026
 
 **Para:** Usuarios del sistema ENVIA ERP
 **Cómo abrir:** Doble clic en `index.html` en Google Chrome
@@ -21,7 +21,8 @@
 8.2 [Tienda & Inventario del conductor](#82-tienda--inventario-del-conductor)
 9. [Bitácora de Auditoría](#9-bitacora-de-auditoria)
 10. [Usuarios del sistema](#10-usuarios-del-sistema)
-10.1 [Configuración del Sistema](#101-configuración-del-sistema)
+10.1 [Configuración del Sistema](#10-configuración-del-sistema)
+10.2 [Asistente ChatBot](#configuración-de-asistente-chatbot)
 11. [Reportes en cada módulo](#11-reportes-en-cada-modulo)
 12. [Reglas importantes que debes conocer](#12-reglas-importantes-que-debes-conocer)
 
@@ -53,7 +54,7 @@ El **menú lateral** está organizado por grupos (Operación, Maestros, Finanzas
 
 ### Paso 4 — Conocer el espacio de trabajo
 
-La versión **1.13.4** consolida el rediseño **ENVIA Spatial OS**, la ficha de consulta de inventario con kardex resumido y el resumen de errores de sincronización con detalle por registro:
+La versión **1.14.0** incorpora el **Asistente Inteligente ENVIA** y consolida el rediseño **ENVIA Spatial OS**, la ficha de consulta de inventario con kardex resumido y el resumen de errores de sincronización con detalle por registro:
 
 - **Acceso centrado:** el login es una sola tarjeta en el centro de la pantalla, sin panel lateral. En móvil se ajusta al ancho disponible y puedes desplazarte verticalmente si el formulario no cabe completo.
 - **Dock flotante:** el menú lateral es una cápsula de cristal con indicador luminoso de la sección activa. El título del módulo abre su pantalla; la flecha solo expande o recoge sus opciones.
@@ -62,6 +63,7 @@ La versión **1.13.4** consolida el rediseño **ENVIA Spatial OS**, la ficha de 
 - **Dashboard Bento:** las métricas se organizan en celdas de distinto tamaño. Las tablas del sistema se muestran como filas-tarjeta con hover; si hay muchas columnas, desplázate horizontalmente.
 - **Fichas y documentos:** las tarjetas de documentos abren una vista previa ampliada. Los archivos se guardan en Supabase Storage o localmente si no hay conexión.
 - **Cápsula BCV:** muestra la tasa oficial como `LIVE`; al pasar el cursor ves la conversión rápida de USD a VES y de 1.000 Bs a USD.
+- **Asistente Inteligente:** botón flotante en la esquina inferior derecha. Configura tu API Key de Google Gemini en Configuración → Asistente ChatBot y consulta con las preguntas rápidas; si no tienes acceso a Configuración, pide a un SuperAdmin que la configure en este navegador.
 
 > Si alguna vez necesitas volver al diseño anterior, ejecuta `revertir_diseno.ps1` desde la carpeta del proyecto. El respaldo está en `_backup_diseno_original/`.
 
@@ -489,7 +491,7 @@ Las acciones disponibles incluyen ver, crear, editar, eliminar, exportar, imprim
 
 ## 10. Configuración del Sistema
 
-Aquí se gestionan los parámetros del sistema, los planes y eventos de conductores, las integraciones con APIs externas, la conexión con Supabase y los respaldos.
+Aquí se gestionan los parámetros del sistema, los planes y eventos de conductores, las integraciones con APIs externas, el Asistente ChatBot, la conexión con Supabase y los respaldos.
 
 El menú lateral de este módulo respeta el mismo orden que las secciones de la pantalla:
 
@@ -497,11 +499,12 @@ El menú lateral de este módulo respeta el mismo orden que las secciones de la 
 2. Planes de conductores
 3. Eventos de conductores
 4. Integración de APIs
-5. Credenciales Supabase
-6. Estado de conexión
-7. Mapa de sincronización
-8. Respaldo y restauración
-9. Reportes
+5. Configuración de Asistente ChatBot
+6. Credenciales Supabase
+7. Estado de conexión
+8. Mapa de sincronización
+9. Respaldo y restauración
+10. Reportes
 
 Al elegir cualquiera de estas opciones, la pantalla se desplaza directamente a la sección correspondiente, dejándola visible debajo de la barra superior (sin quedar tapada).
 
@@ -534,6 +537,18 @@ Al elegir cualquiera de estas opciones, la pantalla se desplaza directamente a l
 1. Ve al menú lateral → **Configuración del Sistema** → **Integración de APIs**.
 2. Aquí ves las APIs configuradas (ej: Tasa BCV Dólar, SENIAT ISLR, SENIAT IVA) con su estado (Activa/Inactiva, Sincronizada/Pendiente).
 3. Para agregar una nueva, haz clic en **Nueva API** y llena clave, nombre, endpoint y descripción.
+
+### Configuración de Asistente ChatBot
+1. Ve al menú lateral → **Configuración del Sistema** → **Asistente ChatBot**.
+2. Pega la **API Key de Google Gemini**. Se guarda solo en `localStorage` de este navegador (`envia_chatbot_v1`); no se sincroniza con Supabase.
+3. Revisa el **Modelo**. El valor por defecto es `gemini-1.5-pro`; puedes cambiarlo por otro modelo habilitado en Google AI Studio.
+4. Pulsa **Guardar Credenciales IA**. La app guarda y comprueba la conexión; el resultado aparece en la misma sección.
+5. Abre el asistente con el botón flotante **Asistente ENVIA** o con **Abrir asistente**. Verás cuatro preguntas rápidas; al pulsar una se envía sola y desaparecen.
+6. Mientras Gemini responde verás **Pensando...**. Las respuestas aceptan **negritas**, listas y código en línea; el contenido se escapa para evitar HTML inseguro.
+7. El asistente solo consulta los módulos habilitados para tu rol. Si preguntas por un módulo bloqueado, rechazará la consulta. Si no hay API Key, el chat pedirá configurarla antes de enviar.
+8. **Nueva conversación** borra el historial local de la ventana. La clave permanece guardada hasta que la borres desde la configuración del navegador.
+
+> **Seguridad:** la API Key queda en el navegador y se envía directamente a Google Gemini. Para producción usa un proxy backend; no guardes claves privadas ni `service_role` en el frontend.
 
 ### Configuración Supabase
 1. Ve al menú lateral → **Configuración del Sistema** → **Credenciales Supabase**.
