@@ -497,6 +497,35 @@
     return count;
   }
 
+  /* Elimina líneas huérfanas de sincronizaciones anteriores. Cuando un asiento
+     conserva su número pero cambia su id local, las líneas antiguas quedan con
+     el id anterior y PostgREST las conserva; hay que retirarlas para no
+     duplicar los importes en los reportes. */
+  async function cleanupStaleEntryLines(entries, remoteIdByNumero) {
+    const ids = [];
+    (entries || []).forEach((e) => {
+      const entryId = remoteIdByNumero.get(e.numero) || e.id;
+      if (entryId && ids.indexOf(entryId) === -1) ids.push(entryId);
+    });
+    if (!ids.length) return 0;
+    const stale = [];
+    for (let i = 0; i < ids.length; i += 100) {
+      const chunk = ids.slice(i, i + 100);
+      const filter = 'entry_id=in.(' + chunk.map((id) => encodeURIComponent(id)).join(',') + ')&select=id,entry_id';
+      const rows = await rest('accounting_entry_lines?' + filter);
+      (rows || []).forEach((row) => {
+        if (String(row.id || '').indexOf(String(row.entry_id) + '_') !== 0) stale.push(row.id);
+      });
+    }
+    let deleted = 0;
+    for (let i = 0; i < stale.length; i += 100) {
+      const chunk = stale.slice(i, i + 100);
+      await rest('accounting_entry_lines?id=in.(' + chunk.map((id) => encodeURIComponent(id)).join(',') + ')', { method: 'DELETE' });
+      deleted += chunk.length;
+    }
+    return deleted;
+  }
+
   async function syncAll() {
     if (!isConfigured()) throw new Error('Configura y prueba la conexión a Supabase antes de sincronizar.');
     const db = NS.store.db;
@@ -558,17 +587,27 @@
 
     // Asientos + líneas
     try {
-      const entries = prepareRows((db.entries || []).map((e) => ({
-        id: e.id, numero: e.numero, fecha: e.fecha, descripcion: e.descripcion,
+      const localEntries = db.entries || [];
+      // El número de asiento es la clave de negocio; el id remoto puede diferir
+      // del local. Usar el id remoto evita que el upsert cambie la PK y arrastre
+      // las líneas antiguas a un estado duplicado.
+      const remoteEntries = await rest('accounting_entries?select=id,numero');
+      const remoteIdByNumero = new Map((remoteEntries || []).map((e) => [e.numero, e.id]));
+      const entries = prepareRows(localEntries.map((e) => ({
+        id: remoteIdByNumero.get(e.numero) || e.id,
+        numero: e.numero, fecha: e.fecha, descripcion: e.descripcion,
         referencia: e.referencia, origen: e.origen, tasa_bcv: e.tasa_bcv, created_at: e.created_at
       })));
       const n = await upsert('accounting_entries', 'numero', entries);
       // Las líneas se envían por asiento completo: el trigger diferido de
       // partida doble valida al cierre de cada transacción y no debe recibir
       // un asiento partido entre dos lotes.
-      const groups = (db.entries || []).map((e) => e.lines.map((l, i) => ({
-        id: e.id + '_' + i, entry_id: e.id, cuenta: l.cuenta, debe: l.debe, haber: l.haber, orden: i
-      })));
+      const groups = localEntries.map((e) => {
+        const entryId = remoteIdByNumero.get(e.numero) || e.id;
+        return e.lines.map((l, i) => ({
+          id: entryId + '_' + i, entry_id: entryId, cuenta: l.cuenta, debe: l.debe, haber: l.haber, orden: i
+        }));
+      });
       let chunk = [];
       let nl = 0;
       const flush = async () => {
@@ -581,7 +620,8 @@
         chunk.push(...group);
       }
       await flush();
-      report.push({ key: 'entries', table: 'accounting_entries + lines', ok: true, count: n + nl });
+      const cleaned = await cleanupStaleEntryLines(localEntries, remoteIdByNumero);
+      report.push({ key: 'entries', table: 'accounting_entries + lines', ok: true, count: n + nl, cleaned });
     } catch (err) {
       report.push({ key: 'entries', table: 'accounting_entries', ok: false, error: err.message });
     }
