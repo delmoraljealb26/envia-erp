@@ -52,16 +52,185 @@
     return (db[key] || []).length;
   }
 
+  const SYNC_ID_RE = /^[VEJ]-[0-9]{7,9}$/;
+  const ACCOUNTING_ORIGINS = ['manual', 'apertura', 'servicio', 'liquidacion', 'compra', 'pago', 'wallet', 'gasto'];
+
+  function syncCleanRow(row) {
+    try { return JSON.parse(JSON.stringify(row || {})); } catch (e) { return row || {}; }
+  }
+
+  function normalizeSyncId(value) {
+    let s = String(value || '').toUpperCase().replace(/\s+/g, '').replace(/[^VEJ0-9-]/g, '');
+    if (!s.includes('-') && /^[VEJ]/.test(s)) s = s[0] + '-' + s.slice(1);
+    return s;
+  }
+
+  function syncRowLabel(key, row, index) {
+    const clean = syncCleanRow(row);
+    let id = '';
+    let name = '';
+    if (key === 'entries') {
+      id = clean.numero || clean.id;
+      name = clean.descripcion || clean.referencia || '';
+    } else if (key === 'clients' || key === 'drivers') {
+      id = clean.cedula_rif || clean.id;
+      name = [clean.nombres, clean.apellidos].filter(Boolean).join(' ');
+    } else if (key === 'suppliers' || key === 'partners') {
+      id = clean.rif || clean.id;
+      name = clean.razon_social || clean.nombre || '';
+    } else {
+      id = clean.id || clean.numero || clean.codigo || clean.sku || clean.key || clean.usuario;
+      name = clean.nombre || clean.descripcion || clean.concepto || clean.correo || '';
+    }
+    return {
+      id: String(id || ('Fila ' + (index + 1))),
+      name: String(name || '')
+    };
+  }
+
+  function syncKeyMismatchDetails(key) {
+    const rows = (NS.store.db && NS.store.db[key]) || [];
+    if (!Array.isArray(rows) || rows.length < 2) return [];
+    const groups = new Map();
+    rows.forEach((row, index) => {
+      const clean = syncCleanRow(row);
+      const keys = Object.keys(clean).sort();
+      const sig = keys.join('|');
+      if (!groups.has(sig)) groups.set(sig, { keys, rows: [] });
+      groups.get(sig).rows.push({ row: clean, index });
+    });
+    if (groups.size < 2) return [];
+    let base = null;
+    groups.forEach((group) => {
+      if (!base || group.rows.length > base.rows.length) base = group;
+    });
+    if (!base) return [];
+    const baseKeys = new Set(base.keys);
+    const idField = key === 'clients' || key === 'drivers'
+      ? 'cedula_rif'
+      : (key === 'suppliers' || key === 'partners' ? 'rif' : null);
+    const out = [];
+    groups.forEach((group) => {
+      if (group === base) return;
+      const keys = new Set(group.keys);
+      const missing = base.keys.filter((k) => !keys.has(k));
+      const extra = group.keys.filter((k) => !baseKeys.has(k));
+      group.rows.forEach(({ row, index }) => {
+        const label = syncRowLabel(key, row, index);
+        const issues = [];
+        if (missing.length) issues.push('Le faltan: ' + missing.join(', '));
+        if (extra.length) issues.push('Tiene de más: ' + extra.join(', '));
+        const rawId = idField ? String(row[idField] || '').trim().toUpperCase() : '';
+        if (rawId && !SYNC_ID_RE.test(rawId)) {
+          const fixed = normalizeSyncId(rawId);
+          issues.push('La cédula/RIF no cumple el formato' + (SYNC_ID_RE.test(fixed) ? '; debería ser ' + fixed : ' (V-12345678, E-12345678 o J-123456789)'));
+        }
+        out.push({
+          id: label.id,
+          name: label.name,
+          issue: issues.join('. ') + '.'
+        });
+      });
+    });
+    return out;
+  }
+
+  function syncInvalidOriginDetails() {
+    const rows = (NS.store.db && NS.store.db.entries) || [];
+    if (!Array.isArray(rows)) return [];
+    return rows.filter((entry) => !ACCOUNTING_ORIGINS.includes(String(entry.origen || ''))).map((entry, index) => {
+      const label = syncRowLabel('entries', entry, index);
+      return {
+        id: label.id,
+        name: label.name,
+        issue: `El origen "${entry.origen || '(vacío)'}" no está permitido por el esquema remoto.`,
+        detail: 'Orígenes permitidos: ' + ACCOUNTING_ORIGINS.join(', ') + '.'
+      };
+    });
+  }
+
+  function syncInvalidIdDetails(key) {
+    const field = key === 'suppliers' || key === 'partners' ? 'rif' : 'cedula_rif';
+    const rows = (NS.store.db && NS.store.db[key]) || [];
+    if (!Array.isArray(rows)) return [];
+    return rows.map((row, index) => ({ row, index }))
+      .filter(({ row }) => {
+        const raw = String(row[field] || '').trim().toUpperCase();
+        return raw && !SYNC_ID_RE.test(raw);
+      })
+      .map(({ row, index }) => {
+        const label = syncRowLabel(key, row, index);
+        const fixed = normalizeSyncId(row[field]);
+        return {
+          id: label.id,
+          name: label.name,
+          issue: `La cédula/RIF "${row[field]}" no cumple el formato.`,
+          detail: SYNC_ID_RE.test(fixed)
+            ? `Debería ser ${fixed}.`
+            : 'Use V-12345678, E-12345678 o J-123456789.'
+        };
+      });
+  }
+
+  function syncErrorRecords(key, error) {
+    const e = String(error || '').toLowerCase();
+    let records = [];
+    if (e.includes('all object keys must match')) {
+      records = syncKeyMismatchDetails(key);
+    } else if (e.includes('violates check constraint') && e.includes('origen') && key === 'entries') {
+      records = syncInvalidOriginDetails();
+    } else if (e.includes('violates check constraint') && (e.includes('cedula_rif') || e.includes('rif')) && ['clients', 'drivers', 'suppliers', 'partners'].includes(key)) {
+      records = syncInvalidIdDetails(key);
+    }
+    const seen = new Set();
+    return records.filter((record) => {
+      const sig = record.id + '|' + record.issue;
+      if (seen.has(sig)) return false;
+      seen.add(sig);
+      return true;
+    });
+  }
+
+  function renderSyncRecords(key, error, ui) {
+    const records = syncErrorRecords(key, error);
+    if (!records.length) return '';
+    const shown = records.slice(0, 8);
+    const remaining = records.length - shown.length;
+    return `<div class="sync-record-block">
+      <h5>${ui.icon('edit', 13)} Registros a corregir</h5>
+      <div class="sync-record-list">
+        ${shown.map((record) => `<div class="sync-record-item">
+          <div class="sync-record-id">
+            <strong>${ui.esc(record.id)}</strong>
+            ${record.name ? `<span>${ui.esc(record.name)}</span>` : ''}
+          </div>
+          <p>${ui.esc(record.issue)}</p>
+          ${record.detail ? `<small>${ui.esc(record.detail)}</small>` : ''}
+        </div>`).join('')}
+      </div>
+      ${remaining ? `<p class="sync-record-more">y ${remaining} registro${remaining === 1 ? '' : 's'} más con el mismo problema.</p>` : ''}
+    </div>`;
+  }
+
+  function syncStatusCell(key, configured, reportByKey, ui) {
+    const result = reportByKey.get(key);
+    if (result && !result.ok) {
+      return `<button type="button" class="sync-status-btn" data-sync-table="${ui.esc(key)}" title="Ver el detalle del error">${ui.icon('alert', 12)} Error</button>`;
+    }
+    if (result && result.ok) return ui.badge('Sincronizado', 'success');
+    return configured ? ui.badge('Listo', 'info') : ui.badge('Local', 'neutral');
+  }
+
   function syncErrorHint(error) {
     const e = String(error || '').toLowerCase();
     if (e.includes('all object keys must match')) {
-      return 'Hay registros de esta tabla con columnas distintas. Revisa el último registro creado o importado: todos deben tener los mismos campos.';
+      return 'Hay registros de esta tabla con columnas distintas. El detalle de los registros afectados aparece abajo: revisa los campos faltantes o sobrantes.';
     }
     if (e.includes('violates check constraint') && e.includes('origen')) {
-      return 'Uno de los asientos usa un origen que el esquema remoto no permite. Actualiza el esquema SQL o corrige el origen del asiento.';
+      return 'Uno o más asientos usan un origen que el esquema remoto no permite. Revisa el detalle de abajo y corrige el origen o actualiza el esquema SQL.';
     }
-    if (e.includes('violates check constraint') && e.includes('cedula_rif')) {
-      return 'Una cédula o RIF no cumple el formato V-12345678, E-12345678 o J-123456789. Corrige el registro antes de volver a sincronizar.';
+    if (e.includes('violates check constraint') && (e.includes('cedula_rif') || e.includes('rif'))) {
+      return 'Una cédula o RIF no cumple el formato V-12345678, E-12345678 o J-123456789. El detalle del registro afectado aparece abajo.';
     }
     if (e.includes('violates check constraint')) {
       return 'Un registro no cumple una restricción del esquema remoto. Revisa los valores permitidos para esa tabla.';
@@ -93,15 +262,17 @@
     setTimeout(() => el.classList.remove('sync-focus'), 1800);
   }
 
-  function showSyncErrorSummary(report) {
+  function showSyncErrorSummary(report, focusKey) {
     const ui = NS.ui;
-    const failed = (report || []).filter((r) => !r.ok);
+    let failed = (report || []).filter((r) => !r.ok);
+    if (focusKey) failed = failed.filter((r) => r.key === focusKey);
     if (!failed.length) return null;
     const okCount = (report || []).filter((r) => r.ok).length;
     const plural = failed.length === 1 ? '' : 's';
     const okText = okCount
       ? `${okCount} tabla${okCount === 1 ? '' : 's'} se sincronizó${okCount === 1 ? '' : 'n'} correctamente.`
       : 'No se sincronizó ninguna otra tabla.';
+    const focusLabel = focusKey ? syncReportLabel(focusKey) : '';
     const body = `
       <div class="sync-error-summary">
         <span class="sync-error-summary-ico">${ui.icon('alert', 22)}</span>
@@ -124,13 +295,17 @@
             </div>
             <p class="sync-error-msg">${ui.esc(r.error || 'Error desconocido')}</p>
             <p class="sync-error-hint">${ui.icon('info', 13)}<span>${ui.esc(syncErrorHint(r.error))}</span></p>
+            ${renderSyncRecords(r.key, r.error, ui)}
           </article>`;
         }).join('')}
       </div>`;
+    document.querySelectorAll('#toast-root .toast').forEach((toast) => toast.remove());
     const overlay = ui.modal({
-      title: 'Errores de sincronización',
+      title: focusKey ? `Error de sincronización · ${focusLabel}` : 'Errores de sincronización',
       eyebrow: 'Supabase · revisión requerida',
-      subtitle: 'Este es el detalle de las tablas rechazadas. Corrige los datos y vuelve a sincronizar.',
+      subtitle: focusKey
+        ? 'Detalle del registro que impide actualizar esta tabla. Corrige los datos y vuelve a sincronizar.'
+        : 'Este es el detalle de las tablas rechazadas. Corrige los datos y vuelve a sincronizar.',
       size: 'lg',
       body,
       footer: `<button class="btn btn-ghost" data-sync-map>${ui.icon('database', 15)} Ver mapa de sincronización</button><button class="btn btn-primary" data-sync-close>${ui.icon('check', 15)} Entendido</button>`
@@ -155,6 +330,8 @@
     const fileCount = Object.keys(files).length;
     const fileSize = JSON.stringify(files).length;
     const dbSize = JSON.stringify(db).length;
+    const reportByKey = new Map((lastReport || []).map((r) => [r.key, r]));
+    const failedReports = (lastReport || []).filter((r) => !r.ok);
 
     // Leer sub-ruta del sidebar y desplazar a la sección correspondiente
     const sub = NS.router.getSubroute();
@@ -331,14 +508,22 @@
       </section>
 
       <section class="card" id="settings-section-sync">
-        <div class="card-head"><div><h3>Mapa de sincronización</h3><p>Filas locales listas para upsert en PostgreSQL</p></div><span class="chip chip-navy">${ui.icon('database', 13)} ${db.entries.length} asientos</span></div>
+        <div class="card-head"><div><h3>Mapa de sincronización</h3><p>Filas locales listas para upsert en PostgreSQL</p></div><div class="sync-head-chips"><span class="chip chip-navy">${ui.icon('database', 13)} ${db.entries.length} asientos</span>${failedReports.length ? ui.badge(failedReports.length + ' con error', 'danger') : ''}</div></div>
+        ${failedReports.length ? `<div class="sync-map-alert">
+          <span class="sync-map-alert-ico">${ui.icon('alert', 18)}</span>
+          <div><strong>${failedReports.length} tabla${failedReports.length === 1 ? '' : 's'} no se ${failedReports.length === 1 ? 'actualizó' : 'actualizaron'} en Supabase</strong><span>Pulsa el estado <strong>Error</strong> de cada fila para ver el registro exacto que debes corregir.</span></div>
+        </div>` : ''}
         <div class="table-wrap">
           <table class="data-table sync-table">
             <thead><tr><th>Tabla Supabase</th><th>Entidad local</th><th>Clave de conflicto</th><th class="num">Registros</th><th>Estado</th></tr></thead>
             <tbody>${TABLES.map(([key, label, conflict]) => {
               const count = key === 'entries' ? db.entries.length : (db[key] ? db[key].length : 0);
-              return `<tr><td class="mono">${ui.esc(key === 'entries' ? 'accounting_entries' : key === 'withholdings' ? 'withholding_vouchers' : key)}</td><td>${ui.esc(label)}</td><td class="mono">${ui.esc(conflict)}</td><td class="num"><strong>${count}</strong></td><td>${configured ? ui.badge('Listo', 'info') : ui.badge('Local', 'neutral')}</td></tr>`;
-            }).join('')}<tr><td class="mono">tax_parameters</td><td>Parámetros fiscales</td><td class="mono">id</td><td class="num"><strong>1</strong></td><td>${configured ? ui.badge('Listo', 'info') : ui.badge('Local', 'neutral')}</td></tr></tbody>
+              const result = reportByKey.get(key);
+              return `<tr class="${result && !result.ok ? 'sync-row-error' : ''}"><td class="mono">${ui.esc(key === 'entries' ? 'accounting_entries' : key === 'withholdings' ? 'withholding_vouchers' : key)}</td><td>${ui.esc(label)}</td><td class="mono">${ui.esc(conflict)}</td><td class="num"><strong>${count}</strong></td><td>${syncStatusCell(key, configured, reportByKey, ui)}</td></tr>`;
+            }).join('')}${(() => {
+              const result = reportByKey.get('tax_parameters');
+              return `<tr class="${result && !result.ok ? 'sync-row-error' : ''}"><td class="mono">tax_parameters</td><td>Parámetros fiscales</td><td class="mono">id</td><td class="num"><strong>1</strong></td><td>${syncStatusCell('tax_parameters', configured, reportByKey, ui)}</td></tr>`;
+            })()}</tbody>
           </table>
         </div>
         <div class="inline-actions">
@@ -375,7 +560,7 @@
         <section class="card">
           <div class="card-head"><div><h3>Información del sistema</h3><p>Parámetros y documentación</p></div></div>
           <div class="status-list">
-            <div class="status-row"><span>Versión</span><strong>ENVIA Technology C.A. 1.13.3</strong></div>
+            <div class="status-row"><span>Versión</span><strong>ENVIA Technology C.A. 1.13.4</strong></div>
             <div class="status-row"><span>Moneda funcional</span><strong>VES (Bolívares)</strong></div>
             <div class="status-row"><span>Tasa BCV</span><strong>${ui.bs(db.taxParams.bcvRate)} / USD</strong></div>
             <div class="status-row"><span>Unidad Tributaria</span><strong>${ui.bs(db.taxParams.ut)}</strong></div>
@@ -428,6 +613,12 @@
 
     const syncErrorsBtn = $('#settings-sync-errors');
     if (syncErrorsBtn) syncErrorsBtn.addEventListener('click', () => showSyncErrorSummary(lastReport));
+    view.querySelectorAll('[data-sync-table]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showSyncErrorSummary(lastReport, btn.dataset.syncTable);
+      });
+    });
 
     $('#settings-sync').addEventListener('click', async () => {
       if (!NS.supabase.isConfigured()) return ui.toast('Primero configura Supabase.', 'warning');

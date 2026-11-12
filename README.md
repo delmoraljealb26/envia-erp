@@ -57,7 +57,7 @@ roles y permisos granulares.
   contenido sin repetir el encabezado de estadísticas del módulo. El título del
   módulo y **Dashboard** siempre regresan a la pantalla principal.
 
-## Experiencia visual (v1.13.3)
+## Experiencia visual (v1.13.4)
 
 - **ENVIA Spatial OS**: dock flotante de cristal, dashboard Bento asimétrico,
   tablas convertidas en *smart cards* y fichas documentales con vista previa.
@@ -80,9 +80,11 @@ roles y permisos granulares.
   detalle del error. Los campos opcionales vacíos (fechas y nivel de evento) se
   envían como `NULL` para que PostgreSQL acepte el registro.
 - **Resumen de errores de sincronización**: si una o más tablas fallan, se abre
-  una ventana con la tabla afectada, el mensaje técnico y una pista de
-  corrección. Se cierra con la X, con **Entendido** o haciendo clic fuera, y
-  puede reabrirse desde **Ver resumen de errores** en el mapa de sincronización.
+  una ventana con la tabla afectada, el mensaje técnico, la pista de corrección
+  y el detalle de los registros concretos que deben corregirse (cédula/RIF,
+  campos faltantes u origen inválido). El mapa marca en **Error** cada tabla no
+  actualizada y, al pulsar ese estado, abre el detalle del registro. La ventana
+  se cierra con la X, con **Entendido** o haciendo clic fuera.
 - **Respaldo del diseño anterior**: `_backup_diseno_original/` contiene
   `index.html`, `css/` y `js/` originales. Para volver atrás:
 

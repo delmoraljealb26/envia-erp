@@ -53,7 +53,7 @@ El **menú lateral** está organizado por grupos (Operación, Maestros, Finanzas
 
 ### Paso 4 — Conocer el espacio de trabajo
 
-La versión **1.13.3** consolida el rediseño **ENVIA Spatial OS**, la ficha de consulta de inventario con kardex resumido y el resumen de errores de sincronización:
+La versión **1.13.4** consolida el rediseño **ENVIA Spatial OS**, la ficha de consulta de inventario con kardex resumido y el resumen de errores de sincronización con detalle por registro:
 
 - **Acceso centrado:** el login es una sola tarjeta en el centro de la pantalla, sin panel lateral. En móvil se ajusta al ancho disponible y puedes desplazarte verticalmente si el formulario no cabe completo.
 - **Dock flotante:** el menú lateral es una cápsula de cristal con indicador luminoso de la sección activa. El título del módulo abre su pantalla; la flecha solo expande o recoge sus opciones.
@@ -555,6 +555,9 @@ Si una o más tablas no se pueden sincronizar, la app abre una ventana con el re
 - La cantidad de registros locales.
 - El mensaje técnico devuelto por Supabase.
 - Una pista para corregir el dato antes de volver a sincronizar.
+- **Registros a corregir:** la cédula/RIF o el número del registro, su nombre o descripción, los campos faltantes o sobrantes y, cuando aplica, el valor permitido.
+
+En el **Mapa de sincronización**, las tablas que fallaron quedan marcadas con el estado **Error**. Pulsa ese estado para abrir el detalle de esa tabla y ver exactamente qué registro debes corregir. Las tablas que sí se actualizaron muestran **Sincronizado**.
 
 Puedes cerrar la ventana con la **X**, con el botón **Entendido** o haciendo clic fuera de ella. Después, usa **Ver resumen de errores** en el mapa de sincronización para volver a abrirla. Las tablas que sí se sincronizaron no se pierden.
 

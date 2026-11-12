@@ -5,7 +5,7 @@
 
 **Estado:** Proyecto completo y funcional
 
-**Versión:** 1.13.3
+**Versión:** 1.13.4
 
 ---
 
@@ -616,6 +616,40 @@ de Supabase y no sepa qué tablas corregir antes de volver a sincronizar.
 - Prueba en Chrome headless `file://` con reporte simulado de 3 tablas:
   modal abierto, 3 errores visibles, cierre con X, clic fuera y reapertura.
 - Captura móvil 390×844 sin solapamiento del pie del modal.
+
+---
+
+## 5.16 Detalle por registro y estado de error en el mapa (11/11/2026)
+
+**Objetivo:** que el resumen de sincronización indique el registro exacto que
+debe corregirse y que el mapa muestre qué tablas no se actualizaron.
+
+**Cambios:**
+- `js/modules/settings.js`: el resumen detecta registros con firmas de campos
+  distintas (faltantes/sobrantes), cédulas/RIF con formato inválido y asientos
+  con `origen` no permitido. Muestra cédula/RIF, nombre o descripción, campos
+  afectados y valores permitidos.
+- El mapa usa `lastReport` para pintar el estado real: **Error** en tablas
+  rechazadas, **Sincronizado** en tablas actualizadas y **Listo/Local** cuando
+  aún no hay una sincronización.
+- El estado **Error** es un botón: abre el resumen filtrado a esa tabla y a sus
+  registros concretos.
+- Se muestra un aviso sobre el mapa con la cantidad de tablas no actualizadas.
+- Al abrir el resumen se retiran los toasts visibles para que no tapen el pie
+  del modal.
+- `css/styles.css`: estilos del aviso del mapa, estado Error, filas rechazadas
+  y bloque de registros a corregir.
+- Versión visible y documentación actualizadas a **1.13.4**.
+
+**Validación:**
+- `node --check js/modules/settings.js` sin errores.
+- Prueba con datos simulados: cliente sin `url_foto_cedula`/`url_foto_rif` y
+  cédula `V11144455`, conductor sin cinco campos y dos asientos con
+  `origen: tienda`.
+- El resumen mostró los registros exactos; el mapa mostró 3 estados **Error**;
+  al pulsar Clientes se abrió el detalle filtrado; **Ver mapa** cerró el modal y
+  enfocó la sección.
+- Sin errores de consola en Chrome headless.
 
 ---
 
