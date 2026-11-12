@@ -53,7 +53,7 @@ El **menú lateral** está organizado por grupos (Operación, Maestros, Finanzas
 
 ### Paso 4 — Conocer el espacio de trabajo
 
-La versión **1.13.2** consolida el rediseño **ENVIA Spatial OS** y añade la ficha de consulta de inventario con kardex resumido:
+La versión **1.13.3** consolida el rediseño **ENVIA Spatial OS**, la ficha de consulta de inventario con kardex resumido y el resumen de errores de sincronización:
 
 - **Acceso centrado:** el login es una sola tarjeta en el centro de la pantalla, sin panel lateral. En móvil se ajusta al ancho disponible y puedes desplazarte verticalmente si el formulario no cabe completo.
 - **Dock flotante:** el menú lateral es una cápsula de cristal con indicador luminoso de la sección activa. El título del módulo abre su pantalla; la flecha solo expande o recoge sus opciones.
@@ -547,6 +547,16 @@ Muestra si la API REST y el Storage están configurados, la fecha de la última 
 Lista cada tabla local con su tabla remota, clave de conflicto, cantidad de registros y estado (Listo o Local). Desde aquí puedes descargar clientes y conductores cuando Supabase está configurado.
 
 > La sincronización espera como máximo **20 segundos por solicitud**. Si la red o Supabase no responden, el botón se libera y se muestra el detalle del error; revisa la URL, la anon key, las políticas RLS y la conexión. Los campos opcionales vacíos, como la fecha de fin o el nivel de un evento, se envían como `NULL` para que PostgreSQL no rechace el registro.
+
+### Resumen de errores de sincronización
+Si una o más tablas no se pueden sincronizar, la app abre una ventana con el resumen de errores. Cada tabla muestra:
+
+- El nombre de la entidad y su tabla remota.
+- La cantidad de registros locales.
+- El mensaje técnico devuelto por Supabase.
+- Una pista para corregir el dato antes de volver a sincronizar.
+
+Puedes cerrar la ventana con la **X**, con el botón **Entendido** o haciendo clic fuera de ella. Después, usa **Ver resumen de errores** en el mapa de sincronización para volver a abrirla. Las tablas que sí se sincronizaron no se pierden.
 
 ### Respaldo y restauración
 1. **Exportar respaldo JSON:** descarga la base local y los archivos en un solo archivo.

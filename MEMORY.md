@@ -5,7 +5,7 @@
 
 **Estado:** Proyecto completo y funcional
 
-**Versión:** 1.13.2
+**Versión:** 1.13.3
 
 ---
 
@@ -590,6 +590,32 @@ las diferencias de esquema que bloqueaban la sincronización completa.
 - 22 tablas remotas comparadas contra la base local: todas coinciden.
 - 50 asientos y 155 líneas contables remotas; sin faltantes ni duplicados.
 - `node --check js/services/supabaseService.js` sin errores.
+
+---
+
+## 5.15 Resumen visual de errores de sincronización (11/11/2026)
+
+**Objetivo:** evitar que el usuario vea solo un toast corto con el primer error
+de Supabase y no sepa qué tablas corregir antes de volver a sincronizar.
+
+**Cambios:**
+- `js/modules/settings.js`: al terminar una sincronización con errores se abre
+  un modal con el resumen de tablas rechazadas, cantidad de registros locales,
+  mensaje técnico y pista de corrección. Incluye **Ver mapa de sincronización**
+  y **Entendido**; la X y el clic fuera también cierran.
+- Se agregó **Ver resumen de errores** en el resultado de la última
+  sincronización para reabrir el modal sin repetir el proceso.
+- El toast de fallo se sustituyó por el modal; el toast de éxito se conserva.
+- `css/styles.css`: estilos del resumen, tarjetas de error, foco del mapa y
+  ajustes responsive para 390 px.
+- `README.md`, `docs/manual_usuario.md` y versión visible actualizados a
+  **1.13.3**.
+
+**Validación:**
+- `node --check js/modules/settings.js` sin errores.
+- Prueba en Chrome headless `file://` con reporte simulado de 3 tablas:
+  modal abierto, 3 errores visibles, cierre con X, clic fuera y reapertura.
+- Captura móvil 390×844 sin solapamiento del pie del modal.
 
 ---
 

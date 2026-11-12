@@ -39,6 +39,110 @@
     return (n / (1024 * 1024)).toFixed(2) + ' MB';
   }
 
+  function syncReportLabel(key) {
+    if (key === 'tax_parameters') return 'Parámetros fiscales';
+    const item = TABLES.find(([k]) => k === key);
+    return item ? item[1] : key;
+  }
+
+  function syncLocalCount(key) {
+    const db = NS.store.db || {};
+    if (key === 'tax_parameters') return 1;
+    if (key === 'entries') return (db.entries || []).length;
+    return (db[key] || []).length;
+  }
+
+  function syncErrorHint(error) {
+    const e = String(error || '').toLowerCase();
+    if (e.includes('all object keys must match')) {
+      return 'Hay registros de esta tabla con columnas distintas. Revisa el último registro creado o importado: todos deben tener los mismos campos.';
+    }
+    if (e.includes('violates check constraint') && e.includes('origen')) {
+      return 'Uno de los asientos usa un origen que el esquema remoto no permite. Actualiza el esquema SQL o corrige el origen del asiento.';
+    }
+    if (e.includes('violates check constraint') && e.includes('cedula_rif')) {
+      return 'Una cédula o RIF no cumple el formato V-12345678, E-12345678 o J-123456789. Corrige el registro antes de volver a sincronizar.';
+    }
+    if (e.includes('violates check constraint')) {
+      return 'Un registro no cumple una restricción del esquema remoto. Revisa los valores permitidos para esa tabla.';
+    }
+    if (e.includes('could not find the table') || (e.includes('could not find the') && e.includes('column'))) {
+      return 'El esquema remoto está desactualizado. Ejecuta la versión actual de sql/supabase_schema.sql en Supabase.';
+    }
+    if (e.includes('duplicate key')) {
+      return 'Hay una clave repetida. Revisa el registro duplicado en la tabla local.';
+    }
+    if (e.includes('foreign key')) {
+      return 'El registro referencia un cliente, conductor, proveedor o cuenta que todavía no existe en Supabase. Sincroniza primero la tabla relacionada.';
+    }
+    if (e.includes('failed to fetch') || e.includes('network') || e.includes('tiempo de espera')) {
+      return 'No se pudo completar la solicitud por un problema de red. Revisa la conexión y vuelve a intentar.';
+    }
+    return 'Revisa los datos de esta tabla y el mensaje técnico antes de volver a sincronizar.';
+  }
+
+  function scrollToSyncMap() {
+    const el = document.getElementById('settings-section-sync');
+    if (!el) return;
+    const topbar = document.querySelector('.topbar');
+    const offset = (topbar ? topbar.getBoundingClientRect().height : 72) + 18;
+    const y = el.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+    document.querySelectorAll('.sync-focus').forEach((n) => n.classList.remove('sync-focus'));
+    el.classList.add('sync-focus');
+    setTimeout(() => el.classList.remove('sync-focus'), 1800);
+  }
+
+  function showSyncErrorSummary(report) {
+    const ui = NS.ui;
+    const failed = (report || []).filter((r) => !r.ok);
+    if (!failed.length) return null;
+    const okCount = (report || []).filter((r) => r.ok).length;
+    const plural = failed.length === 1 ? '' : 's';
+    const okText = okCount
+      ? `${okCount} tabla${okCount === 1 ? '' : 's'} se sincronizó${okCount === 1 ? '' : 'n'} correctamente.`
+      : 'No se sincronizó ninguna otra tabla.';
+    const body = `
+      <div class="sync-error-summary">
+        <span class="sync-error-summary-ico">${ui.icon('alert', 22)}</span>
+        <div>
+          <strong>${failed.length} tabla${plural} no se pudo${failed.length === 1 ? '' : 'ieron'} sincronizar</strong>
+          <p>${okText} Corrige los datos señalados antes de volver a pulsar <strong>Sincronizar ahora</strong>.</p>
+        </div>
+      </div>
+      <div class="sync-error-list">
+        ${failed.map((r) => {
+          const count = syncLocalCount(r.key);
+          return `<article class="sync-error-item">
+            <div class="sync-error-head">
+              <span class="sync-error-ico">${ui.icon('alert', 16)}</span>
+              <div class="sync-error-title">
+                <strong>${ui.esc(syncReportLabel(r.key))}</strong>
+                <small class="mono">${ui.esc(r.table || r.key)}</small>
+              </div>
+              ${ui.badge(count + ' registro' + (count === 1 ? '' : 's'), 'neutral')}
+            </div>
+            <p class="sync-error-msg">${ui.esc(r.error || 'Error desconocido')}</p>
+            <p class="sync-error-hint">${ui.icon('info', 13)}<span>${ui.esc(syncErrorHint(r.error))}</span></p>
+          </article>`;
+        }).join('')}
+      </div>`;
+    const overlay = ui.modal({
+      title: 'Errores de sincronización',
+      eyebrow: 'Supabase · revisión requerida',
+      subtitle: 'Este es el detalle de las tablas rechazadas. Corrige los datos y vuelve a sincronizar.',
+      size: 'lg',
+      body,
+      footer: `<button class="btn btn-ghost" data-sync-map>${ui.icon('database', 15)} Ver mapa de sincronización</button><button class="btn btn-primary" data-sync-close>${ui.icon('check', 15)} Entendido</button>`
+    });
+    overlay.querySelector('[data-sync-close]').addEventListener('click', () => ui.closeModal(overlay));
+    overlay.querySelector('[data-sync-map]').addEventListener('click', () => {
+      ui.closeModal(overlay);
+      scrollToSyncMap();
+    });
+    return overlay;
+  }
+
   function render(view) {
     const ui = NS.ui;
     const store = NS.store;
@@ -242,7 +346,10 @@
           <span class="hint">La sincronización hace upsert por clave primaria y no elimina registros remotos.</span>
         </div>
         ${lastReport ? `<div class="sync-report">
-          <h4>Resultado de la última sincronización</h4>
+          <div class="sync-report-head">
+            <h4>Resultado de la última sincronización</h4>
+            ${lastReport.some((r) => !r.ok) ? `<button class="btn btn-danger-ghost btn-xs" id="settings-sync-errors">${ui.icon('alert', 13)} Ver resumen de errores</button>` : ''}
+          </div>
           <div class="sync-report-grid">
             ${lastReport.map((r) => `<div class="sync-report-row ${r.ok ? 'ok' : 'bad'}"><span>${ui.icon(r.ok ? 'check' : 'alert', 14)} ${ui.esc(r.table)}</span><strong>${r.ok ? r.count + ' registros' : ui.esc(r.error || 'Error')}</strong></div>`).join('')}
           </div>
@@ -268,7 +375,7 @@
         <section class="card">
           <div class="card-head"><div><h3>Información del sistema</h3><p>Parámetros y documentación</p></div></div>
           <div class="status-list">
-            <div class="status-row"><span>Versión</span><strong>ENVIA Technology C.A. 1.13.2</strong></div>
+            <div class="status-row"><span>Versión</span><strong>ENVIA Technology C.A. 1.13.3</strong></div>
             <div class="status-row"><span>Moneda funcional</span><strong>VES (Bolívares)</strong></div>
             <div class="status-row"><span>Tasa BCV</span><strong>${ui.bs(db.taxParams.bcvRate)} / USD</strong></div>
             <div class="status-row"><span>Unidad Tributaria</span><strong>${ui.bs(db.taxParams.ut)}</strong></div>
@@ -319,6 +426,9 @@
       });
     }
 
+    const syncErrorsBtn = $('#settings-sync-errors');
+    if (syncErrorsBtn) syncErrorsBtn.addEventListener('click', () => showSyncErrorSummary(lastReport));
+
     $('#settings-sync').addEventListener('click', async () => {
       if (!NS.supabase.isConfigured()) return ui.toast('Primero configura Supabase.', 'warning');
       const btn = $('#settings-sync');
@@ -326,10 +436,12 @@
       try {
         lastReport = await NS.supabase.syncAll();
         const failed = lastReport.filter((r) => !r.ok).length;
-        const firstError = lastReport.find((r) => !r.ok && r.error);
-        const detail = firstError ? ' Detalle: ' + firstError.error : '';
-        ui.toast(failed ? `Sincronización completada con ${failed} tabla(s) con error.${detail}` : 'Todas las tablas se sincronizaron correctamente.', failed ? 'warning' : 'success');
         render(view);
+        if (failed) {
+          showSyncErrorSummary(lastReport);
+        } else {
+          ui.toast('Todas las tablas se sincronizaron correctamente.', 'success');
+        }
       } catch (e) {
         ui.toast(e.message, 'error');
       } finally {

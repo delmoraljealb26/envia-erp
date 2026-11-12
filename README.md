@@ -57,7 +57,7 @@ roles y permisos granulares.
   contenido sin repetir el encabezado de estadísticas del módulo. El título del
   módulo y **Dashboard** siempre regresan a la pantalla principal.
 
-## Experiencia visual (v1.13.2)
+## Experiencia visual (v1.13.3)
 
 - **ENVIA Spatial OS**: dock flotante de cristal, dashboard Bento asimétrico,
   tablas convertidas en *smart cards* y fichas documentales con vista previa.
@@ -79,6 +79,10 @@ roles y permisos granulares.
   sincronización con Supabase tiene timeout de 20 s y libera el botón con el
   detalle del error. Los campos opcionales vacíos (fechas y nivel de evento) se
   envían como `NULL` para que PostgreSQL acepte el registro.
+- **Resumen de errores de sincronización**: si una o más tablas fallan, se abre
+  una ventana con la tabla afectada, el mensaje técnico y una pista de
+  corrección. Se cierra con la X, con **Entendido** o haciendo clic fuera, y
+  puede reabrirse desde **Ver resumen de errores** en el mapa de sincronización.
 - **Respaldo del diseño anterior**: `_backup_diseno_original/` contiene
   `index.html`, `css/` y `js/` originales. Para volver atrás:
 
