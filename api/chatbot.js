@@ -144,10 +144,13 @@ function extractReply(data) {
 
 function friendlyError(status, data) {
   const detail = data && data.error && data.error.message ? String(data.error.message) : '';
-  if (status === 400 && /API key|API_KEY|invalid/i.test(detail)) return 'La API Key configurada en el servidor no es válida.';
+  // "API key not valid" es el 400 real de una clave inválida. Un 400 de
+  // "invalid argument" es del payload contra ese modelo y no de la clave.
+  if (status === 400 && /api[_ ]?key.*(not valid|invalid)|api key not valid/i.test(detail)) return 'La API Key configurada en el servidor no es válida.';
   if (status === 401 || status === 403) return 'La API Key configurada en el servidor no tiene permisos para este modelo.';
   if (status === 404) return 'El modelo solicitado no está disponible.';
   if (status === 429) return 'Se alcanzó el límite de cuota de Gemini. Espera un momento e intenta de nuevo.';
+  if (status === 400 && /invalid argument|not supported|unsupported/i.test(detail)) return 'Gemini rechazó un parámetro de la consulta para el modelo disponible.';
   if (status >= 500) return 'Gemini no está disponible en este momento. Intenta de nuevo en unos minutos.';
   return 'No se pudo completar la consulta con Gemini' + (detail ? ': ' + detail : ' (HTTP ' + status + ').');
 }
@@ -198,8 +201,7 @@ module.exports = async (req, res) => {
     generationConfig: {
       temperature: 0.25,
       topP: 0.9,
-      maxOutputTokens: 2048,
-      thinkingConfig: { thinkingBudget: 0 }
+      maxOutputTokens: 2048
     }
   };
 
@@ -216,11 +218,14 @@ module.exports = async (req, res) => {
     }
     lastStatus = attempt.status;
     lastData = attempt.data;
-    // 404 (modelo retirado), 429 (cuota diaria de ESE modelo agotada) y 503
-    // (demanda) se resuelven probando el siguiente modelo: la cuota de Gemini
-    // en el plan gratuito es por modelo, así que un 429 en uno no implica que
-    // fallen los demás. 400/401/403 sí son definitivos (clave o payload).
-    if (attempt.status === 400 || attempt.status === 401 || attempt.status === 403) break;
+    // 404 (modelo retirado), 429 (cuota diaria de ESE modelo agotada), 503
+    // (demanda) y 400 por argumento inválido (p. ej. thinkingConfig no
+    // soportado por un modelo lite) se resuelven probando el siguiente modelo:
+    // la cuota de Gemini en el plan gratuito es por modelo, así que un 429 en
+    // uno no implica que fallen los demás. Solo 401/403 (clave sin permisos)
+    // y un 400 que mencione la API Key son definitivos.
+    if (attempt.status === 401 || attempt.status === 403) break;
+    if (attempt.status === 400 && /api[_ ]?key|api key not valid|permission/i.test(String((attempt.data && attempt.data.error && attempt.data.error.message) || ''))) break;
   }
 
   const body_ = {

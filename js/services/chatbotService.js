@@ -529,7 +529,9 @@
   function apiErrorMessage(status, data) {
     const google = data && data.error ? data.error : null;
     const detail = google && google.message ? String(google.message) : '';
-    if (status === 400 && /API key|API_KEY|invalid/i.test(detail)) return 'La API Key de Gemini no es válida. Revísala en Configuración → Asistente ChatBot.';
+    // "API key not valid" es el 400 real de una clave inválida; un 400 de
+    // "invalid argument" corresponde al payload contra ese modelo.
+    if (status === 400 && /api[_ ]?key.*(not valid|invalid)|api key not valid/i.test(detail)) return 'La API Key de Gemini no es válida. Revísala en Configuración → Asistente ChatBot.';
     if (status === 400) return 'Gemini rechazó la solicitud' + (detail ? ': ' + detail : '. Revisa el modelo y la API Key.');
     if (status === 401 || status === 403) return 'La API Key no tiene permisos para usar este modelo. Verifica el acceso en Google AI Studio.';
     if (status === 404) return 'El modelo configurado no está disponible. Prueba con otro modelo de Gemini.';
@@ -580,8 +582,7 @@
       generationConfig: {
         temperature: 0.25,
         topP: 0.9,
-        maxOutputTokens: 2048,
-        thinkingConfig: { thinkingBudget: 0 }
+        maxOutputTokens: 2048
       }
     };
 
@@ -623,9 +624,12 @@
       }
       lastError = chatError(apiErrorMessage(response.status, data), 'API_ERROR');
       // La cuota del plan gratuito es por modelo: un 429 en uno no implica que
-      // fallen los demás, así que se sigue probando la lista de respaldo.
-      // Solo 400/401/403 son definitivos (clave o payload incorrectos).
-      if ([400, 401, 403].indexOf(response.status) !== -1) break;
+      // fallen los demás, así que se sigue probando la lista de respaldo. Un
+      // 400 por argumento inválido tampoco es definitivo (p. ej. un parámetro
+      // no soportado por ese modelo); solo lo son 401/403 y un 400 que
+      // mencione explícitamente la API Key.
+      if (response.status === 401 || response.status === 403) break;
+      if (response.status === 400 && /api[_ ]?key.*(not valid|invalid)/i.test(String((data && data.error && data.error.message) || ''))) break;
     }
     throw lastError || chatError('No se pudo completar la consulta con Gemini.', 'API_ERROR');
   }
@@ -655,7 +659,7 @@
           body: JSON.stringify({
             system_instruction: { parts: [{ text: BASE_SYSTEM_PROMPT }] },
             contents: [{ role: 'user', parts: [{ text: 'Responde únicamente: conexión OK' }] }],
-            generationConfig: { temperature: 0, maxOutputTokens: 24, thinkingConfig: { thinkingBudget: 0 } }
+            generationConfig: { temperature: 0, maxOutputTokens: 24 }
           })
         }, TEST_TIMEOUT_MS);
         const data = await readJson(response);
