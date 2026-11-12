@@ -3439,3 +3439,96 @@ html[data-theme="dark"] .quick-stock input[type="number"]:focus {
   .login-card { padding: 24px 18px 20px; border-radius: 22px; }
   .login-legal { font-size: 9px; line-height: 1.55; }
 }
+
+
+/* ======================================================================
+   Inventario · ficha de consulta y kardex resumido
+   ====================================================================== */
+.data-table tbody tr.product-row { cursor: pointer; }
+.data-table tbody tr.product-row:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: -2px;
+}
+.data-table tbody tr.product-row:hover td { background: rgba(0, 95, 255, .045); }
+[data-theme="dark"] .data-table tbody tr.product-row:hover td { background: rgba(70, 182, 249, .08); }
+
+/* El icono de actualización de BCV necesita contraste propio en ambos temas. */
+html[data-theme="light"] .rate-refresh {
+  background: #E3ECFF;
+  color: #0B57D0;
+  box-shadow: inset 0 0 0 1px rgba(11, 87, 208, .16);
+}
+html[data-theme="light"] .rate-refresh:hover {
+  background: #CFE0FF;
+  color: #083F9B;
+}
+html[data-theme="dark"] .rate-refresh {
+  background: rgba(70, 182, 249, .16);
+  color: #9BD8FF;
+}
+html[data-theme="dark"] .rate-refresh:hover {
+  background: rgba(70, 182, 249, .28);
+  color: #FFFFFF;
+}
+
+
+/* Kardex compacto dentro de la ficha del producto */
+.kardex-table {
+  min-width: 0;
+  table-layout: fixed;
+}
+.kardex-table th:nth-child(1),
+.kardex-table td:nth-child(1) { width: 82px; }
+.kardex-table th:nth-child(2),
+.kardex-table td:nth-child(2) { width: 88px; }
+.kardex-table th:nth-child(3),
+.kardex-table td:nth-child(3) { width: auto; white-space: normal; word-break: break-word; }
+.kardex-table th:nth-child(4),
+.kardex-table td:nth-child(4) { width: 94px; }
+.kardex-table th:nth-child(5),
+.kardex-table td:nth-child(5) { width: 68px; }
+.kardex-table td { font-size: 10.5px; }
+@media (max-width: 760px) {
+  .kardex-table { min-width: 0; border-spacing: 0; }
+  .kardex-table thead { display: none; }
+  .kardex-table,
+  .kardex-table tbody,
+  .kardex-table tr,
+  .kardex-table td { display: block; width: 100%; }
+  .kardex-table tbody tr {
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface-2);
+    box-shadow: none;
+    transform: none;
+  }
+  .kardex-table tbody tr:hover { transform: none; }
+  .kardex-table tbody td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 4px 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    text-align: right;
+  }
+  .kardex-table tbody td:first-child,
+  .kardex-table tbody td:last-child { border: 0; border-radius: 0; }
+  .kardex-table tbody tr:last-child td { border-bottom: 0; }
+  .kardex-table tbody td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    color: var(--text-3);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: .55px;
+    text-transform: uppercase;
+    text-align: left;
+  }
+  .kardex-table tbody td:nth-child(3) { align-items: flex-start; }
+  .kardex-table tbody td:nth-child(3) > span { max-width: 70%; text-align: right; }
+}

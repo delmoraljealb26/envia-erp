@@ -16,7 +16,7 @@
     const ui = NS.ui;
     const low = p.stock <= p.stock_min;
     const margin = p.precio_usd > 0 ? ((p.precio_usd - p.costo_usd) / p.precio_usd) * 100 : 0;
-    return `<tr>
+    return `<tr class="product-row" data-product-row="${ui.esc(p.sku)}" tabindex="0" aria-label="Consultar ficha de ${ui.esc(p.nombre)}" title="Ver ficha, disponibilidad y movimientos">
       <td><div class="cell-user">${ui.avatar(p.nombre, 30)}
         <span><strong>${ui.esc(p.nombre)}</strong><small class="block muted">${ui.esc(p.descripcion || p.categoria)}</small></span></div></td>
       <td><span class="mono strong">${ui.esc(p.sku)}</span></td>
@@ -82,7 +82,7 @@
           ${NS.reports.button('inventory')}
           ${canExport ? `<button class="btn btn-ghost" id="inventory-export">${ui.icon('download', 16)} Exportar CSV</button>` : ''}
           ${canAssign ? `<button class="btn btn-ghost" id="inventory-assign">${ui.icon('user', 16)} Asignar producto</button>` : ''}
-          ${canCreate ? `<button class="btn btn-primary" id="inventory-new">${ui.icon('plus', 16)} Nuevo producto</button>` : ''}
+          ${canCreate ? `<button class="btn btn-primary" id="inventory-new">${ui.icon('refresh', 16)} Nuevo producto</button>` : ''}
         </div>
       </div>
 
@@ -156,6 +156,19 @@
     const exportBtn = $('#inventory-export');
     if (exportBtn) exportBtn.addEventListener('click', exportCsv);
     view.querySelectorAll('[data-edit-product]').forEach((b) => b.addEventListener('click', () => openProductForm(b.dataset.editProduct)));
+    view.querySelectorAll('[data-product-row]').forEach((row) => {
+      const openDetail = () => openProductDetail(row.dataset.productRow);
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('button, input, select, textarea, a, label')) return;
+        openDetail();
+      });
+      row.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        if (e.target.closest('button, input, select, textarea, a, label')) return;
+        e.preventDefault();
+        openDetail();
+      });
+    });
     view.querySelectorAll('[data-del-product]').forEach((b) => b.addEventListener('click', () => askDelete(b.dataset.delProduct)));
     view.querySelectorAll('[data-stock]').forEach((b) => b.addEventListener('click', () => openStock(b.dataset.stock)));
     view.querySelectorAll('[data-assign]').forEach((b) => b.addEventListener('click', () => openAssign(b.dataset.assign)));
@@ -173,6 +186,158 @@
         NS.app.refresh(true);
       } catch (e) { ui.toast(e.message, 'error'); }
     }));
+  }
+
+  function productKardex(p) {
+    const db = NS.store.db;
+    const movements = [];
+    (db.driverCharges || []).filter((c) => c.producto_sku === p.sku).forEach((c) => {
+      const d = (db.drivers || []).find((x) => x.cedula_rif === c.conductor_cedula_rif);
+      movements.push({
+        fecha: c.fecha,
+        hora: '',
+        tipo: 'Salida',
+        tono: 'warning',
+        detalle: 'Asignación a ' + (d ? d.nombres + ' ' + d.apellidos : c.conductor_cedula_rif) + ' · ' + c.cuotas + ' cuota(s)',
+        cantidad: -Math.abs(Number(c.cantidad) || 0),
+        referencia: c.id
+      });
+    });
+    const audit = NS.store.getAuditLog ? NS.store.getAuditLog() : [];
+    audit.filter((a) => a.modulo === 'inventario' && a.referencia === p.sku && a.accion === 'ajuste_stock').forEach((a) => {
+      const match = String(a.detalle || '').match(/([+-]?\d+)\s+unidades/);
+      if (!match) return;
+      const cantidad = Number(match[1]);
+      if (!cantidad) return;
+      movements.push({
+        fecha: a.fecha,
+        hora: a.hora || '',
+        tipo: cantidad > 0 ? 'Entrada' : 'Ajuste',
+        tono: cantidad > 0 ? 'success' : 'info',
+        detalle: String(a.detalle || '').replace(/^[^:]+:\s*/, '') || 'Ajuste de stock',
+        cantidad,
+        referencia: a.id
+      });
+    });
+    movements.sort((a, b) => String(a.fecha + ' ' + (a.hora || '00:00:00')).localeCompare(String(b.fecha + ' ' + (b.hora || '00:00:00'))));
+    const neto = movements.reduce((s, m) => s + m.cantidad, 0);
+    const apertura = Number(p.stock || 0) - neto;
+    const rows = [];
+    let saldo = apertura;
+    if (movements.length) {
+      const created = String(p.created_at || '').slice(0, 10);
+      const first = movements[0] && movements[0].fecha ? String(movements[0].fecha) : '';
+      const openingDate = created && first ? (first < created ? first : created) : (created || first);
+      rows.push({ fecha: openingDate, hora: '', tipo: 'Saldo inicial', tono: 'neutral', detalle: 'Existencia de apertura / ajustes directos no detallados', cantidad: apertura, saldo: apertura });
+    }
+    movements.forEach((m) => { saldo += m.cantidad; rows.push({ ...m, saldo }); });
+    return rows;
+  }
+
+  function productDetailHtml(p) {
+    const ui = NS.ui;
+    const db = NS.store.db;
+    const low = Number(p.stock || 0) <= Number(p.stock_min || 0);
+    const margin = Number(p.precio_usd) > 0 ? ((Number(p.precio_usd) - Number(p.costo_usd)) / Number(p.precio_usd)) * 100 : 0;
+    const rows = productKardex(p);
+    const charges = (db.driverCharges || []).filter((c) => c.producto_sku === p.sku);
+    const pendientes = charges.filter((c) => Number(c.saldo_usd) > 0.01);
+    const financiado = charges.reduce((s, c) => s + Number(c.total_usd || 0), 0);
+    const saldoPendiente = pendientes.reduce((s, c) => s + Number(c.saldo_usd || 0), 0);
+    const valorCosto = Number(p.stock || 0) * Number(p.costo_usd || 0);
+    const kardexRows = rows.map((m) => {
+      const signo = m.cantidad > 0 ? '+' : '';
+      const tone = m.cantidad > 0 ? 'text-green' : (m.cantidad < 0 ? 'text-orange' : 'muted');
+      return `<tr>
+        <td data-label="Fecha">${m.fecha ? ui.date(m.fecha) : '—'}${m.hora ? `<small class="block muted">${ui.esc(m.hora)}</small>` : ''}</td>
+        <td data-label="Tipo">${ui.badge(m.tipo, m.tono)}</td>
+        <td data-label="Detalle"><span>${ui.esc(m.detalle)}</span></td>
+        <td data-label="Movimiento" class="num"><strong class="${tone}">${signo}${ui.num(m.cantidad, 0)}</strong></td>
+        <td data-label="Saldo" class="num"><strong>${ui.num(m.saldo, 0)}</strong></td>
+      </tr>`;
+    }).join('');
+    const chargeRows = charges.slice().sort((a, b) => String(b.fecha).localeCompare(String(a.fecha))).slice(0, 5).map((c) => {
+      const d = (db.drivers || []).find((x) => x.cedula_rif === c.conductor_cedula_rif);
+      return `<div class="mini-row mini-static">
+        <span class="mini-ico">${ui.icon('calendar', 15)}</span>
+        <span class="mini-main"><strong>${ui.esc(d ? d.nombres + ' ' + d.apellidos : c.conductor_cedula_rif)}</strong><small>${ui.date(c.fecha)} · ${ui.num(c.cantidad, 0)} unid. · ${ui.num(c.cuotas, 0)} cuota(s)</small></span>
+        <span class="mini-amount">${ui.usd(c.saldo_usd)}</span>
+      </div>`;
+    }).join('');
+
+    return `
+      <div class="profile-head">
+        ${ui.avatar(p.nombre, 56)}
+        <div class="profile-id">
+          <div class="profile-name">${ui.esc(p.nombre)} ${p.activo ? ui.badge('Activo', 'success') : ui.badge('Inactivo', 'danger')} ${low ? ui.badge('Stock bajo', 'warning') : ui.badge('Disponible', 'success')}</div>
+          <div class="profile-meta"><span class="mono">${ui.esc(p.sku)}</span><span>${ui.esc(p.categoria)}</span><span>${ui.num(p.stock, 0)} unidades disponibles</span><span>${ui.usd(p.precio_usd)} · ${ui.pct(margin)} margen</span></div>
+        </div>
+      </div>
+
+      <div class="detail-grid">
+        <div class="detail-main">
+          <div class="detail-block">
+            <h4>Descripción</h4>
+            <p class="muted">${ui.esc(p.descripcion || 'Sin descripción registrada para este producto.')}</p>
+          </div>
+
+          <div class="detail-block">
+            <h4>Kardex resumido <span class="count-chip">${rows.length} línea${rows.length === 1 ? '' : 's'}</span></h4>
+            ${rows.length ? `<div class="table-wrap">
+              <table class="data-table data-table-compact kardex-table">
+                <thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th class="num">Movimiento</th><th class="num">Saldo</th></tr></thead>
+                <tbody>${kardexRows}</tbody>
+              </table>
+            </div>` : `<p class="muted small">Sin movimientos de stock registrados para este producto. El saldo actual es de ${ui.num(p.stock, 0)} unidades.</p>`}
+            <p class="form-note" style="margin-top:10px">${ui.icon('info', 14)} El saldo incluye asignaciones y ajustes registrados. Las ediciones directas del stock se reflejan en el saldo de apertura.</p>
+          </div>
+        </div>
+
+        <div class="detail-aside">
+          <div class="detail-block">
+            <h4>Disponibilidad actual</h4>
+            <div class="info-grid">
+              <div class="info-item"><span>${ui.icon('package', 14)} Stock actual</span><strong class="${low ? 'text-orange' : ''}">${ui.num(p.stock, 0)} unidades</strong></div>
+              <div class="info-item"><span>${ui.icon('alert', 14)} Stock mínimo</span><strong>${ui.num(p.stock_min, 0)} unidades</strong></div>
+              <div class="info-item"><span>${ui.icon('layers', 14)} Valor a costo</span><strong>${ui.usd(valorCosto)}</strong></div>
+              <div class="info-item"><span>${ui.icon('percent', 14)} Margen</span><strong>${ui.pct(margin)}</strong></div>
+            </div>
+          </div>
+
+          <div class="detail-block">
+            <h4>Economía</h4>
+            <div class="info-grid">
+              <div class="info-item"><span>Precio de venta</span><strong>${ui.usd(p.precio_usd)}</strong></div>
+              <div class="info-item"><span>Costo unitario</span><strong>${ui.usd(p.costo_usd)}</strong></div>
+              <div class="info-item"><span>Financiado histórico</span><strong>${ui.usd(financiado)}</strong></div>
+              <div class="info-item"><span>Saldo por cobrar</span><strong class="${saldoPendiente > 0 ? 'text-orange' : ''}">${ui.usd(saldoPendiente)}</strong></div>
+            </div>
+          </div>
+
+          <div class="detail-block">
+            <h4>Financiamientos recientes <span class="count-chip">${charges.length}</span></h4>
+            ${chargeRows ? `<div class="mini-list mini-list-tight">${chargeRows}</div>` : `<p class="muted small">Este producto aún no tiene financiamientos a conductores.</p>`}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function openProductDetail(sku) {
+    const ui = NS.ui;
+    const p = NS.store.db.products.find((x) => x.sku === sku);
+    if (!p) return ui.toast('Producto no encontrado.', 'error');
+    const canEdit = NS.app.canAction('inventory', 'editar');
+    const overlay = ui.modal({
+      title: 'Ficha del producto',
+      eyebrow: p.sku + ' · ' + p.categoria,
+      subtitle: 'Consulta de disponibilidad y movimientos · solo lectura.',
+      size: 'xl',
+      body: productDetailHtml(p),
+      footer: `<button class="btn btn-ghost" data-close-product>${ui.icon('x', 15)} Cerrar</button>${canEdit ? `<button class="btn btn-primary" id="product-detail-edit">${ui.icon('edit', 15)} Editar producto</button>` : ''}`
+    });
+    overlay.querySelector('[data-close-product]').addEventListener('click', () => ui.closeModal(overlay));
+    const edit = overlay.querySelector('#product-detail-edit');
+    if (edit) edit.addEventListener('click', () => { ui.closeModal(overlay); openProductForm(sku); });
   }
 
   function openProductForm(sku) {
@@ -209,7 +374,7 @@
         NS.store.upsertProduct(payload);
         ui.closeModal(overlay);
         ui.toast(p ? 'Producto actualizado.' : 'Producto creado.', 'success');
-        NS.app.refresh(true);
+        NS.router.navigate('inventory', true);
       } catch (e) { ui.toast(e.message, 'error'); }
     });
   }
@@ -311,7 +476,7 @@
         });
         ui.closeModal(overlay);
         ui.toast('Producto asignado, stock descontado y financiamiento generado.', 'success');
-        NS.app.refresh(true);
+        NS.router.navigate('inventory', true);
       } catch (e) { ui.toast(e.message, 'error'); }
     });
   }
@@ -371,5 +536,5 @@
     NS.ui.toast('Inventario exportado a CSV.', 'success');
   }
 
-  NS.modules.inventory = { render, openProductForm, openAssign, openChargePayment };
+  NS.modules.inventory = { render, openProductDetail, openProductForm, openAssign, openChargePayment };
 })();

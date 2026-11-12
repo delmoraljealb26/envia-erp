@@ -1,6 +1,6 @@
 # Manual de Usuario — ENVIA ERP
 
-**Versión:** 1.5.1 · **Fecha:** noviembre de 2026
+**Versión:** 1.5.2 · **Fecha:** noviembre de 2026
 
 **Para:** Usuarios del sistema ENVIA ERP
 **Cómo abrir:** Doble clic en `index.html` en Google Chrome
@@ -53,7 +53,7 @@ El **menú lateral** está organizado por grupos (Operación, Maestros, Finanzas
 
 ### Paso 4 — Conocer el espacio de trabajo
 
-La versión **1.13.1** introdujo el rediseño **ENVIA Spatial OS**:
+La versión **1.13.2** consolida el rediseño **ENVIA Spatial OS** y añade la ficha de consulta de inventario con kardex resumido:
 
 - **Acceso centrado:** el login es una sola tarjeta en el centro de la pantalla, sin panel lateral. En móvil se ajusta al ancho disponible y puedes desplazarte verticalmente si el formulario no cabe completo.
 - **Dock flotante:** el menú lateral es una cápsula de cristal con indicador luminoso de la sección activa. El título del módulo abre su pantalla; la flecha solo expande o recoge sus opciones.
@@ -404,7 +404,8 @@ La **Tienda del Conductor** permite vender uniformes, equipamiento y seguridad a
 1. Ve al menú lateral → **Tienda & Inventario** → **Catálogo e inventario** (o **Nuevo producto** / **Asignar producto**).
 2. En **Nuevo producto** define SKU, nombre, categoría, precio de venta, costo, stock actual y stock mínimo.
 3. Puedes **ajustar stock** con el icono de refresco (compra, devolución, merma) y editar el producto.
-4. El sistema resalta los productos en o bajo el stock mínimo y calcula el valor del inventario al costo.
+4. Haz clic sobre la fila de un producto para abrir su **ficha de consulta**: disponibilidad actual, economía, financiamientos y **kardex resumido**. La ficha es de solo lectura; para modificar usa **Editar producto**.
+5. El sistema resalta los productos en o bajo el stock mínimo y calcula el valor del inventario al costo.
 
 Productos de demostración incluidos: Bolso Delivery ($80), Franela manga larga tipo chemis ($25), Casco personalizado ($50), Seguro RCV ($25), Chaqueta cortaviento ($50) y Portacelular ($25).
 
@@ -412,7 +413,7 @@ Productos de demostración incluidos: Bolso Delivery ($80), Franela manga larga 
 1. Pulsa **Asignar producto** (o hazlo desde el expediente del conductor).
 2. Selecciona conductor, producto, cantidad y número de cuotas (1, 2, 4, 8, 12 o 24).
 3. El sistema muestra el total y la cuota estimada.
-4. Al confirmar: descuenta stock, crea una **cuenta por cobrar al conductor** (1.1.2.02), registra el ingreso por tienda (4.2.1.03) y el costo del artículo (5.2.2.01).
+4. Al confirmar: descuenta stock, crea una **cuenta por cobrar al conductor** (1.1.2.02), registra el ingreso por tienda (4.2.1.03) y el costo del artículo (5.2.2.01). La ventana se cierra y regresas al catálogo de inventario.
 5. En **Financiamientos** puedes ver el saldo y usar **Abonar** para registrar pagos parciales.
 
 La deuda aparece en la **Wallet del conductor** y puede descontarse de sus liquidaciones.
@@ -544,6 +545,8 @@ Muestra si la API REST y el Storage están configurados, la fecha de la última 
 
 ### Mapa de sincronización
 Lista cada tabla local con su tabla remota, clave de conflicto, cantidad de registros y estado (Listo o Local). Desde aquí puedes descargar clientes y conductores cuando Supabase está configurado.
+
+> La sincronización espera como máximo **20 segundos por solicitud**. Si la red o Supabase no responden, el botón se libera y se muestra el detalle del error; revisa la URL, la anon key, las políticas RLS y la conexión.
 
 ### Respaldo y restauración
 1. **Exportar respaldo JSON:** descarga la base local y los archivos en un solo archivo.

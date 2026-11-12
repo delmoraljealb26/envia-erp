@@ -11,6 +11,7 @@
   const FILES_KEY = 'envia_files_v1';
   const FILES_DB = 'envia_files_db';
   const FILES_STORE = 'files';
+  const REQUEST_TIMEOUT_MS = 20000;
 
   function getConfig() {
     try {
@@ -44,20 +45,43 @@
     };
   }
 
+  async function withTimeout(run, timeoutMs, label) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs || REQUEST_TIMEOUT_MS);
+    try {
+      return await run(controller.signal);
+    } catch (err) {
+      if (err && (err.name === 'AbortError' || /aborted|abort/i.test(String(err.message || '')))) {
+        throw new Error('Tiempo de espera agotado al conectar con Supabase' + (label ? ' (' + label + ')' : '') + '. Revisa la URL, la red o las políticas RLS.');
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  function isNetworkFailure(err) {
+    const msg = String((err && err.message) || err || '').toLowerCase();
+    return /tiempo de espera|failed to fetch|networkerror|load failed|fetch failed|network request failed|aborted/.test(msg);
+  }
+
   async function rest(path, options) {
     if (!isConfigured()) throw new Error('Supabase no está configurado.');
-    const res = await fetch(baseUrl() + '/rest/v1/' + path, {
-      ...(options || {}),
-      headers: headers((options && options.headers) || {})
-    });
-    const text = await res.text();
-    let body = null;
-    try { body = text ? JSON.parse(text) : null; } catch (e) { body = text; }
-    if (!res.ok) {
-      const msg = body && (body.message || body.hint || body.error_description) ? (body.message || body.hint || body.error_description) : ('HTTP ' + res.status);
-      throw new Error(msg);
-    }
-    return body;
+    return withTimeout(async (signal) => {
+      const res = await fetch(baseUrl() + '/rest/v1/' + path, {
+        ...(options || {}),
+        signal,
+        headers: headers((options && options.headers) || {})
+      });
+      const text = await res.text();
+      let body = null;
+      try { body = text ? JSON.parse(text) : null; } catch (e) { body = text; }
+      if (!res.ok) {
+        const msg = body && (body.message || body.hint || body.error_description) ? (body.message || body.hint || body.error_description) : ('HTTP ' + res.status);
+        throw new Error(msg);
+      }
+      return body;
+    }, REQUEST_TIMEOUT_MS, 'REST');
   }
 
   async function testConnection(url, anonKey) {
@@ -69,11 +93,14 @@
     if (!/^https:\/\/[a-z0-9-]+\.supabase\.co/i.test(cfg.url) && !/^http:\/\/localhost/i.test(cfg.url)) {
       // Se permite cualquier URL válida, solo advertimos por el formato típico.
     }
-    const res = await fetch(cfg.url + '/rest/v1/clients?select=cedula_rif&limit=1', {
-      headers: { apikey: cfg.anonKey, Authorization: 'Bearer ' + cfg.anonKey }
-    });
+    const { res, text } = await withTimeout(async (signal) => {
+      const response = await fetch(cfg.url + '/rest/v1/clients?select=cedula_rif&limit=1', {
+        headers: { apikey: cfg.anonKey, Authorization: 'Bearer ' + cfg.anonKey },
+        signal
+      });
+      return { res: response, text: await response.text() };
+    }, REQUEST_TIMEOUT_MS, 'prueba de conexión');
     let body = null;
-    const text = await res.text();
     try { body = text ? JSON.parse(text) : null; } catch (e) { body = text; }
     if (res.ok) {
       saveConfig({ ...cfg, lastTest: new Date().toISOString() });
@@ -438,8 +465,13 @@
     if (!isConfigured()) throw new Error('Configura y prueba la conexión a Supabase antes de sincronizar.');
     const db = NS.store.db;
     const report = [];
+    let fatal = null;
     for (const key of Object.keys(TABLE_MAP)) {
       const map = TABLE_MAP[key];
+      if (fatal) {
+        report.push({ key, table: map.table, ok: false, error: 'No ejecutado: ' + fatal });
+        continue;
+      }
       if (key === 'withholdings') {
         const rows = (db.withholdings || []).map((v) => ({ ...v, proveedor_rif: v.proveedor_rif || null }));
         try {
@@ -447,6 +479,7 @@
           report.push({ key, table: map.table, ok: true, count: n });
         } catch (err) {
           report.push({ key, table: map.table, ok: false, error: err.message });
+          if (isNetworkFailure(err)) fatal = err.message;
         }
         continue;
       }
@@ -455,8 +488,10 @@
         report.push({ key, table: map.table, ok: true, count: n });
       } catch (err) {
         report.push({ key, table: map.table, ok: false, error: err.message });
+        if (isNetworkFailure(err)) fatal = err.message;
       }
     }
+    if (fatal) return report;
 
     // Asientos + líneas
     try {

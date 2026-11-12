@@ -1,11 +1,11 @@
 # MEMORY.md - ENVIA ERP
 ## Registro del proyecto para continuación de tareas
 
-**Fecha:** 08 de noviembre de 2026
+**Fecha:** 11 de noviembre de 2026
 
 **Estado:** Proyecto completo y funcional
 
-**Versión:** 1.13.1
+**Versión:** 1.13.2
 
 ---
 
@@ -472,7 +472,7 @@ tocar la lógica de negocio, los identificadores del DOM ni los cálculos SENIAT
 | `js/services/experienceService.js` | Nuevo servicio: tema persistente `Dark Fintech` / `Light Spatial`, command palette global (`Ctrl/Cmd+K`), búsqueda de módulos, cédulas/RIF, facturas, servicios y productos. |
 | `js/services/routerService.js` | Topbar con buscador global, botón de tema y cápsula BCV `LIVE` con conversión rápida. Sin cambios en rutas, RBAC ni sesión. |
 | `js/modules/ui.js` | Iconos nuevos `sun`, `moon`, `command`, `sparkles`, `layers`. |
-| `js/modules/settings.js` | Versión visible actualizada a `1.13.0`; `1.13.1` en 5.12. |
+| `js/modules/settings.js` | Versión visible actualizada a `1.13.2`. |
 | `_backup_diseno_original/` | Copia exacta de `index.html`, `css/` y `js/` del diseño anterior. |
 | `revertir_diseno.ps1` | Restaura el diseño anterior desde el respaldo. |
 | `.agents/skills/avant-garde-ui.md` | Directivas permanentes de diseño para futuras iteraciones. |
@@ -523,6 +523,48 @@ panel visual izquierdo, sin perder la identidad de marca.
 - Móvil 360×640: scroll vertical disponible (708 px de alto), botón visible.
 - Login con `ENVIA` / `123456789` y entrada al Dashboard en móvil: correcto.
 - `node --check` sin fallos; `0` errores de consola.
+
+---
+
+## 5.13 Inventario consultable, navegación y sincronización (11/11/2026)
+
+**Objetivo:** resolver siete ajustes de usabilidad sin tocar datos, RBAC ni
+cálculos fiscales.
+
+**Cambios:**
+- `js/modules/inventory.js`: al pulsar una fila se abre la **Ficha del producto**
+  de solo lectura con disponibilidad, economía, financiamientos y **kardex
+  resumido** (saldo inicial + asignaciones + ajustes de auditoría). La edición
+  solo se habilita con **Editar producto**; los botones de la fila no abren la
+  ficha y la fila responde a `Enter`/`Espacio`.
+- El botón **Nuevo producto** usa el icono circular `refresh`. Las altas y
+  asignaciones cierran la ventana y navegan al inventario para evitar que la
+  subruta reabra el formulario.
+- `js/modules/drivers.js`: al guardar un conductor se cierra la ventana y se
+  navega a `#/drivers`; el alta ya no se reabre desde `envia_subroute`.
+- `js/services/routerService.js`: el acordeón del sidebar se cierra al pulsar de
+  nuevo el módulo; `renderRoute` limpia `envia_subroute` cuando no hay `?sub=`.
+- `js/services/supabaseService.js`: timeout de **20 s** por solicitud REST y
+  prueba de conexión; `syncAll` corta tras un fallo de red y devuelve reporte.
+- `js/modules/settings.js`: `finally` libera el botón; el toast incluye el primer
+  error; versión visible **1.13.2**.
+- `css/styles.css`: contraste explícito de `rate-refresh` en ambos temas, hover
+  de filas y kardex compacto con tarjetas en móvil.
+
+**Validación:**
+- `node --check` en los seis archivos JS modificados.
+- CDP `file://` 1440×960: ficha sin inputs, kardex con 2 líneas, edición desde el
+  botón, icono `refresh`, tema claro, acordeón abre/cierra, alta de conductor y
+  asignación cierran sin reabrir.
+- Subrutas `drivers?sub=drivers-new`, `inventory?sub=inventory-assign` e
+  `inventory?sub=inventory-new`: guardan, navegan al módulo y dejan
+  `envia_subroute=null`.
+- Timeout simulado con un servidor local que no responde: el botón vuelve a
+  **Sincronizar ahora** a los 21,6 s, con toast de detalle y `lastSync` sin
+  actualizar.
+- Móvil 390×844: ficha dentro del viewport (370 px), kardex en tarjetas,
+  `docW=390` y 0 errores; barrido de 320 px en los 12 módulos sin overflow.
+- Consola del navegador: 0 errores.
 
 ---
 

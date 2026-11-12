@@ -57,7 +57,7 @@ roles y permisos granulares.
   contenido sin repetir el encabezado de estadísticas del módulo. El título del
   módulo y **Dashboard** siempre regresan a la pantalla principal.
 
-## Experiencia visual (v1.13.1)
+## Experiencia visual (v1.13.2)
 
 - **ENVIA Spatial OS**: dock flotante de cristal, dashboard Bento asimétrico,
   tablas convertidas en *smart cards* y fichas documentales con vista previa.
@@ -71,6 +71,13 @@ roles y permisos granulares.
 - **Login centrado**: una sola tarjeta de cristal con la marca y el formulario,
   sin panel lateral. En móvil se adapta al ancho y permite desplazamiento
   vertical cuando el formulario supera el alto de la pantalla.
+- **Inventario consultable**: al pulsar la fila de un producto se abre una ficha
+  de solo lectura con disponibilidad, economía, financiamientos y kardex
+  resumido. La edición se habilita únicamente con **Editar producto**.
+- **Navegación y sincronización**: el acordeón del menú se recoge al pulsarlo de
+  nuevo; las ventanas de alta/asignación se cierran y vuelven al módulo; la
+  sincronización con Supabase tiene timeout de 20 s y libera el botón con el
+  detalle del error.
 - **Respaldo del diseño anterior**: `_backup_diseno_original/` contiene
   `index.html`, `css/` y `js/` originales. Para volver atrás:
 

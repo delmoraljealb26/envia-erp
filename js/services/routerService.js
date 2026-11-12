@@ -173,13 +173,14 @@
         e.stopPropagation();
         e.preventDefault();
         const module = btn.dataset.route;
+        const wasOpen = btn.getAttribute('aria-expanded') === 'true' && btn.parentElement.classList.contains('open');
         closeMobileNav();
         // Limpiar la subruta para no reabrir el último subitem visitado.
         try { sessionStorage.removeItem('envia_subroute'); } catch (err) { /* ignorar */ }
         navigate(module, true);
         nav.querySelectorAll('.nav-subitem').forEach((s) => s.classList.remove('active'));
-        // Acordeón: abrir el módulo actual y cerrar los demás.
-        setSidebarModuleOpen(nav, module, true);
+        // Acordeón: abre el módulo actual, o ciérralo si ya estaba abierto.
+        setSidebarModuleOpen(nav, module, !wasOpen);
       });
     });
 
@@ -464,6 +465,8 @@
         currentSubroute = { module: route, sub, action };
         try { sessionStorage.setItem('envia_subroute', JSON.stringify(currentSubroute)); } catch (e) { /* ignorar */ }
       }
+    } else {
+      try { sessionStorage.removeItem('envia_subroute'); } catch (e) { /* ignorar */ }
     }
     const meta = MODULES[route];
     $('#crumb-current').textContent = meta.label;

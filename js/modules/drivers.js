@@ -245,7 +245,7 @@
         NS.store.upsertDriver(payload);
         ui.closeModal(overlay);
         ui.toast(d ? 'Conductor actualizado.' : 'Conductor registrado.', 'success');
-        NS.app.refresh(true);
+        NS.router.navigate('drivers', true);
         if (d) openDetail(ui.normalizeId(payload.cedula_rif));
       } catch (e) { ui.toast(e.message, 'error'); }
     });
