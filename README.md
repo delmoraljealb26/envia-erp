@@ -68,18 +68,48 @@ roles y permisos granulares.
 - **Contexto filtrado por RBAC**: el asistente solo recibe datos de los módulos
   que el rol o usuario tiene habilitados. Las consultas de módulos bloqueados se
   rechazan antes de llamar a Gemini y el prompt refuerza la restricción.
-- **Configuración local**: API Key y modelo (`gemini-1.5-pro` por defecto) en
-  `Configuración → Asistente ChatBot`. Se guardan en `localStorage`
-  (`envia_chatbot_v1`) y se envían directamente a Google Gemini; no se
-  sincronizan con Supabase. Para producción se recomienda un proxy backend.
+- **Configuración**: en producción el asistente usa la clave guardada **en el
+  servidor** (proxy serverless `api/chatbot.js`), de modo que ningún usuario
+  tiene que pegar una clave y esta nunca queda expuesta en el repositorio
+  público. El widget muestra **Gemini · servidor**. Sin el proxy (por ejemplo
+  abriendo `index.html` en `file://`), se usa la configuración local de
+  `Configuración → Asistente ChatBot`, que guarda API Key y modelo
+  (`gemini-3.5-flash` por defecto) en `localStorage` (`envia_chatbot_v1`).
+- **Modelos**: `gemini-3.5-flash` es el predeterminado. Si Google no lo tiene
+  disponible, el servicio prueba en orden `gemini-3.5-flash-lite` y
+  `gemini-3.1-flash-lite`, porque Google retiró `gemini-1.5-pro` y los modelos
+  más recientes pueden devolver 503 por demanda.
 - **Markdown seguro**: negritas, énfasis, listas, encabezados y código en línea
   se generan después de escapar el texto. Indicador **Pensando...** durante la
   solicitud y mensajes de error legibles sin exponer la clave.
-- **Archivo nuevo**: `js/services/chatbotService.js` (Gemini, contexto RBAC,
-  widget y Markdown seguro). No altera la lógica contable, fiscal ni el RBAC.
+- **Archivos**: `js/services/chatbotService.js` (Gemini, contexto RBAC, widget
+  y Markdown seguro) y `api/chatbot.js` (proxy serverless). No alteran la
+  lógica contable, fiscal ni el RBAC.
 
 No se agregaron tablas ni columnas a `sql/supabase_schema.sql`: la configuración
 del asistente y el historial de conversación permanecen en el navegador.
+
+### Proxy serverless del asistente
+
+`api/chatbot.js` se despliega como función de Vercel y lee la variable de
+entorno `GEMINI_API_KEY`:
+
+| Método | Ruta | Respuesta |
+|---|---|---|
+| `GET` | `/api/chatbot?action=status` | `{ ok, configured, models }` |
+| `POST` | `/api/chatbot` | `{ ok, reply, model }` |
+
+La clave nunca se devuelve al cliente, el proxy aplica su propio prompt
+corporativo, limita a 20 consultas por minuto y por IP y recorta las entradas.
+Para activarlo:
+
+```bash
+vercel env add GEMINI_API_KEY production --sensitive
+vercel redeploy <deployment-url>
+```
+
+El repositorio es estático: **no debe añadirse `package.json`**, porque Vercel
+dejaría de tratarlo como sitio estático y el build fallaría.
 
 ## Experiencia visual
 
@@ -169,10 +199,12 @@ se migran automáticamente para liberar espacio para la base de datos.
   estado completo de cada tabla y sanea los asientos que arrastran líneas de
   versiones anteriores, de modo que los reportes nunca duplican importes.
 - Vercel publica automáticamente cada push a `main`.
-- La configuración de Supabase y la API Key de Gemini se guardan por navegador
-  en `localStorage`. No se requieren variables de entorno en Vercel para que la
-  aplicación abra; para compartir la configuración del asistente entre usuarios
-  se recomienda un proxy backend.
+- **Asistente:** la API Key de Gemini vive en la variable de entorno
+  `GEMINI_API_KEY` de Vercel y se consume por el proxy `/api/chatbot`. Todos
+  los usuarios de la URL pública usan el asistente sin pegar claves.
+- La configuración de **Supabase** sí se guarda por navegador en `localStorage`
+  (`envia_supabase`), porque la `anon key` es pública por diseño y la
+  protección real son las políticas RLS.
 
 ## Validación realizada
 

@@ -759,6 +759,56 @@ superar los 20 s de timeout y abortar toda la sincronización.
 - Orígenes presentes: apertura 1, compra 7, gasto 4, liquidacion 16, pago 2,
   servicio 16, tienda 8, wallet 4.
 
+## 5.20 API Key de Gemini en el servidor y modelo vigente (12/11/2026)
+
+**Problema 1 — el modelo por defecto ya no existe.** El chatbot usaba
+`gemini-1.5-pro`, que Google retiró: toda consulta devolvía HTTP 404
+("This model is no longer available"). Los modelos `gemini-3.8-flash` y
+`gemini-3.7-flash` responden 503 por demanda alta.
+
+**Problema 2 — la clave no podía ir en el frontend.** El repositorio es
+público, así que la API Key no puede escribirse en `js/`. Se creó un proxy
+serverless que la mantiene en el servidor.
+
+**Cambios:**
+- `api/chatbot.js` (nuevo, serverless Vercel): expone `GET ?action=status` y
+  `POST`. Lee `GEMINI_API_KEY` de las variables de entorno, nunca la devuelve
+  al cliente, aplica su propio prompt corporativo (ignora el del cliente),
+  límite de 20 consultas por minuto y por IP, y recorta las entradas.
+- `chatbotService.js`: `DEFAULT_MODEL` = `gemini-3.5-flash`; lista
+  `MODEL_FALLBACKS` (`gemini-3.5-flash` → `gemini-3.5-flash-lite` →
+  `gemini-3.1-flash-lite`) que se prueban en orden; `proxyAvailable()` detecta
+  el proxy y lo prioriza sobre la clave local; `thinkingBudget: 0` para evitar
+  gastar tokens en razonamiento; timeout de prueba 40 s.
+- `settings.js`: la sección refleja el modo servidor (estado "Configurado en el
+  servidor", modelo "Servidor (Gemini)") y ya no sugiere `gemini-1.5-pro`.
+- `vercel.json` se dejó **sin tocar**: Vercel resuelve `/api/*` antes de aplicar
+  el rewrite `/(.*)` → `/index.html`.
+
+**Vercel (proyecto `jealb/envia-erp`):**
+- Variable `GEMINI_API_KEY` creada como **Secret** para el entorno Production.
+- CLI de Vercel autenticado; `.vercel/` y `.env.local` están en `.gitignore`.
+
+**Lecciones de despliegue (importantes):**
+- Añadir `package.json` al repo **rompe el build**: Vercel deja de tratar el
+  proyecto como sitio estático y exige un `buildCommand`. El repo es estático
+  puro, sin `package.json`.
+- El bloque `"functions"` en `vercel.json` no es necesario para un proyecto
+  estático con `api/`.
+- Tras cambiar variables de entorno hay que **redesplegar** (`vercel redeploy`);
+  un push nuevo no basta.
+
+**Validación en producción:**
+- `GET /api/chatbot?action=status` → `{"ok":true,"configured":true}`.
+- `POST /api/chatbot` con una consulta real → respuesta correcta de Gemini.
+- Navegador con perfil **sin** API key local: widget en "Gemini · servidor",
+  consulta respondida con `gemini-3.5-flash`, sin excepciones ni errores de
+  consola.
+- Guard RBAC: con el módulo de Contabilidad revocado, la consulta se bloquea
+  con el mensaje de módulos permitidos y el contexto enviado **excluye** los
+  datos de Contabilidad.
+- Camino local (clave en `localStorage`) también verificado respondiendo.
+
 ---
 
 ## 6. Próximas tareas pendientes (opcionales)
