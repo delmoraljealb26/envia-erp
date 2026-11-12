@@ -537,7 +537,17 @@
         continue;
       }
       try {
-        const n = await upsert(map.table, map.conflict, prepareRows(db[key] || []));
+        const rows = prepareRows(db[key] || []);
+        if (key === 'clients' || key === 'drivers') {
+          rows.forEach((row) => {
+            if (!row.fecha_registro) {
+              row.fecha_registro = row.created_at
+                ? String(row.created_at).slice(0, 10)
+                : new Date().toISOString().slice(0, 10);
+            }
+          });
+        }
+        const n = await upsert(map.table, map.conflict, rows);
         report.push({ key, table: map.table, ok: true, count: n });
       } catch (err) {
         report.push({ key, table: map.table, ok: false, error: err.message });
