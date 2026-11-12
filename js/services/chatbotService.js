@@ -21,8 +21,8 @@
   const PROXY_PATH = 'api/chatbot';
   const MAX_HISTORY_MESSAGES = 16;
   const FETCH_TIMEOUT_MS = 45000;
-  const TEST_TIMEOUT_MS = 22000;
-  const PROXY_TIMEOUT_MS = 50000;
+  const TEST_TIMEOUT_MS = 40000;
+  const PROXY_TIMEOUT_MS = 55000;
 
   const BASE_SYSTEM_PROMPT = "Eres el Asistente Inteligente corporativo de ENVIA ERP, un sistema en Venezuela. Tu propósito es ayudar al usuario a usar el sistema, entender cálculos SENIAT, retenciones, facturas, clientes, conductores y DolarAPI. Tienes PROHIBIDO responder preguntas sobre temas generales de la vida, política, clima, recetas o programación ajena al ERP. Si te preguntan algo fuera de ENVIA ERP, responde: 'Como asistente corporativo de ENVIA ERP, solo estoy autorizado para responder consultas sobre el funcionamiento de esta plataforma'.";
 
