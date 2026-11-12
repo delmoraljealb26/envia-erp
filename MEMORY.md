@@ -707,7 +707,8 @@ sincronización del esquema y los datos con Supabase.
 
 **Producción:**
 - URL: <https://envia-erp.vercel.app>
-- Commits desplegados: `9530d64`, `f941b23` y `13a4c54` sobre `main`.
+- Commits desplegados: `9530d64`, `f941b23`, `13a4c54`, `228d5df` y `deafca2`
+  sobre `main`.
 - Vercel publicó el asistente Gemini y el widget flotante.
 - Smoke test en Chrome headless: login, dashboard, widget, 4 sugerencias,
   Configuración ChatBot y versión 1.14.0 sin excepciones.
@@ -720,10 +721,43 @@ sincronización del esquema y los datos con Supabase.
   columnas de cada lote y completa `fecha_registro` en clientes/conductores
   antiguos.
 - `settings.js`: `ACCOUNTING_ORIGINS` incluye `tienda`.
-- Sync completo: 11 clientes, 9 conductores, 58 asientos, 326 líneas, 0
+- Sync completo: 11 clientes, 9 conductores, 58 asientos, 171 líneas, 0
   desbalanceados y 0 asientos sin líneas.
 - Nota: la configuración de Supabase y la API Key de Gemini siguen siendo
   locales por navegador.
+
+## 5.19 Saneamiento de líneas contables y reintentos REST (12/11/2026)
+
+**Problema 1 — líneas contables duplicadas en Supabase.** Cuando un asiento
+conserva su número pero cambia su id local, la FK `on update cascade` de
+`accounting_entry_lines.entry_id` reasigna las líneas antiguas al asiento nuevo
+conservando su id viejo. Quedaban dos juegos de líneas por asiento (326 líneas
+para 58 asientos) y los reportes duplicaban los importes.
+
+**Problema 2 — timeouts de la sincronización.** El proyecto Supabase (plan
+gratuito) se suspende tras un tiempo de inactividad; la petición REST podía
+superar los 20 s de timeout y abortar toda la sincronización.
+
+**Cambios en `js/services/supabaseService.js`:**
+- `syncAll` resuelve el id remoto por `numero` de asiento y reutiliza ese id
+  al enviar cabecera y líneas, de modo que la PK ya no cambia y no se arrastran
+  las líneas antiguas.
+- `cleanupStaleEntryLines()` detecta los asientos con líneas obsoletas (id que
+  no corresponde al prefijo del asiento), los vacía por completo y permite que
+  la sincronización reenvíe el juego completo de líneas. El vaciado debe ser
+  total: el trigger diferido `trg_lines_balanced` valida el asiento al cerrar
+  la transacción y rechaza un borrado parcial por descuadre.
+- `rest()` reintenta hasta 3 veces con espera creciente (2 s / 5 s / 12 s) y
+  timeout de 30 s, solo ante fallos de red o tiempo de espera.
+
+**Validación:**
+- Sync completo en producción: 20/20 tablas OK, 50 asientos saneados
+  (`cleaned: 50`), 58 asientos y 171 líneas en Supabase.
+- Segunda sync idempotente: `cleaned: 0`, `lastSync` actualizado.
+- Integridad en Supabase: 0 asientos desbalanceados, 0 asientos sin líneas,
+  0 desbalanceados en el origen `tienda`.
+- Orígenes presentes: apertura 1, compra 7, gasto 4, liquidacion 16, pago 2,
+  servicio 16, tienda 8, wallet 4.
 
 ---
 

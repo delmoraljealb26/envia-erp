@@ -165,7 +165,9 @@ se migran automáticamente para liberar espacio para la base de datos.
 - **Producción:** <https://envia-erp.vercel.app>
 - **Repositorio:** <https://github.com/delmoraljealb26/envia-erp>
 - **Supabase:** proyecto `vnxmztvkrskppznaaenq`, esquema 1.1 con el origen
-  contable `tienda` habilitado.
+  contable `tienda` habilitado. La sincronización es idempotente: reenvía el
+  estado completo de cada tabla y sanea los asientos que arrastran líneas de
+  versiones anteriores, de modo que los reportes nunca duplican importes.
 - Vercel publica automáticamente cada push a `main`.
 - La configuración de Supabase y la API Key de Gemini se guardan por navegador
   en `localStorage`. No se requieren variables de entorno en Vercel para que la
