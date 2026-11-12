@@ -445,6 +445,42 @@
     users: { table: 'erp_users', conflict: 'usuario' }
   };
 
+  const IDENTITY_FIELDS = ['cedula_rif', 'cliente_cedula_rif', 'conductor_cedula_rif', 'proveedor_rif', 'rif'];
+  const IDENTITY_RE = /^([VEJ])-?(\d{7,9})$/;
+
+  function normalizeIdentity(value) {
+    if (typeof value !== 'string') return value;
+    const raw = value.trim().toUpperCase().replace(/[\s.]/g, '');
+    const match = raw.match(IDENTITY_RE);
+    return match ? match[1] + '-' + match[2] : value;
+  }
+
+  /* Normaliza claves de identidad y homogeneiza las columnas de cada lote.
+     PostgREST exige que todos los objetos de un mismo upsert tengan las mismas
+     claves; las filas antiguas pueden omitir campos opcionales. */
+  function prepareRows(rows) {
+    const list = (rows || []).map((row) => {
+      const out = { ...(row || {}) };
+      IDENTITY_FIELDS.forEach((field) => {
+        if (out[field]) out[field] = normalizeIdentity(out[field]);
+      });
+      return out;
+    });
+    const keys = [];
+    list.forEach((row) => {
+      Object.keys(row).forEach((key) => {
+        if (keys.indexOf(key) === -1) keys.push(key);
+      });
+    });
+    return list.map((row) => {
+      const out = {};
+      keys.forEach((key) => {
+        out[key] = Object.prototype.hasOwnProperty.call(row, key) ? row[key] : null;
+      });
+      return out;
+    });
+  }
+
   async function upsert(table, conflict, rows) {
     if (!rows || !rows.length) return 0;
     // Supabase limita el payload; se envía en lotes de 200.
@@ -473,7 +509,7 @@
         continue;
       }
       if (key === 'withholdings') {
-        const rows = (db.withholdings || []).map((v) => ({ ...v, proveedor_rif: v.proveedor_rif || null }));
+        const rows = prepareRows((db.withholdings || []).map((v) => ({ ...v, proveedor_rif: v.proveedor_rif || null })));
         try {
           const n = await upsert(map.table, map.conflict, rows);
           report.push({ key, table: map.table, ok: true, count: n });
@@ -485,12 +521,12 @@
       }
       if (key === 'driverEvents') {
         // Las fechas vacías del formulario se envían como NULL para PostgreSQL.
-        const rows = (db.driverEvents || []).map((e) => ({
+        const rows = prepareRows((db.driverEvents || []).map((e) => ({
           ...e,
           nivel_aplicar: e.nivel_aplicar || null,
           fecha_inicio: e.fecha_inicio || null,
           fecha_fin: e.fecha_fin || null
-        }));
+        })));
         try {
           const n = await upsert(map.table, map.conflict, rows);
           report.push({ key, table: map.table, ok: true, count: n });
@@ -501,7 +537,7 @@
         continue;
       }
       try {
-        const n = await upsert(map.table, map.conflict, db[key] || []);
+        const n = await upsert(map.table, map.conflict, prepareRows(db[key] || []));
         report.push({ key, table: map.table, ok: true, count: n });
       } catch (err) {
         report.push({ key, table: map.table, ok: false, error: err.message });
@@ -512,10 +548,10 @@
 
     // Asientos + líneas
     try {
-      const entries = (db.entries || []).map((e) => ({
+      const entries = prepareRows((db.entries || []).map((e) => ({
         id: e.id, numero: e.numero, fecha: e.fecha, descripcion: e.descripcion,
         referencia: e.referencia, origen: e.origen, tasa_bcv: e.tasa_bcv, created_at: e.created_at
-      }));
+      })));
       const n = await upsert('accounting_entries', 'numero', entries);
       // Las líneas se envían por asiento completo: el trigger diferido de
       // partida doble valida al cierre de cada transacción y no debe recibir

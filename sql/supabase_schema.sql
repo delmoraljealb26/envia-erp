@@ -1,7 +1,7 @@
 -- ============================================================================
 --  ENVIA ERP · Esquema Supabase (PostgreSQL)
---  Versión 1.0 · Noviembre 2026
---  Última revisión de interfaz: v1.13.2 · Inventario consultable y sync con timeout (sin cambios de esquema).
+--  Versión 1.1 · Noviembre 2026
+--  Última revisión de interfaz: v1.14.0 · Asistente Gemini y asientos de tienda del conductor.
 --
 --  Este esquema replica la estructura local de ENVIA ERP y soporta la
 --  sincronización REST/Storage del frontend (js/services/supabaseService.js).
@@ -309,7 +309,7 @@ create table if not exists public.accounting_entries (
   descripcion   text not null,
   referencia    text,
   origen        text not null default 'manual'
-                  check (origen in ('manual','apertura','servicio','liquidacion','compra','pago','wallet','gasto')),
+                  check (origen in ('manual','apertura','servicio','liquidacion','compra','pago','wallet','gasto','tienda')),
   tasa_bcv      numeric(14,4) not null default 0 check (tasa_bcv >= 0),
   created_at    timestamptz not null default timezone('utc', now()),
   updated_at    timestamptz not null default timezone('utc', now())
@@ -330,6 +330,26 @@ create table if not exists public.accounting_entry_lines (
 
 comment on table public.accounting_entries is 'Cabecera de asientos contables.';
 comment on table public.accounting_entry_lines is 'Líneas DEBE/HABER. La suma debe cuadrar.';
+
+-- Migración idempotente: habilita el origen 'tienda' usado por la tienda del
+-- conductor y por los financiamientos. Se elimina cualquier check previo sobre
+-- la columna origen para evitar nombres de restricción heredados.
+do $$
+declare c record;
+begin
+  for c in
+    select conname
+      from pg_constraint
+     where conrelid = 'public.accounting_entries'::regclass
+       and contype = 'c'
+       and pg_get_constraintdef(oid) ilike '%origen%'
+  loop
+    execute format('alter table public.accounting_entries drop constraint %I', c.conname);
+  end loop;
+end $$;
+alter table public.accounting_entries
+  add constraint accounting_entries_origen_check
+  check (origen in ('manual','apertura','servicio','liquidacion','compra','pago','wallet','gasto','tienda'));
 
 -- ============================================================================
 --  11. USUARIOS DEL SISTEMA (RBAC)

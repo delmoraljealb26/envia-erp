@@ -54,7 +54,7 @@
   }
 
   const SYNC_ID_RE = /^[VEJ]-[0-9]{7,9}$/;
-  const ACCOUNTING_ORIGINS = ['manual', 'apertura', 'servicio', 'liquidacion', 'compra', 'pago', 'wallet', 'gasto'];
+  const ACCOUNTING_ORIGINS = ['manual', 'apertura', 'servicio', 'liquidacion', 'compra', 'pago', 'wallet', 'gasto', 'tienda'];
 
   function syncCleanRow(row) {
     try { return JSON.parse(JSON.stringify(row || {})); } catch (e) { return row || {}; }
