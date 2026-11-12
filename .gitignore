@@ -13,6 +13,7 @@ opencode.exe
 
 # Despliegue y sistema
 .vercel/
+supabase/.temp/
 .DS_Store
 Thumbs.db
 *.log

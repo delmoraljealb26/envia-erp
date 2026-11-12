@@ -160,6 +160,18 @@ se migran automáticamente para liberar espacio para la base de datos.
 > `anon` para que la demo funcione con la clave pública. En producción deben
 > restringirse a usuarios autenticados y propietarios.
 
+## Despliegue
+
+- **Producción:** <https://envia-erp.vercel.app>
+- **Repositorio:** <https://github.com/delmoraljealb26/envia-erp>
+- **Supabase:** proyecto `vnxmztvkrskppznaaenq`, esquema 1.1 con el origen
+  contable `tienda` habilitado.
+- Vercel publica automáticamente cada push a `main`.
+- La configuración de Supabase y la API Key de Gemini se guardan por navegador
+  en `localStorage`. No se requieren variables de entorno en Vercel para que la
+  aplicación abra; para compartir la configuración del asistente entre usuarios
+  se recomienda un proxy backend.
+
 ## Validación realizada
 
 - `node --check` sobre los 16 archivos JS.

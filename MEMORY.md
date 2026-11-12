@@ -672,8 +672,10 @@ operativo filtrado por RBAC y credenciales guardadas solo en el navegador.
   estados de carga/error, responsive 390 px y temas claro/oscuro.
 - `README.md`, `docs/manual_usuario.md` y `manual.html`: documentación y versión
   visible actualizadas a **1.14.0** (manual 1.6.0).
-- No se modificó `sql/supabase_schema.sql`: la API Key y el historial son locales;
-  no se sincronizan con Supabase.
+- `sql/supabase_schema.sql`: esquema 1.1; se habilitó el origen `tienda` y se
+  agregó una migración idempotente para la restricción de `accounting_entries`.
+  La API Key y el historial del asistente siguen siendo locales y no se
+  sincronizan con Supabase.
 
 **Seguridad:**
 - La API Key se guarda en `localStorage` (`envia_chatbot_v1`) y se envía
@@ -697,6 +699,31 @@ operativo filtrado por RBAC y credenciales guardadas solo en el navegador.
 - Markdown, contexto de servicios/ranking y guard de contabilidad simulado.
 - Temas claro/oscuro y viewport 390×844 sin desbordamiento horizontal.
 - CORS desde `file://` verificado con respuesta 400 controlada de Gemini.
+
+## 5.18 Producción Vercel y sincronización Supabase (12/11/2026)
+
+**Objetivo:** publicar v1.14.0 en la URL de producción y completar la
+sincronización del esquema y los datos con Supabase.
+
+**Producción:**
+- URL: <https://envia-erp.vercel.app>
+- Commits desplegados: `9530d64`, `f941b23` y `13a4c54` sobre `main`.
+- Vercel publicó el asistente Gemini y el widget flotante.
+- Smoke test en Chrome headless: login, dashboard, widget, 4 sugerencias,
+  Configuración ChatBot y versión 1.14.0 sin excepciones.
+
+**Supabase:**
+- Proyecto: `vnxmztvkrskppznaaenq`.
+- Esquema actualizado a 1.1: `accounting_entries_origen_check` incluye `tienda`.
+  Migración aplicada con `supabase db query --remote`.
+- `supabaseService.js`: normaliza cédula/RIF antes del upsert, homogeneiza las
+  columnas de cada lote y completa `fecha_registro` en clientes/conductores
+  antiguos.
+- `settings.js`: `ACCOUNTING_ORIGINS` incluye `tienda`.
+- Sync completo: 11 clientes, 9 conductores, 58 asientos, 326 líneas, 0
+  desbalanceados y 0 asientos sin líneas.
+- Nota: la configuración de Supabase y la API Key de Gemini siguen siendo
+  locales por navegador.
 
 ---
 
