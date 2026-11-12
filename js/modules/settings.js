@@ -333,14 +333,17 @@
     const dbSize = JSON.stringify(db).length;
     const reportByKey = new Map((lastReport || []).map((r) => [r.key, r]));
     const failedReports = (lastReport || []).filter((r) => !r.ok);
-    const chatbotCfg = NS.chatbot ? NS.chatbot.getConfig() : { apiKey: '', model: 'gemini-1.5-pro', lastTest: null };
+    const chatbotCfg = NS.chatbot ? NS.chatbot.getConfig() : { apiKey: '', model: 'gemini-3.5-flash', lastTest: null };
     const chatbotConfigured = !!(NS.chatbot && NS.chatbot.isConfigured());
     const chatbotAllowed = NS.chatbot ? NS.chatbot.allowedModules().map((key) => NS.chatbot.moduleLabel(key)) : [];
     const chatbotTest = chatbotTestResult || chatbotCfg.lastTest || null;
     const chatbotCanWrite = canWrite && !!NS.chatbot;
-    const chatbotHealth = !chatbotConfigured
-      ? { label: 'Sin configurar', tone: 'warning' }
-      : (chatbotTest ? (chatbotTest.ok ? { label: 'Conectado', tone: 'success' } : { label: 'Requiere atención', tone: 'danger' }) : { label: 'Sin verificar', tone: 'info' });
+    const chatbotServer = !!(NS.chatbot && NS.chatbot.proxyState === true);
+    const chatbotHealth = chatbotServer
+      ? { label: 'Servidor', tone: 'success' }
+      : (!chatbotConfigured
+        ? { label: 'Sin configurar', tone: 'warning' }
+        : (chatbotTest ? (chatbotTest.ok ? { label: 'Conectado', tone: 'success' } : { label: 'Requiere atención', tone: 'danger' }) : { label: 'Sin verificar', tone: 'info' }));
 
     // Leer sub-ruta del sidebar y desplazar a la sección correspondiente
     const sub = NS.router.getSubroute();
@@ -497,8 +500,8 @@
               <small>Se guarda solo en este navegador (localStorage). No se envía a Supabase. En producción usa un proxy backend para no exponer la clave.</small>
             </label>
             <label class="field field-full"><span>Modelo</span>
-              <input name="model" value="${ui.esc(chatbotCfg.model || 'gemini-1.5-pro')}" placeholder="gemini-1.5-pro" ${chatbotCanWrite ? '' : 'disabled'}>
-              <small>Valor por defecto: <strong>gemini-1.5-pro</strong>. Si tu API Key no tiene acceso, prueba otro modelo disponible en Google AI Studio.</small>
+              <input name="model" value="${ui.esc(chatbotCfg.model || 'gemini-3.5-flash')}" placeholder="gemini-3.5-flash" ${chatbotCanWrite ? '' : 'disabled'}>
+              <small>Valor por defecto: <strong>gemini-3.5-flash</strong>. Si tu API Key no tiene acceso, prueba otro modelo disponible en Google AI Studio (por ejemplo <strong>gemini-3.5-flash-lite</strong> o <strong>gemini-3.1-flash-lite</strong>).</small>
             </label>
             <div class="field-full form-actions">
               ${chatbotCanWrite ? `<button type="button" class="btn btn-ghost" id="chatbot-test">${ui.icon('link', 15)} Probar conexión</button><button type="button" class="btn btn-primary" id="chatbot-save">${ui.icon('check', 15)} Guardar Credenciales IA</button>` : `<span class="readonly-chip">${ui.icon('eye', 13)} Solo lectura</span>`}
@@ -509,13 +512,13 @@
             <span class="chatbot-config-orb">${ui.icon('sparkles', 19)}</span>
             <strong>Asistente con contexto autorizado</strong>
             <p>El bot solo consulta los módulos habilitados para tu rol: ${chatbotAllowed.length ? ui.esc(chatbotAllowed.join(', ')) : 'ninguno'}. Las preguntas sobre módulos bloqueados se rechazan.</p>
-            <div class="chatbot-config-meta"><span>Estado</span><strong>${chatbotConfigured ? 'Credenciales guardadas' : 'Pendiente de API Key'}</strong></div>
-            <div class="chatbot-config-meta"><span>Modelo</span><strong>${ui.esc(chatbotCfg.model || 'gemini-1.5-pro')}</strong></div>
+            <div class="chatbot-config-meta"><span>Estado</span><strong>${chatbotServer ? 'Configurado en el servidor' : (chatbotConfigured ? 'Credenciales guardadas' : 'Pendiente de API Key')}</strong></div>
+            <div class="chatbot-config-meta"><span>Modelo</span><strong>${ui.esc(chatbotServer ? 'Servidor (Gemini)' : (chatbotCfg.model || 'gemini-3.5-flash'))}</strong></div>
             <div class="chatbot-config-meta"><span>Última prueba</span><strong>${chatbotTest && chatbotTest.at ? ui.dateTime(chatbotTest.at) : '—'}</strong></div>
           </aside>
         </div>
         ${chatbotTest ? `<div class="chatbot-test-result ${chatbotTest.ok ? 'ok' : 'warn'}">${ui.icon(chatbotTest.ok ? 'check' : 'alert', 17)}<div><strong>${chatbotTest.ok ? 'Conexión verificada' : 'Conexión con observaciones'}</strong><span>${ui.esc(chatbotTest.message || '')}</span></div></div>` : ''}
-        <p class="form-note">${ui.icon('shield', 14)} La clave se usa directamente desde este navegador hacia Google Gemini. No se sincroniza con Supabase ni se comparte con otros usuarios.</p>
+        <p class="form-note">${ui.icon('shield', 14)} ${chatbotServer ? 'El asistente usa la clave configurada en el servidor: no se expone en el navegador ni se comparte con el repositorio.' : 'La clave se usa directamente desde este navegador hacia Google Gemini. No se sincroniza con Supabase ni se comparte con otros usuarios.'}</p>
       </section>
 
       <section class="card card-span-2" id="settings-section-supabase">
@@ -682,7 +685,7 @@
       if (saveChatbot) {
         saveChatbot.addEventListener('click', async () => {
           const apiKey = chatbotForm.elements.apiKey.value.trim();
-          const model = chatbotForm.elements.model.value.trim() || 'gemini-1.5-pro';
+          const model = chatbotForm.elements.model.value.trim() || 'gemini-3.5-flash';
           if (!apiKey) return ui.toast('Ingresa la API Key de Google Gemini.', 'warning');
           try {
             NS.chatbot.saveConfig({ apiKey, model });
@@ -706,7 +709,7 @@
         testChatbot.addEventListener('click', async () => {
           const current = NS.chatbot.getConfig();
           const apiKey = chatbotForm.elements.apiKey.value.trim() || current.apiKey;
-          const model = chatbotForm.elements.model.value.trim() || current.model || 'gemini-1.5-pro';
+          const model = chatbotForm.elements.model.value.trim() || current.model || 'gemini-3.5-flash';
           if (!apiKey) return ui.toast('Ingresa la API Key de Google Gemini antes de probar.', 'warning');
           ui.setBusy(testChatbot, true, 'Probando...');
           try {

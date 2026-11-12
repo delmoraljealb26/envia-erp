@@ -12,11 +12,17 @@
 
   const NS = (window.ENVIA = window.ENVIA || {});
   const CONFIG_KEY = 'envia_chatbot_v1';
-  const DEFAULT_MODEL = 'gemini-1.5-pro';
+  const DEFAULT_MODEL = 'gemini-3.5-flash';
+  // Modelos de respaldo: Google retira versiones antiguas y los más recientes
+  // pueden devolver 503 por demanda alta. Se prueban en orden hasta que uno
+  // responda correctamente.
+  const MODEL_FALLBACKS = ['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
   const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
+  const PROXY_PATH = 'api/chatbot';
   const MAX_HISTORY_MESSAGES = 16;
   const FETCH_TIMEOUT_MS = 45000;
   const TEST_TIMEOUT_MS = 22000;
+  const PROXY_TIMEOUT_MS = 50000;
 
   const BASE_SYSTEM_PROMPT = "Eres el Asistente Inteligente corporativo de ENVIA ERP, un sistema en Venezuela. Tu propósito es ayudar al usuario a usar el sistema, entender cálculos SENIAT, retenciones, facturas, clientes, conductores y DolarAPI. Tienes PROHIBIDO responder preguntas sobre temas generales de la vida, política, clima, recetas o programación ajena al ERP. Si te preguntan algo fuera de ENVIA ERP, responde: 'Como asistente corporativo de ENVIA ERP, solo estoy autorizado para responder consultas sobre el funcionamiento de esta plataforma'.";
 
@@ -157,6 +163,57 @@
 
   function isConfigured() {
     return !!getConfig().apiKey;
+  }
+
+  /* --------------------------- Proxy del servidor ------------------------ */
+  // En producción el frontend puede delegar en el proxy /api/chatbot, que
+  // guarda la API Key en el servidor. Se consulta una sola vez y se cachea
+  // el resultado: si el proxy no está disponible (app local en file:// o
+  // despliegue sin serverless) se sigue usando la clave local del navegador.
+  let proxyState = null;
+  let proxyPromise = null;
+
+  function proxyAvailable() {
+    if (proxyState !== null) return Promise.resolve(proxyState);
+    if (!proxyPromise) {
+      proxyPromise = fetchWithTimeout(PROXY_PATH + '?action=status', { method: 'GET' }, 8000)
+        .then(async (response) => {
+          if (!response.ok) throw new Error('proxy');
+          const data = await readJson(response);
+          proxyState = !!(data && data.configured);
+          return proxyState;
+        })
+        .catch(() => {
+          proxyState = false;
+          return false;
+        });
+    }
+    return proxyPromise;
+  }
+
+  async function enviarPorProxy(prompt) {
+    const history = conversation.slice(-(MAX_HISTORY_MESSAGES - 1))
+      .filter((item) => item.role === 'model')
+      .map((item) => ({ text: (item.parts || []).map((p) => p.text || '').join(' ') }));
+    const response = await fetchWithTimeout(PROXY_PATH, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: prompt,
+        context: buildSystemInstruction(),
+        history
+      })
+    }, PROXY_TIMEOUT_MS);
+    const data = await readJson(response);
+    if (!response.ok || !data || !data.ok) {
+      throw chatError((data && data.error) || 'El asistente del servidor no pudo responder.', 'PROXY_ERROR');
+    }
+    const reply = String(data.reply || '').trim();
+    if (!reply) throw chatError('Gemini no devolvió una respuesta útil. Reformula la pregunta.', 'EMPTY_RESPONSE');
+    conversation.push({ role: 'user', parts: [{ text: prompt }] });
+    conversation.push({ role: 'model', parts: [{ text: reply }] });
+    trimConversation();
+    return { text: reply, model: data.model || 'servidor', finishReason: '', usage: null };
   }
 
   function normalizeText(value) {
@@ -494,13 +551,17 @@
     if (!prompt) throw chatError('Escribe una consulta para el asistente.', 'EMPTY');
     if (prompt.length > 1600) throw chatError('La consulta es demasiado larga. Resúmela en menos de 1.600 caracteres.', 'TOO_LONG');
 
+    const guard = accessGuard(prompt);
+    if (!guard.allowed) throw chatError(guard.message, 'FORBIDDEN');
+
+    // El proxy del servidor tiene prioridad: mantiene la clave fuera del
+    // navegador y es la vía configurada en producción.
+    if (await proxyAvailable()) return enviarPorProxy(prompt);
+
     const cfg = getConfig();
     if (!cfg.apiKey) {
       throw chatError('Para usar el Asistente ENVIA primero configura la API Key de Google Gemini en Configuración → Asistente ChatBot.', 'NO_API_KEY');
     }
-
-    const guard = accessGuard(prompt);
-    if (!guard.allowed) throw chatError(guard.message, 'FORBIDDEN');
 
     const payload = {
       system_instruction: { parts: [{ text: buildSystemInstruction() }] },
@@ -508,37 +569,52 @@
       generationConfig: {
         temperature: 0.25,
         topP: 0.9,
-        maxOutputTokens: 1400
+        maxOutputTokens: 2048,
+        thinkingConfig: { thinkingBudget: 0 }
       }
     };
 
-    const response = await fetchWithTimeout(apiUrl(cfg.model, cfg.apiKey), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    }, FETCH_TIMEOUT_MS);
-
-    const data = await readJson(response);
-    if (!response.ok) throw chatError(apiErrorMessage(response.status, data), 'API_ERROR');
-
-    const candidate = data && data.candidates && data.candidates[0];
-    const parts = candidate && candidate.content && candidate.content.parts ? candidate.content.parts : [];
-    const reply = parts.map((part) => part.text || '').join('\n').trim();
-    if (!reply) {
-      const reason = candidate && candidate.finishReason ? ' (' + candidate.finishReason + ')' : '';
-      throw chatError('Gemini no devolvió una respuesta útil' + reason + '. Reformula la pregunta.', 'EMPTY_RESPONSE');
+    // Se recorren los modelos disponibles hasta que uno responda: Google
+    // retira versiones antiguas (404) y las más nuevas pueden saturarse (503).
+    const candidates = [cfg.model].concat(MODEL_FALLBACKS).filter((m, i, arr) => m && arr.indexOf(m) === i);
+    let lastError = null;
+    for (const model of candidates) {
+      let response;
+      let data;
+      try {
+        response = await fetchWithTimeout(apiUrl(model, cfg.apiKey), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }, FETCH_TIMEOUT_MS);
+        data = await readJson(response);
+      } catch (e) {
+        lastError = e;
+        continue;
+      }
+      if (response.ok) {
+        const candidate = data && data.candidates && data.candidates[0];
+        const parts = candidate && candidate.content && candidate.content.parts ? candidate.content.parts : [];
+        const reply = parts.map((part) => part.text || '').join('\n').trim();
+        if (reply) {
+          conversation.push({ role: 'user', parts: [{ text: prompt }] });
+          conversation.push({ role: 'model', parts: [{ text: reply }] });
+          trimConversation();
+          return {
+            text: reply,
+            model,
+            finishReason: (candidate && candidate.finishReason) || '',
+            usage: (data && data.usageMetadata) || null
+          };
+        }
+        lastError = chatError('Gemini no devolvió una respuesta útil. Reformula la pregunta.', 'EMPTY_RESPONSE');
+        continue;
+      }
+      lastError = chatError(apiErrorMessage(response.status, data), 'API_ERROR');
+      // 400/401/403/429 no se resuelven cambiando de modelo.
+      if ([400, 401, 403, 429].indexOf(response.status) !== -1) break;
     }
-
-    conversation.push({ role: 'user', parts: [{ text: prompt }] });
-    conversation.push({ role: 'model', parts: [{ text: reply }] });
-    trimConversation();
-
-    return {
-      text: reply,
-      model: cfg.model,
-      finishReason: (candidate && candidate.finishReason) || '',
-      usage: (data && data.usageMetadata) || null
-    };
+    throw lastError || chatError('No se pudo completar la consulta con Gemini.', 'API_ERROR');
   }
 
   async function probarConexion(apiKey, model) {
@@ -552,36 +628,67 @@
     }
     const started = Date.now();
     try {
-      const response = await fetchWithTimeout(apiUrl(selected, key), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: BASE_SYSTEM_PROMPT }] },
-          contents: [{ role: 'user', parts: [{ text: 'Responde únicamente: conexión OK' }] }],
-          generationConfig: { temperature: 0, maxOutputTokens: 24 }
-        })
-      }, TEST_TIMEOUT_MS);
-      const data = await readJson(response);
-      if (!response.ok) {
-        const message = apiErrorMessage(response.status, data);
-        saveLastTest({ ok: false, message, model: selected });
-        return { ok: false, message, model: selected };
+      const candidates = [selected].concat(MODEL_FALLBACKS).filter((m, i, arr) => m && arr.indexOf(m) === i);
+      let lastMessage = '';
+      let lastModel = selected;
+      for (const model of candidates) {
+        const response = await fetchWithTimeout(apiUrl(model, key), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: BASE_SYSTEM_PROMPT }] },
+            contents: [{ role: 'user', parts: [{ text: 'Responde únicamente: conexión OK' }] }],
+            generationConfig: { temperature: 0, maxOutputTokens: 24, thinkingConfig: { thinkingBudget: 0 } }
+          })
+        }, TEST_TIMEOUT_MS);
+        const data = await readJson(response);
+        if (!response.ok) {
+          lastMessage = apiErrorMessage(response.status, data);
+          lastModel = model;
+          if ([400, 401, 403, 429].indexOf(response.status) !== -1) break;
+          continue;
+        }
+        const candidate = data && data.candidates && data.candidates[0];
+        const parts = candidate && candidate.content && candidate.content.parts ? candidate.content.parts : [];
+        const text = parts.map((part) => part.text || '').join(' ').trim();
+        const result = {
+          ok: true,
+          message: 'Conexión verificada con ' + model + ' en ' + ((Date.now() - started) / 1000).toFixed(1) + ' s.',
+          model,
+          response: text.slice(0, 120)
+        };
+        saveLastTest(result);
+        return result;
       }
-      const candidate = data && data.candidates && data.candidates[0];
-      const parts = candidate && candidate.content && candidate.content.parts ? candidate.content.parts : [];
-      const text = parts.map((part) => part.text || '').join(' ').trim();
-      const result = {
-        ok: true,
-        message: 'Conexión verificada con ' + selected + ' en ' + ((Date.now() - started) / 1000).toFixed(1) + ' s.',
-        model: selected,
-        response: text.slice(0, 120)
-      };
-      saveLastTest(result);
-      return result;
+      saveLastTest({ ok: false, message: lastMessage, model: lastModel });
+      return { ok: false, message: lastMessage, model: lastModel };
     } catch (e) {
       const result = { ok: false, message: e.message || 'No se pudo verificar la conexión.', model: selected };
       saveLastTest(result);
       return result;
+    }
+  }
+
+  async function probarConexionServidor() {
+    const started = Date.now();
+    try {
+      const response = await fetchWithTimeout(PROXY_PATH, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'Responde únicamente: conexión OK' })
+      }, PROXY_TIMEOUT_MS);
+      const data = await readJson(response);
+      if (!response.ok || !data || !data.ok) {
+        return { ok: false, message: (data && data.error) || 'El asistente del servidor no respondió.', model: 'servidor' };
+      }
+      return {
+        ok: true,
+        message: 'Conexión verificada con el asistente del servidor (' + (data.model || 'Gemini') + ') en ' + ((Date.now() - started) / 1000).toFixed(1) + ' s.',
+        model: data.model || 'servidor',
+        response: String(data.reply || '').slice(0, 120)
+      };
+    } catch (e) {
+      return { ok: false, message: e.message || 'No se pudo verificar la conexión del servidor.', model: 'servidor' };
     }
   }
 
@@ -708,6 +815,9 @@
 
   function initWidget() {
     if (initialized) return;
+    // Se consulta el proxy del servidor al arrancar: en producción es la vía
+    // preferida porque mantiene la API Key fuera del navegador.
+    proxyAvailable().then(() => syncStatus());
     widget = document.getElementById('envia-chatbot');
     if (!widget) {
       widget = document.createElement('section');
@@ -789,13 +899,15 @@
   }
 
   function syncStatus() {
-    if (!el.status) return;
+    if (!el || !el.status) return;
     const cfg = getConfig();
-    const status = cfg.apiKey ? ('Gemini · ' + cfg.model) : 'Gemini · sin configurar';
+    const serverReady = proxyState === true;
+    const ready = serverReady || !!cfg.apiKey;
+    const status = serverReady ? 'Gemini · servidor' : (cfg.apiKey ? ('Gemini · ' + cfg.model) : 'Gemini · sin configurar');
     el.status.textContent = status;
-    if (el.dot) el.dot.classList.toggle('is-configured', !!cfg.apiKey);
+    if (el.dot) el.dot.classList.toggle('is-configured', ready);
     const launcherLabel = widget && widget.querySelector('.envia-chat-launcher-label small');
-    if (launcherLabel) launcherLabel.textContent = cfg.apiKey ? 'Consultas del ERP' : 'Configura tu API Key';
+    if (launcherLabel) launcherLabel.textContent = ready ? 'Consultas del ERP' : 'Configura tu API Key';
   }
 
   function toggle() {
@@ -955,6 +1067,9 @@
     init: initWidget,
     enviarMensajeGemini,
     probarConexion,
+    probarConexionServidor,
+    proxyAvailable,
+    get proxyState() { return proxyState; },
     getConfig,
     saveConfig,
     clearConfig,
@@ -971,6 +1086,7 @@
     moduleLabel,
     accessGuard,
     defaultModel: DEFAULT_MODEL,
+    modelFallbacks: MODEL_FALLBACKS,
     configKey: CONFIG_KEY
   };
 })();
