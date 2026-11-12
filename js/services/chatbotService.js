@@ -124,12 +124,14 @@
 
   function saveConfig(data) {
     const apiKey = String((data && data.apiKey) || '').trim();
-    if (!apiKey) throw new Error('Ingresa la API Key de Google Gemini.');
-    if (/\s/.test(apiKey)) throw new Error('La API Key no debe contener espacios.');
     const model = normalizeModel(data && data.model, true);
+    // En modo servidor la clave vive en Vercel: guardar el modelo local es
+    // opcional y no debe exigir pegar una clave en el navegador.
+    if (!apiKey && proxyState !== true) throw new Error('Ingresa la API Key de Google Gemini.');
+    if (apiKey && /\s/.test(apiKey)) throw new Error('La API Key no debe contener espacios.');
     const current = getConfig();
     const cfg = {
-      apiKey,
+      apiKey: apiKey || current.apiKey,
       model,
       updatedAt: new Date().toISOString(),
       lastTest: (apiKey === current.apiKey && model === current.model) ? (current.lastTest || null) : null
@@ -161,8 +163,16 @@
     return cfg.lastTest;
   }
 
-  function isConfigured() {
+  /* El asistente está disponible si hay clave local en el navegador O si el
+     proxy del servidor está configurado. En modo servidor la clave local no
+     existe por diseño, así que mirar solo localStorage bloqueaba el chat y
+     hacía que el contexto le dijera al modelo que no había credenciales. */
+  function hasLocalKey() {
     return !!getConfig().apiKey;
+  }
+
+  function isConfigured() {
+    return hasLocalKey() || proxyState === true;
   }
 
   /* --------------------------- Proxy del servidor ------------------------ */
@@ -473,7 +483,8 @@
 
     if (allowed.includes('settings')) {
       const configured = !!(NS.supabase && typeof NS.supabase.isConfigured === 'function' && NS.supabase.isConfigured());
-      lines.push('- Configuración: Supabase ' + (configured ? 'configurado' : 'no configurado (modo local)') + '; asistente Gemini ' + (isConfigured() ? 'con credenciales locales' : 'sin credenciales') + '.');
+      const assistant = hasLocalKey() ? 'con credenciales locales' : (proxyState === true ? 'configurado en el servidor' : 'sin credenciales');
+      lines.push('- Configuración: Supabase ' + (configured ? 'configurado' : 'no configurado (modo local)') + '; asistente Gemini ' + assistant + '.');
     }
 
     return lines.join('\n');
@@ -619,7 +630,11 @@
 
   async function probarConexion(apiKey, model) {
     const key = String(apiKey || getConfig().apiKey || '').trim();
-    if (!key) return { ok: false, message: 'Falta la API Key de Google Gemini.' };
+    // Sin clave local pero con proxy del servidor: se prueba la vía real.
+    if (!key) {
+      if (await proxyAvailable()) return probarConexionServidor();
+      return { ok: false, message: 'Falta la API Key de Google Gemini.' };
+    }
     let selected;
     try {
       selected = normalizeModel(model || getConfig().model, true);
@@ -817,7 +832,12 @@
     if (initialized) return;
     // Se consulta el proxy del servidor al arrancar: en producción es la vía
     // preferida porque mantiene la API Key fuera del navegador.
-    proxyAvailable().then(() => syncStatus());
+    proxyAvailable().then(() => {
+      syncStatus();
+      // Si el widget ya se abrió antes de resolver, el greeting mostraba
+      // "configura tu API Key": se repinta con el estado real.
+      if (conversation.length <= 1) resetConversation();
+    });
     widget = document.getElementById('envia-chatbot');
     if (!widget) {
       widget = document.createElement('section');
@@ -1005,7 +1025,7 @@
   }
 
   function addNoKeyNotice() {
-    const wrap = addMessage('assistant', 'Para usar el Asistente ENVIA necesito que primero configures la **API Key de Google Gemini**. Si tienes acceso, ve a **Configuración → Asistente ChatBot**; si no, pide a un SuperAdmin que la configure en este navegador. La clave se guarda solo aquí.', { notice: true });
+    const wrap = addMessage('assistant', 'El Asistente ENVIA no está disponible en este momento porque no hay una **API Key de Google Gemini** disponible. Si tienes acceso, ve a **Configuración → Asistente ChatBot**; si no, pide a un SuperAdmin que la configure en el servidor o en este navegador.', { notice: true });
     if (!wrap) return;
     const inner = wrap.querySelector('.envia-chat-msg-inner');
     if (!inner) return;
@@ -1021,7 +1041,10 @@
     if (!el.messages) return;
     hideQuickReplies();
     addMessage('user', text);
-    if (!getConfig().apiKey) {
+    // El proxy del servidor debe resolverse antes de decidir: en modo
+    // servidor no hay clave local y el chat debe funcionar igual.
+    await proxyAvailable();
+    if (!isConfigured()) {
       addNoKeyNotice();
       return;
     }
@@ -1050,8 +1073,7 @@
     conversation = [];
     if (!el.messages) return;
     el.messages.innerHTML = '';
-    const cfg = getConfig();
-    const greeting = cfg.apiKey
+    const greeting = isConfigured()
       ? 'Hola, soy el **Asistente ENVIA**. Puedo ayudarte con clientes, servicios, conductores, contabilidad, tributos y cuentas por pagar, siempre dentro de los módulos autorizados para tu rol.'
       : 'Hola, soy el **Asistente ENVIA**. Para empezar, configura tu **API Key de Google Gemini** en Configuración → Asistente ChatBot. Mientras tanto puedo mostrarte las preguntas rápidas disponibles.';
     addMessage('assistant', greeting);
@@ -1075,6 +1097,7 @@
     clearConfig,
     saveLastTest,
     isConfigured,
+    hasLocalKey,
     resetConversation,
     open,
     close,
