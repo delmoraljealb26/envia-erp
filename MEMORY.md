@@ -809,6 +809,70 @@ serverless que la mantiene en el servidor.
   datos de Contabilidad.
 - Camino local (clave en `localStorage`) también verificado respondiendo.
 
+## 5.21 Corrección del modo servidor en el widget (12/11/2026)
+
+**Síntoma:** con el proxy configurado, el widget mostraba el badge
+"Gemini · servidor" pero al enviar un mensaje respondía *"necesito que
+primero configures la API Key"*, aunque la conexión aparecía verificada.
+
+**Causa raíz (bug de código, no de configuración):** en `sendMessage()` la
+guarda `if (!getConfig().apiKey)` miraba **solo** la clave local del navegador
+y bloqueaba la consulta **antes** de llegar a `enviarMensajeGemini()`, que sí
+sabe usar el proxy. En modo servidor la clave local no existe por diseño, así
+que el chat quedaba inutilizable. La verificación anterior no lo detectó
+porque probó la API interna (`enviarMensajeGemini()`) y no el flujo del widget
+(`sendMessage()`) que usa el usuario: **falta de cobertura de la prueba**.
+
+**Correcciones en `js/services/chatbotService.js`:**
+- `sendMessage()`: espera `proxyAvailable()` y usa `isConfigured()`.
+- `isConfigured()`: ahora cubre clave local **o** proxy. Se añadió `hasLocalKey()`
+  para los casos específicos del navegador.
+- `resetConversation()`: el saludo usa `isConfigured()`.
+- `addNoKeyNotice()`: texto coherente con el modo servidor.
+- `buildContext()`: informa al modelo "asistente Gemini configurado en el
+  servidor" en vez de "sin credenciales".
+- `saveConfig()`: ya no exige clave local si el servidor está configurado.
+- `probarConexion()`: sin clave local cae al proxy (`probarConexionServidor()`).
+- `initWidget()`: repinta el greeting cuando el proxy resuelve.
+
+**Correcciones en `js/modules/settings.js`:**
+- Campo de API Key deshabilitado con placeholder "Gestionada en el servidor"
+  y nota de que es opcional cuando hay proxy.
+- "Probar conexión" y "Guardar" funcionan sin clave local en modo servidor.
+- `render()` espera la resolución del proxy y se vuelve a pintar.
+- El "última prueba" heredado solo se muestra si la credencial sigue presente
+  (evita el "Conexión verificada" engañoso).
+
+## 5.22 Cuota de Gemini: es POR MODELO (12/11/2026)
+
+**Hallazgo:** el plan gratuito de Gemini permite **20 requests/día por modelo**
+(métrica `generate_content_free_tier_requests`, cuota
+`GenerateRequestsPerDayPerProjectPerModel-FreeTier`). Agotar un modelo **no**
+afecta a los demás: `gemini-3.5-flash` y `gemini-3.6-flash` agotaron su cuota
+mientras `gemini-3.5-flash-lite` seguía respondiendo 200.
+
+**Bug asociado:** `thinkingConfig: { thinkingBudget: 0 }` es **inválido** en los
+modelos `lite` (responden HTTP 400 "Request contains an invalid argument"), y
+el código abortaba la lista de respaldo en cualquier 400. Se quitó
+`thinkingConfig` y ahora solo 401/403 (y un 400 que mencione la API Key) son
+definitivos; un 400 por argumento inválido pasa al siguiente modelo.
+
+**Cambios:**
+- `api/chatbot.js`: lista ampliada a `gemini-3.5-flash`, `gemini-3.6-flash`,
+  `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-flash-lite-latest`;
+  se continúa ante 400/404/429/503; mensaje de 429 con enlace a
+  <https://ai.dev/rate-limit>; `friendlyError` distingue "API key not valid" de
+  "invalid argument".
+- `js/services/chatbotService.js`: misma lista y misma regla de fallback.
+
+**Validación:** con la cuota de `3.5-flash` y `3.6-flash` agotada, el proxy de
+producción respondió 200 con `gemini-3.5-flash-lite` y el widget mostró la
+respuesta real (10 clientes, 6 activos).
+
+**Advertencia para el usuario:** la cuota gratuita es muy baja (20/día por
+modelo) y se comparte entre todos los usuarios del proxy. Para uso intensivo
+se necesita una API Key de pago.
+
 ---
 
 ## 6. Próximas tareas pendientes (opcionales)

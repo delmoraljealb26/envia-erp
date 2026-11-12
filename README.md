@@ -76,9 +76,14 @@ roles y permisos granulares.
   `Configuración → Asistente ChatBot`, que guarda API Key y modelo
   (`gemini-3.5-flash` por defecto) en `localStorage` (`envia_chatbot_v1`).
 - **Modelos**: `gemini-3.5-flash` es el predeterminado. Si Google no lo tiene
-  disponible, el servicio prueba en orden `gemini-3.5-flash-lite` y
-  `gemini-3.1-flash-lite`, porque Google retiró `gemini-1.5-pro` y los modelos
-  más recientes pueden devolver 503 por demanda.
+  disponible, el servicio prueba en orden `gemini-3.6-flash`,
+  `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite` y `gemini-flash-lite-latest`,
+  porque Google retiró `gemini-1.5-pro` y los modelos más recientes pueden
+  devolver 503 por demanda.
+- **Cuota**: el plan gratuito de Gemini permite unas **20 consultas por día y
+  por modelo**. Como la cuota es por modelo, agotar uno activa el siguiente.
+  Para uso intensivo hace falta una API Key de pago: revisa el consumo en
+  <https://ai.dev/rate-limit>.
 - **Markdown seguro**: negritas, énfasis, listas, encabezados y código en línea
   se generan después de escapar el texto. Indicador **Pensando...** durante la
   solicitud y mensajes de error legibles sin exponer la clave.
