@@ -11,7 +11,11 @@
   const FILES_KEY = 'envia_files_v1';
   const FILES_DB = 'envia_files_db';
   const FILES_STORE = 'files';
-  const REQUEST_TIMEOUT_MS = 20000;
+  // El proyecto de Supabase (plan gratuito) se suspende tras un tiempo de
+  // inactividad y puede tardar en despertar. Por eso cada petición reintenta
+  // con espera creciente antes de declararse fallida.
+  const REQUEST_TIMEOUT_MS = 30000;
+  const RETRY_DELAYS_MS = [2000, 5000, 12000];
 
   function getConfig() {
     try {
@@ -65,23 +69,39 @@
     return /tiempo de espera|failed to fetch|networkerror|load failed|fetch failed|network request failed|aborted/.test(msg);
   }
 
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   async function rest(path, options) {
     if (!isConfigured()) throw new Error('Supabase no está configurado.');
-    return withTimeout(async (signal) => {
-      const res = await fetch(baseUrl() + '/rest/v1/' + path, {
-        ...(options || {}),
-        signal,
-        headers: headers((options && options.headers) || {})
-      });
-      const text = await res.text();
-      let body = null;
-      try { body = text ? JSON.parse(text) : null; } catch (e) { body = text; }
-      if (!res.ok) {
-        const msg = body && (body.message || body.hint || body.error_description) ? (body.message || body.hint || body.error_description) : ('HTTP ' + res.status);
-        throw new Error(msg);
+    let lastError = null;
+    for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+      try {
+        return await withTimeout(async (signal) => {
+          const res = await fetch(baseUrl() + '/rest/v1/' + path, {
+            ...(options || {}),
+            signal,
+            headers: headers((options && options.headers) || {})
+          });
+          const text = await res.text();
+          let body = null;
+          try { body = text ? JSON.parse(text) : null; } catch (e) { body = text; }
+          if (!res.ok) {
+            const msg = body && (body.message || body.hint || body.error_description) ? (body.message || body.hint || body.error_description) : ('HTTP ' + res.status);
+            throw new Error(msg);
+          }
+          return body;
+        }, REQUEST_TIMEOUT_MS, 'REST');
+      } catch (err) {
+        lastError = err;
+        // Solo se reintenta un fallo de red o de tiempo de espera; los errores
+        // del servidor (HTTP 4xx/5xx con mensaje) se devuelven de inmediato.
+        if (!isNetworkFailure(err) || attempt === RETRY_DELAYS_MS.length) throw err;
+        await sleep(RETRY_DELAYS_MS[attempt]);
       }
-      return body;
-    }, REQUEST_TIMEOUT_MS, 'REST');
+    }
+    throw lastError;
   }
 
   async function testConnection(url, anonKey) {
@@ -497,10 +517,14 @@
     return count;
   }
 
-  /* Elimina líneas huérfanas de sincronizaciones anteriores. Cuando un asiento
-     conserva su número pero cambia su id local, las líneas antiguas quedan con
-     el id anterior y PostgREST las conserva; hay que retirarlas para no
-     duplicar los importes en los reportes. */
+  /* Sanea los asientos que arrastran líneas de sincronizaciones anteriores.
+     Cuando un asiento conserva su número pero cambia su id local, la clave
+     foránea "on update cascade" reasigna las líneas antiguas al asiento nuevo
+     conservando su id viejo: quedan dos juegos de líneas y los reportes
+     duplican los importes. Para evitarlo se vacían por completo los asientos
+     afectados (el asiento sin líneas es un estado válido para el trigger
+     diferido de partida doble) y la sincronización vuelve a enviar su juego
+     completo de líneas con el id estable. */
   async function cleanupStaleEntryLines(entries, remoteIdByNumero) {
     const ids = [];
     (entries || []).forEach((e) => {
@@ -508,22 +532,23 @@
       if (entryId && ids.indexOf(entryId) === -1) ids.push(entryId);
     });
     if (!ids.length) return 0;
-    const stale = [];
+    const affected = [];
     for (let i = 0; i < ids.length; i += 100) {
       const chunk = ids.slice(i, i + 100);
       const filter = 'entry_id=in.(' + chunk.map((id) => encodeURIComponent(id)).join(',') + ')&select=id,entry_id';
       const rows = await rest('accounting_entry_lines?' + filter);
       (rows || []).forEach((row) => {
-        if (String(row.id || '').indexOf(String(row.entry_id) + '_') !== 0) stale.push(row.id);
+        const entryId = row.entry_id;
+        if (String(row.id || '').indexOf(String(entryId) + '_') === 0) return;
+        if (affected.indexOf(entryId) === -1) affected.push(entryId);
       });
     }
-    let deleted = 0;
-    for (let i = 0; i < stale.length; i += 100) {
-      const chunk = stale.slice(i, i + 100);
-      await rest('accounting_entry_lines?id=in.(' + chunk.map((id) => encodeURIComponent(id)).join(',') + ')', { method: 'DELETE' });
-      deleted += chunk.length;
+    if (!affected.length) return 0;
+    for (let i = 0; i < affected.length; i += 40) {
+      const chunk = affected.slice(i, i + 40);
+      await rest('accounting_entry_lines?entry_id=in.(' + chunk.map((id) => encodeURIComponent(id)).join(',') + ')', { method: 'DELETE' });
     }
-    return deleted;
+    return affected.length;
   }
 
   async function syncAll() {
@@ -599,6 +624,10 @@
         referencia: e.referencia, origen: e.origen, tasa_bcv: e.tasa_bcv, created_at: e.created_at
       })));
       const n = await upsert('accounting_entries', 'numero', entries);
+      // Saneamiento previo: los asientos que arrastran líneas de una
+      // sincronización anterior se vacían por completo (el trigger de partida
+      // doble acepta el asiento sin líneas) y se vuelven a enviar completas.
+      const cleaned = await cleanupStaleEntryLines(localEntries, remoteIdByNumero);
       // Las líneas se envían por asiento completo: el trigger diferido de
       // partida doble valida al cierre de cada transacción y no debe recibir
       // un asiento partido entre dos lotes.
@@ -620,7 +649,6 @@
         chunk.push(...group);
       }
       await flush();
-      const cleaned = await cleanupStaleEntryLines(localEntries, remoteIdByNumero);
       report.push({ key: 'entries', table: 'accounting_entries + lines', ok: true, count: n + nl, cleaned });
     } catch (err) {
       report.push({ key: 'entries', table: 'accounting_entries', ok: false, error: err.message });
