@@ -1,0 +1,80 @@
+name: Keep Supabase Alive
+
+# Evita la pausa del proyecto gratuito de Supabase tras 7 días de inactividad
+# mediante una consulta GET de solo lectura (1 fila, sin escrituras).
+#
+# Secretos requeridos en el repositorio (Settings > Secrets and variables > Actions):
+#   SUPABASE_URL      -> https://<proyecto>.supabase.co   (sin barra final)
+#   SUPABASE_ANON_KEY -> anon key pública del proyecto
+
+on:
+  schedule:
+    # Cada 3 días a las 12:00 UTC (08:00 hora de Venezuela, UTC-4).
+    - cron: '0 12 */3 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keep-supabase-alive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    name: Consulta de solo lectura
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Validar secretos configurados
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          missing=0
+          if [ -z "${SUPABASE_URL}" ]; then
+            echo "::error::Falta el secreto SUPABASE_URL."
+            missing=1
+          fi
+          if [ -z "${SUPABASE_ANON_KEY}" ]; then
+            echo "::error::Falta el secreto SUPABASE_ANON_KEY."
+            missing=1
+          fi
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+          echo "Secretos presentes. URL: ${SUPABASE_URL%/}"
+
+      - name: GET de solo lectura a tax_parameters (1 fila)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          URL="${SUPABASE_URL%/}/rest/v1/tax_parameters?select=id&limit=1"
+          BODY_FILE="${RUNNER_TEMP}/supabase_keepalive.json"
+
+          echo "Consultando: ${URL}"
+
+          CODE=$(curl -sS -f -o "$BODY_FILE" -w '%{http_code}' \
+            --retry 3 --retry-delay 10 --retry-connrefused \
+            --max-time 30 \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            -H "Accept: application/json" \
+            "$URL") || {
+              echo "::error::La petición a Supabase falló (HTTP ${CODE:-sin respuesta})."
+              [ -f "$BODY_FILE" ] && cat "$BODY_FILE"
+              exit 1
+            }
+
+          echo "Respuesta:"
+          cat "$BODY_FILE" 2>/dev/null || true
+          echo ""
+
+          if [ "$CODE" != "200" ]; then
+            echo "::error::Se esperaba HTTP 200 y se recibió HTTP ${CODE}."
+            exit 1
+          fi
+
+          echo "OK: Supabase respondió HTTP 200. Proyecto activo."
